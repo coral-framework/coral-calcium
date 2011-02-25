@@ -1,0 +1,5 @@
+// Implements IObjectModel.
+component ObjectModel
+{
+	provides IObjectModel model;
+};

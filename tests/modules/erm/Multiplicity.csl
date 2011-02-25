@@ -1,0 +1,10 @@
+/*
+	The multiplicity of one end of a relationship.
+	Currently, multiplicities are always inclusive ranges, like "min..max".
+	By convention, negative values represent "many" (i.e. an '*' or 'N').
+ */
+struct Multiplicity
+{
+	int32 min;
+	int32 max;
+};

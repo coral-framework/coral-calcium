@@ -1,0 +1,2 @@
+// Indicates an object model violation.
+exception ObjectModelException;

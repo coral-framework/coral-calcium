@@ -1,0 +1,4 @@
+component Relationship
+{
+	provides IRelationship relationship;
+};

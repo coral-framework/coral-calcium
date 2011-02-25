@@ -1,0 +1,5 @@
+// The 'ca' module defines its own co.ModulePart.
+component ca
+{
+	provides co.ModulePart part;
+};

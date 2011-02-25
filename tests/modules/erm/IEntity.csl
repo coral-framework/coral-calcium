@@ -1,0 +1,4 @@
+interface IEntity
+{
+	attribute string name;
+};

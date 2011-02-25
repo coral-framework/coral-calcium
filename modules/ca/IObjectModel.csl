@@ -1,0 +1,127 @@
+/*
+	An object graph schema.
+
+	Conceptually, object models are a set of types with a list of attributes for each
+	type, where the attributes must be a subset of a type's actual attribute set, and
+	all attribute types must be in the object model.
+
+	Only interfaces, structs, native classes, components and enums can be added to an
+	object model. Whenever a type is added, its array counterpart is also \e implicitly
+	added, and vice versa.
+
+	All primitive Coral types are \e implicitly defined in all object models, except
+	for the special type \c 'any', which is currently forbidden as an attribute type.
+
+	Before an object model is ever used, its \c name attribute must be set.
+	Otherwise, most methods will raise a co.LifeCycleException. A name is required
+	for many operations done "behind the scenes" by object models.
+
+	Whenever a type that is not already in the object model is queried, it will attempt
+	to load definitions from a file named <tt>CaModel_\<name\>.lua</tt> in the type's
+	directory (where <tt>\<name\></tt> is the object model's name). If the file contains
+	an error, a ca.ObjectModelException will be raised. Otherwise, if the file does not
+	exist or does not add the queried type to the object model, the queried type will
+	be considered as not being part of the object model.
+ */
+interface IObjectModel
+{
+	// Name of this object model. Must be set only once, before the component is used.
+	attribute string name;
+
+	//---------- Querying the Object Model ----------//
+
+	/*
+		Returns whether a \a type is already in the object model.
+
+		This method does not attempt to lazy-load definitions for types that are not
+		already in the object model. If you need such behaviour, use contains() instead.
+	 */
+	bool alreadyContains( in co.Type type );
+
+	/*
+		Returns whether a \a type is in the object model.
+
+		This method attempts to lazy-load definitions for types not already
+		in the object model. For this reason, it may raise exceptions.
+	 */
+	bool contains( in co.Type type ) raises co.LifeCycleException, ObjectModelException;
+
+	/*
+		Gets the list of attributes for a type in the object model.
+		This method only works for attribute containers. For components, use getReceptacles() instead.
+		\throw co.IllegalArgumentException if the \a type is not an attribute container.
+		\throw ca.ObjectModelException if the \a type is not in the object model.
+	 */
+	co.AttributeInfo[] getAttributes( in co.Type type )
+			raises co.LifeCycleException, co.IllegalArgumentException, ObjectModelException;
+
+	/*
+		Gets the list of receptacles for a component in the object model.
+		\throw ca.ObjectModelException if the \a componentType is not in the object model.
+	 */
+	co.InterfaceInfo[] getReceptacles( in co.ComponentType componentType )
+			raises co.LifeCycleException, ObjectModelException;
+
+	//---------- Changing the Object Model ----------//
+
+	/*
+		Starts a transaction to change the object model.
+		Changes are not visible until you call applyChanges().
+		Nested calls are 'ignored'; i.e. only the top-most call really starts a transaction.
+	 */
+	void beginChanges();
+
+	/*
+		Finishes the current transaction by validating and then applying all changes.
+
+		If the changes are inconsistent, an exception will be raised with an explanation.
+		In this case, the only possible follow up is to call discardChanges().
+
+		Nested calls are 'ignored'; i.e. only the top-most call really ends the transaction.
+
+		\throw co.LifeCycleException if beginChanges() was not called to start a transaction,
+					or if discardChanges() was previously called in the current transaction.
+		\throw ca.ObjectModelException if the changes are inconsistent.
+	 */
+	void applyChanges() raises co.LifeCycleException, ObjectModelException;
+
+	/*
+		Finishes the current transaction by discarding all changes.
+
+		Nested calls are 'ignored'; i.e. only the top-most call to either applyChanges() or
+		discardChanges() really ends a transaction. Once discardChanges() is called in a
+		nested level, calling applyChanges() in the upper levels will raise an exception.
+	 */
+	void discardChanges();
+
+	/*
+		Adds an enum type.
+
+		\throw co.LifeCycleException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalArgumentException if the \a type is invalid.
+		\throw ca.ObjectModelException if the \a type is already in the object model.
+	 */
+	void addEnum( in co.EnumType type )
+			raises co.LifeCycleException, co.IllegalArgumentException, ObjectModelException;
+
+	/*
+		Adds an \e attribute \e container type, along with a list of attributes.
+
+		\throw co.LifeCycleException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalArgumentException if either the \a type or one of the \a attributes are invalid.
+		\throw ca.ObjectModelException if the \a type is already in the object model.
+	 */
+	void addAttributeContainer( in co.Type type, in co.AttributeInfo[] attributes )
+			raises co.LifeCycleException, co.IllegalArgumentException, ObjectModelException;
+
+	/*
+		Adds a component type, along with a list of receptacles.
+
+		\throw co.LifeCycleException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalArgumentException if either the \a componentType or
+					one of the \a receptacles are invalid.
+		\throw ca.ObjectModelException if the \a componentType is already in the object model.
+	 */
+	void addComponent( in co.ComponentType componentType, in co.InterfaceInfo[] receptacles )
+			raises co.LifeCycleException, co.IllegalArgumentException, ObjectModelException;
+};

@@ -1,0 +1,5 @@
+interface IModel
+{
+	attribute IEntity[] entities;
+	attribute IRelationship[] relationships;
+};

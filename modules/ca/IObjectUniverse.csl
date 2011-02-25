@@ -1,0 +1,7 @@
+/*
+	Whatever
+ */
+interface IObjectUniverse
+{
+	void dummy();
+};

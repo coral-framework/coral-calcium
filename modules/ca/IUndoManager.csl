@@ -1,0 +1,59 @@
+/*
+	Manages a pair of undo and redo stacks.
+
+	An undo/redo manager records all changes made to an object graph and allows any
+	set of changes to be reverted or re-applied.
+
+	Individual changes can be grouped into a single ChangeSet, so that performing
+	an undo reverts all grouped changes. The easiest way to do this is to enclose
+	an application loop with a pair of calls to beginUndoGroup() and endUndoGroup().
+ */
+interface IUndoManager
+{
+	// Whether there are any changes to undo.
+	readonly attribute bool canUndo;
+
+	// Whether there are any changes to redo.
+	readonly attribute bool canRedo;
+
+	// Strings describing each ChangeSet in the undo stack.
+	readonly attribute string[] undoList;
+
+	// Strings describing each ChangeSet in the redo stack.
+	readonly attribute string[] redoList;
+
+	/*
+		TODO
+	 */
+	void beginUndo( in string message );
+
+	/*
+		TODO
+	 */
+	void endUndo();
+
+	/*
+		TODO
+	 */
+	void beginUndoGroup();
+
+	/*
+		TODO
+	 */
+	void endUndoGroup();
+
+	/*
+		Undoes the most recent ChangeSet on the undo stack, recording the operations on the redo stack.
+	 */
+	void undo();
+
+	/*
+		Redoes the most recent ChangeSet on the redo stack, recording the operations on the undo stack.
+	 */
+	void redo();
+
+	/*
+		Clears the undo and redo stacks.
+	 */
+	void clear();
+};

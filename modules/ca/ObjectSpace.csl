@@ -1,0 +1,5 @@
+// Implements IObjectSpace.
+component ObjectSpace
+{
+	provides IObjectSpace space;
+};
