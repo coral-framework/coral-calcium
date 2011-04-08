@@ -2,6 +2,6 @@
 # camodels - Pure CSL Module
 ################################################################################
 
-PROJECT( CAMODELS )
+project( CAMODELS )
 
 CORAL_BUILD_CSL_MODULE( camodels )
