@@ -30,7 +30,7 @@ TARGET_LINK_LIBRARIES( tests ${CORAL_LIBRARIES} ${GTEST_LIBRARIES} )
 FILE( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
 ADD_TEST(
 	NAME tests
-	COMMAND $<TARGET_FILE:tests> --gtest_output=xml:${CMAKE_BINARY_DIR}/tests/output/Tests$<CONFIGURATION>.xml
+	COMMAND $<TARGET_FILE:tests> --gtest_output=xml:../../output/Tests$<CONFIGURATION>.xml
 )
 CORAL_TEST_ENVIRONMENT( tests )
 
