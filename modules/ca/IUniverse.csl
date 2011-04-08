@@ -1,0 +1,55 @@
+/*
+	A unified context for objects under the same model.
+
+	The universe is the workhorse behind the spaces. Most of its API is restricted
+	and should not be used directly (unless you're implementing a space).
+ */
+interface IUniverse
+{
+	//---------- Space Registration and Management ----------//
+
+	/*
+		Adds a space to this universe.
+	 */
+	uint16 registerSpace( in ISpace space );
+
+	/*
+		Removes a space from this universe.
+	 */
+	void unregisterSpace( in uint16 spaceId );
+
+	/*
+		Adds a root object to a space.
+		\throw ModelException if \a root's component is not in the object model.
+	 */
+	void addRootObject( in uint16 spaceId, in co.IObject root ) raises ModelException;
+
+	/*
+		Removes a root object from a space.
+		\throw NoSuchObjectException if \a root is not in the space's list of root objects.
+	 */
+	void removeRootObject( in uint16 spaceId, in co.IObject root ) raises NoSuchObjectException;
+
+	/*
+		Returns the list of root objects in a space.
+	 */
+	void getRootObjects( in uint16 spaceId, out co.IObject[] roots );
+
+	//---------- Change Management ----------//
+
+	/*
+		Marks the beginning of a change section.
+
+		The argument must be a \a service whose type is in the object model,
+		and whose provider object is in this universe.
+
+		\throw NoSuchObjectException if the object that provides the \a service is not in this universe.
+		\throw ModelException if the \a service's facet/component is not defined in the object model.
+	 */
+	void beginChange( in co.IService service ) raises NoSuchObjectException;
+
+	/*
+		TODO
+	 */
+	void endChange( in co.IService service );
+};

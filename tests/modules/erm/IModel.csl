@@ -1,5 +1,9 @@
 interface IModel
 {
-	attribute IEntity[] entities;
-	attribute IRelationship[] relationships;
+	IEntity[] entities;
+	IRelationship[] relationships;
+	IModel[] dependencies;
+
+	void addEntity( in IEntity entity );
+	void addRelationship( in IRelationship rel );
 };

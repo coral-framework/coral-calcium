@@ -1,10 +1,10 @@
 /*
- * Calcium Object Model Framework
+ * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
 
 #include <co/Coral.h>
-#include <co/System.h>
+#include <co/ISystem.h>
 #include <gtest/gtest.h>
 
 int main( int argc, char** argv )

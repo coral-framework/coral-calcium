@@ -1,0 +1,8 @@
+/*
+	TODO
+ */
+interface IObjectObserver
+{
+	void onServiceChanged( in co.IObject object, in co.IPort receptacle,
+			in co.IService previous, in co.IService current );
+};

@@ -1,0 +1,64 @@
+/*
+	Manages a collection of object graphs that are mirrored in a remote data store.
+
+	Objects are guaranteed to be unique within a space. They can also be shared by
+	multiple spaces in the same universe, and have copies in different universes.
+
+	The space has a central role in the life-cycle of its object graphs.
+
+	A space posts notifications at various points. For instance, when changes are
+	detected for an object (or a branch of the object graph), when.
+ */
+interface ISpace
+{
+	//---------- Object Management ----------//
+
+	/*
+		Adds a root object to the space.
+
+		This operation implicitly adds to the space the whole graph of objects
+		reachable from \a root, in accordance with the object model (IModel) in effect.
+
+		\throw ModelException if \a root's component is not in the object model.
+	 */
+	void addRootObject( in co.IObject root ) raises ModelException;
+
+	/*
+		Removes a root object from the space.
+
+		This operation implicitly removes from the space all objects that are
+		no longer reachable after removing the \a root object.
+
+		\throw NoSuchObjectException if \a root is not in the list of root objects.
+	 */
+	void removeRootObject( in co.IObject root ) raises NoSuchObjectException;
+
+	/*
+		Returns the list of root objects in the space.
+	 */
+	void getRootObjects( out co.IObject[] roots );
+
+	//---------- Change Management ----------//
+
+	/*
+		Marks the beginning of a change section.
+
+		The argument must be a \a service whose type is in the object model,
+		and whose provider object is in this space.
+
+		\throw NoSuchObjectException if the object that provides the \a service is not in this space.
+		\throw ModelException if the \a service's facet/component is not defined in the object model.
+	 */
+	void beginChange( in co.IService service ) raises NoSuchObjectException;
+
+	/*
+		Marks the end of a change section.
+
+		\throw co.IllegalArgumentException if called without a corresponding preceding call to beginChange().
+	 */
+	void endChange( in co.IService service );
+
+	//---------- Change Notification ----------//
+
+	//void addObserver( in IObjectSpaceObserver observer );
+};

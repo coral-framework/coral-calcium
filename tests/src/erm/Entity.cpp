@@ -23,10 +23,15 @@ public:
 	const std::string& getName() { return _name; }
 	void setName( const std::string& name ) { _name = name; }
 
+	co::Range<erm::IRelationship* const> getRelationships()
+	{
+		return co::Range<erm::IRelationship* const>();
+	}
+
 private:
 	std::string _name;
 };
+	
+CORAL_EXPORT_COMPONENT( Entity, Entity )
 
 } // namespace erm
-
-CORAL_EXPORT_COMPONENT( erm::Entity, Entity )

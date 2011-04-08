@@ -1,8 +1,8 @@
 /*
-	Manages a pair of undo and redo stacks.
+	Manages a pair of undo/redo stacks.
 
-	An undo/redo manager records all changes made to an object graph and allows any
-	set of changes to be reverted or re-applied.
+	An undo/redo manager records all changes made to an object graph
+	and allows any set of changes to be reverted or re-applied.
 
 	Individual changes can be grouped into a single ChangeSet, so that performing
 	an undo reverts all grouped changes. The easiest way to do this is to enclose
@@ -11,16 +11,16 @@
 interface IUndoManager
 {
 	// Whether there are any changes to undo.
-	readonly attribute bool canUndo;
+	readonly bool canUndo;
 
 	// Whether there are any changes to redo.
-	readonly attribute bool canRedo;
+	readonly bool canRedo;
 
 	// Strings describing each ChangeSet in the undo stack.
-	readonly attribute string[] undoList;
+	readonly string[] undoList;
 
 	// Strings describing each ChangeSet in the redo stack.
-	readonly attribute string[] redoList;
+	readonly string[] redoList;
 
 	/*
 		TODO

@@ -4,4 +4,6 @@ struct SomeStruct
 	string str1;
 	SomeEnum enum1;
 	SomeInterface interface1;
+	SomeInterface[] interfaceArray;
+	erm.Multiplicity structWithinStruct;
 };

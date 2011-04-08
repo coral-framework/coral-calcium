@@ -22,14 +22,14 @@ local caModelEnv = {}
 local caModelEnvMT = { __index = caModelEnv }
 local currentEnv = nil
 
-local typeMT = { __call = function( typeDecl, fields )
-	typeDecl.fields = fields
+local typeMT = { __call = function( typeDecl, entries )
+	typeDecl.entries = entries
 end }
 
 function caModelEnv.Type( name )
 	local ok, type = pcall( coType, name )
 	if not ok then
-		error( "type '" .. tostring( name ) .. "' does not exist", 0 )
+		error( "could not load type '" .. tostring( name ) .. "'", 0 )
 	end
 	local typeDecl = setmetatable( { type = type, name = name }, typeMT )
 	currentEnv[#currentEnv + 1] = typeDecl
@@ -40,7 +40,7 @@ end
 -- This function traverses an array of typeDecls, performs some basic checks
 -- and adds the types to the objModel.
 
-local isAttributeContainer = {
+local isRecordType = {
 	TK_STRUCT = true,
 	TK_INTERFACE = true,
 	TK_NATIVECLASS = true,
@@ -50,58 +50,56 @@ local function processTypes( types, objModel )
 	for i, typeDecl in ipairs( types ) do
 		local type = typeDecl.type
 		local kind = type.kind
-		local fields = typeDecl.fields or {}
+		local entries = typeDecl.entries or {}
 		if kind == 'TK_ARRAY' then
 			error( "array type '" .. typeDecl.name .. "' cannot be defined in the object model; define '"
 						.. type.elementType.fullName .. "' instead", 0 )
 		elseif kind == 'TK_ENUM' then
-			if fields and next( fields ) then
-				error( "enum type '" .. typeDecl.name .. "' should not have a field list", 0 )
+			if entries and next( entries ) then
+				error( "enum '" .. typeDecl.name .. "' should not have a field list", 0 )
 			end
 			objModel:addEnum( type )
 		elseif kind == 'TK_EXCEPTION' then
 			error( "exception type '" .. typeDecl.name .. "' cannot be defined in the object model", 0 )
 		elseif kind == 'TK_COMPONENT' then
-			-- resolve the list of receptacles (InterfaceInfos)
-			local receptacles = {}
-			for itfName, expectedTypeName in pairs( fields ) do
-				local itfInfo = type:getMember( itfName )
-				if not itfInfo then
-					error( "no such interface '" .. itfName .. "' in component '" .. typeDecl.name .. "'", 0 )
-				elseif itfInfo.isFacet then
-					error( "interface '" .. itfName .. "' of component '" .. typeDecl.name .. "' is not a receptacle", 0 )
+			-- resolve the list of ports
+			local ports = {}
+			for portName, expectedTypeName in pairs( entries ) do
+				local port = type:getMember( portName )
+				if not port then
+					error( "no such port '" .. portName .. "' in component '" .. typeDecl.name .. "'", 0 )
 				end
-				local itfType = itfInfo.type
-				if itfType.fullName ~= expectedTypeName then
-					error( "interface '" .. itfName .. "' of component '" .. typeDecl.name ..
+				local portType = port.type
+				if portType.fullName ~= expectedTypeName then
+					error( "port '" .. portName .. "' in component '" .. typeDecl.name ..
 						"' was expected to be of type '" .. expectedTypeName ..
-						"', but it is really of type '" .. itfType.fullName .. "'", 0 )
+						"', but it is really of type '" .. portType.fullName .. "'", 0 )
 				end
-				receptacles[#receptacles + 1] = itfInfo
+				ports[#ports + 1] = port
 			end
-			objModel:addComponent( type, receptacles )
-		elseif isAttributeContainer[kind] then
-			-- resolve the list of attributes (AttributeInfos)
-			local attributes = {}
-			for attribName, expectedTypeName in pairs( fields ) do
-				local attribInfo = type:getMember( attribName )
-				if not attribInfo then
-					error( "no such attribute '" .. attribName .. "' in type '" .. typeDecl.name .. "'", 0 )
+			objModel:addComponent( type, ports )
+		elseif isRecordType[kind] then
+			-- resolve the list of fields
+			local fields = {}
+			for fieldName, expectedTypeName in pairs( entries ) do
+				local field = type:getMember( fieldName )
+				if not field then
+					error( "no such field '" .. fieldName .. "' in type '" .. typeDecl.name .. "'", 0 )
 				end
-				local attribType = attribInfo.type
-				if attribType.fullName ~= expectedTypeName then
-					error( "attribute '" .. attribName .. "' of type '" .. typeDecl.name ..
+				local fieldType = field.type
+				if fieldType.fullName ~= expectedTypeName then
+					error( "field '" .. fieldName .. "' in type '" .. typeDecl.name ..
 						"' was expected to be of type '" .. expectedTypeName ..
-						"', but it is really of type '" .. attribType.fullName .. "'", 0 )
+						"', but it is really of type '" .. fieldType.fullName .. "'", 0 )
 				end
-				if attribInfo.isReadOnly then
-					error( "attribute '" .. attribInfo .. "' of type '" .. typeDecl.name .. "' is read-only", 0 )
+				if field.isReadOnly then
+					error( "illegal read-only field '" .. fieldName .. "' defined for type '" .. typeDecl.name .. "'", 0 )
 				end
-				attributes[#attributes + 1] = attribInfo
+				fields[#fields + 1] = field
 			end
-			objModel:addAttributeContainer( type, attributes )
+			objModel:addRecordType( type, fields )
 		else
-			error( "primitive type '" .. typeDecl.name .. "' cannot be defined in the object model.", 0 )
+			error( "cannot define primitive type '" .. typeDecl.name .. "'", 0 )
 		end
 	end
 end
@@ -129,7 +127,7 @@ local coRaise = co.raise
 local function protectedLoadModelFile( objModel, filePath )
 	local ok, err = pcall( loadModelFile, objModel, filePath )
 	if not ok then
-		coRaise( "ca.ObjectModelException", err )
+		coRaise( "ca.ModelException", err )
 	end
 end
 

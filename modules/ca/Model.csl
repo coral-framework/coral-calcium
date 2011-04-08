@@ -1,0 +1,5 @@
+// Provides a calcium object model (IModel).
+component Model
+{
+	provides IModel model;
+};

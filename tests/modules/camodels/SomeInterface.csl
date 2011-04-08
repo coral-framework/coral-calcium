@@ -1,18 +1,20 @@
 interface SomeInterface
 {
-	attribute SomeEnum enum1;
+	SomeEnum enum1;
 
-	attribute SomeStruct struct1;
+	SomeStruct struct1;
 
-	readonly attribute SomeStruct readOnlyStruct;
+	readonly SomeStruct readOnlyStruct;
 
-	attribute string str1;
+	string str1;
 
-	attribute string[] strArray;
+	string[] strArray;
 
-	attribute any any1;
+	any any1;
 
-	attribute int8 byte1;
+	int8 byte1;
 
-	readonly attribute int8 readOnlyByte;
+	SomeInterface autoRef;
+
+	readonly int8 readOnlyByte;
 };

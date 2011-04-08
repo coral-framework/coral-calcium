@@ -1,0 +1,11 @@
+// Provides a calcium object universe (IUniverse) that operates under a certain IModel.
+component Universe
+{
+	provides IUniverse universe;
+
+	/*
+		The object model that regulates this universe.
+		This must be set once, before the component is ever used.
+	 */
+	receives IModel model;
+};

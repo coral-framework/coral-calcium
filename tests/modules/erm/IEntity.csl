@@ -1,4 +1,6 @@
 interface IEntity
 {
-	attribute string name;
+	string name;
+
+	readonly IRelationship[] relationships;
 };

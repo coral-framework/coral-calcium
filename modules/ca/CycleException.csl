@@ -1,0 +1,2 @@
+// Indicates a cycle was detected in the object graph.
+exception CycleException;

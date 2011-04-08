@@ -44,6 +44,6 @@ private:
 	std::string _relation;
 };
 
-} // namespace erm
+CORAL_EXPORT_COMPONENT( Relationship, Relationship )
 
-CORAL_EXPORT_COMPONENT( erm::Relationship, Relationship )
+} // namespace erm

@@ -1,8 +1,19 @@
 -- Calcium Object Model description for module "erm"
 
 Type "erm.Entity"
+{
+	entity = "erm.IEntity"
+}
+
 Type "erm.Model"
+{
+	model = "erm.IModel"
+}
+
 Type "erm.Relationship"
+{
+	relationship = "erm.IRelationship"
+}
 
 Type "erm.Multiplicity"
 {

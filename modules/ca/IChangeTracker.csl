@@ -1,7 +1,0 @@
-/*
-	TODO
- */
-interface IChangeTracker
-{
-	void dummy();
-};

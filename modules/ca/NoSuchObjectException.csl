@@ -1,0 +1,2 @@
+// Indicates an object is not part of a calcium space or universe.
+exception NoSuchObjectException;

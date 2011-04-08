@@ -1,10 +1,10 @@
 interface IRelationship
 {
-	attribute IEntity entityA;
-	attribute IEntity entityB;
+	string relation;
 
-	attribute Multiplicity multiplicityA;
-	attribute Multiplicity multiplicityB;
+	IEntity entityA;
+	IEntity entityB;
 
-	attribute string relation;
+	Multiplicity multiplicityA;
+	Multiplicity multiplicityB;
 };

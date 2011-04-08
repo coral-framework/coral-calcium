@@ -23,31 +23,52 @@ public:
 		// empty
 	}
 
-	co::ArrayRange<IEntity* const> getEntities()
+	co::Range<IEntity* const> getEntities()
 	{
 		return _entities;
 	}
 
-	void setEntities( co::ArrayRange<IEntity* const> entities )
+	void setEntities( co::Range<IEntity* const> entities )
 	{
 		entities.assignTo( _entities );
 	}
 
-	co::ArrayRange<IRelationship* const> getRelationships()
+	void addEntity( IEntity* entity )
+	{
+		_entities.push_back( entity );
+	}
+
+	co::Range<IRelationship* const> getRelationships()
 	{
 		return _relationships;
 	}
 
-	void setRelationships( co::ArrayRange<IRelationship* const> relationships )
+	void setRelationships( co::Range<IRelationship* const> relationships )
 	{
 		relationships.assignTo( _relationships );
+	}
+	
+	void addRelationship( IRelationship* rel )
+	{
+		_relationships.push_back( rel );
+	}
+
+	co::Range<IModel* const> getDependencies()
+	{
+		return _dependencies;
+	}
+
+	void setDependencies( co::Range<IModel* const> dependencies )
+	{
+		dependencies.assignTo( _dependencies );
 	}
 
 private:
 	co::RefVector<IEntity> _entities;
 	co::RefVector<IRelationship> _relationships;
+	co::RefVector<IModel> _dependencies;
 };
+	
+CORAL_EXPORT_COMPONENT( Model, Model )
 
 } // namespace erm
-
-CORAL_EXPORT_COMPONENT( erm::Model, Model )

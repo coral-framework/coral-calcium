@@ -1,0 +1,124 @@
+/*
+	An object graph schema.
+
+	A calcium model is a set of types, along with an optional set of fields	for
+	each type (a subset of the type's actual fields), where all field types must
+	be in the model.
+
+	Only components, enums and \ref co.IRecordType "record types" (interfaces,
+	native classes and structs) can be added to a model. Whenever a type is added,
+	its array counterpart is also \e implicitly added, and vice versa.
+
+	The co.IObject interface and all primitive Coral types are \e implicitly defined
+	in all models, except for the special type \c any, which is currently forbidden
+	as a field type.
+
+	Before a model is ever used, its \c name (field) must be set. Otherwise, most
+	methods will raise a co.IllegalStateException. A name is required for several
+	operations performed "behind the scenes" by the models.
+
+	Whenever an unknown type is queried, the model attempts to load definitions from
+	a file named "CaModel_<em>name</em>.lua" (where \e name is the model's name) in
+	the type's namespace. If the file contains an error, a ModelException is raised.
+	Otherwise, if the file does not exist or does not add the queried type to the
+	model, the type is simply not considered part of the model.
+ */
+interface IModel
+{
+	// Name of this model. Must be set once, before using the service.
+	string name;
+
+	//---------- Querying the Model ----------//
+
+	/*
+		Returns whether a \a type is already in the model.
+
+		This method does not attempt to lazy-load definitions for unknown types.
+		If you need such behaviour, use contains() instead.
+	 */
+	bool alreadyContains( in co.IType type );
+
+	/*
+		Returns whether a \a type is in the model.
+
+		This method attempts to lazy-load definitions for unknown types.
+		For this reason, it may raise exceptions.
+	 */
+	bool contains( in co.IType type ) raises co.IllegalStateException, ModelException;
+
+	/*
+		Gets the list of fields for a record type in the model.
+		\throw ModelException if \a type is not in the model.
+	 */
+	void getFields( in co.IRecordType type, out co.IField[] fields )
+			raises co.IllegalStateException, ModelException;
+
+	/*
+		Gets the list of ports for a component in the model.
+		\throw ModelException if \a type is not in the model.
+	 */
+	void getPorts( in co.IComponent type, out co.IPort[] ports )
+			raises co.IllegalStateException, ModelException;
+
+	//---------- Extending the Model ----------//
+
+	/*
+		Starts a transaction to change the model.
+		Changes are not visible until you call applyChanges().
+		Nested calls are \e ignored, so only the top-most call really starts a transaction.
+	 */
+	void beginChanges();
+
+	/*
+		Finishes the current transaction by validating and then applying all changes.
+
+		If the changes are inconsistent, an exception will be raised with an explanation.
+		In this case, the only possible follow up is to call discardChanges().
+
+		Nested calls are \e ignored, so only the top-most call really ends the transaction.
+
+		\throw co.IllegalStateException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalStateException if discardChanges() was called in the current transaction.
+		\throw ModelException if the changes are inconsistent.
+	 */
+	void applyChanges() raises co.IllegalStateException, ModelException;
+
+	/*
+		Finishes the current transaction by discarding all changes.
+
+		Nested calls are \e ignored, so only the top-most call to either applyChanges() or
+		discardChanges() really ends the transaction. Once discardChanges() is called in a
+		nested level, calling applyChanges() in the upper levels will raise an exception.
+	 */
+	void discardChanges();
+
+	/*
+		Adds an enum to the transaction.
+
+		\throw co.IllegalStateException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalArgumentException if \a type is invalid.
+		\throw ObjectModelException if \a type is already in the object model.
+	 */
+	void addEnum( in co.IEnum type )
+			raises co.IllegalStateException, co.IllegalArgumentException, ModelException;
+
+	/*
+		Adds a record type to the transaction, along with a list of fields.
+
+		\throw co.LifeCycleException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalArgumentException if either the \a type or one of the \a fields are invalid.
+		\throw ObjectModelException if \a type is already in the object model.
+	 */
+	void addRecordType( in co.IRecordType type, in co.IField[] fields )
+			raises co.IllegalStateException, co.IllegalArgumentException, ModelException;
+
+	/*
+		Adds a component to the transaction, along with a list of ports.
+
+		\throw co.LifeCycleException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalArgumentException if either the \a type or one of the \a ports are invalid.
+		\throw ObjectModelException if \a type is already in the object model.
+	 */
+	void addComponent( in co.IComponent type, in co.IPort[] ports )
+			raises co.IllegalStateException, co.IllegalArgumentException, ModelException;
+};

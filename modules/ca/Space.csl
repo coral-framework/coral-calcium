@@ -1,0 +1,11 @@
+// Provides a calcium object space (ISpace) within a certain universe (IUniverse).
+component Space
+{
+	provides ISpace space;
+
+	/*
+		The universe where this space is allocated.
+		This must be set once, before the component is ever used.
+	 */
+	receives IUniverse universe;
+};

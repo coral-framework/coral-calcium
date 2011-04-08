@@ -1,8 +1,0 @@
-// Provides an IObjectUniverse that operates under a certain IObjectModel.
-component ObjectUniverse
-{
-	provides IObjectUniverse universe;
-
-	// The object model that regulates this universe. Must be set before the component is used.
-	receives IObjectModel model;
-};

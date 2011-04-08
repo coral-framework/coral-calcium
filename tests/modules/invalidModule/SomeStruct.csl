@@ -1,0 +1,5 @@
+struct SomeStruct
+{
+	int32 int1;
+	string str1;
+};

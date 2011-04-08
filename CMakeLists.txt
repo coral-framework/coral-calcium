@@ -1,5 +1,5 @@
 ################################################################################
-# Calcium - Object Model Framework
+# Calcium - Domain Model Framework
 ################################################################################
 
 CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )

@@ -1,5 +1,5 @@
-// The 'ca' module defines its own co.ModulePart.
+// The 'ca' module defines its own co.IModulePart.
 component ca
 {
-	provides co.ModulePart part;
+	provides co.IModulePart part;
 };

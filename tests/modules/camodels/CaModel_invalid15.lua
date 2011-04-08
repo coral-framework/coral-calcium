@@ -1,4 +1,4 @@
--- single-module model containing potential cycles
+-- struct containing an interface
 
 Type "camodels.SomeEnum"
 
@@ -8,7 +8,6 @@ Type "camodels.SomeInterface"
 	enum1 = "camodels.SomeEnum",
 	struct1 = "camodels.SomeStruct",
 	strArray = "string[]",
-	autoRef = "camodels.SomeInterface",
 }
 
 Type "camodels.SomeStruct"
@@ -16,6 +15,7 @@ Type "camodels.SomeStruct"
 	int1 = "int32",
 	str1 = "string",
 	enum1 = "camodels.SomeEnum",
+	interfaceArray = "camodels.SomeInterface[]",
 }
 
 Type "erm.Model"
