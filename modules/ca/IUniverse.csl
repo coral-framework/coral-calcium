@@ -1,8 +1,8 @@
 /*
 	A unified context for objects under the same model.
 
-	The universe is the workhorse behind the spaces. Most of its API is restricted
-	and should not be used directly (unless you're implementing a space).
+	\warning IUniverse is restricted and should not be used
+		directly. Use an ISpace instead.
  */
 interface IUniverse
 {
@@ -35,7 +35,7 @@ interface IUniverse
 	 */
 	void getRootObjects( in uint16 spaceId, out co.IObject[] roots );
 
-	//---------- Change Management ----------//
+	//---------- Change Sections and Notifications ----------//
 
 	/*
 		Starts a change section.
@@ -51,13 +51,24 @@ interface IUniverse
 	uint32 beginChange( in uint16 spaceId, in co.IService service ) raises NoSuchObjectException;
 
 	/*
-		Finishes all change sections up to (and including) the specified \a level.
-		A \a level of zero finishes all change sections.
+		Ends all change sections up to (and including) the specified \a level.
+		A \a level of zero ends all active change sections.
 
-		\note All calls to beginChange() should be paired with a call to endChange(). A warning
-			is generated whenever 2+ sections are finished by a single call to endChange().
+		\note All calls to beginChange() should be paired with a call to endChange().
+			A warning is generated whenever 2+ sections are finished by a single call
+			to endChange().
 
-		\throw co.IllegalArgumentException if \a level is deeper than the current section's level.
+		\throw co.IllegalArgumentException if \a level is deeper than the current stack.
 	 */
 	void endChange( in uint16 spaceId, in uint32 level );
+
+	/*
+		Notifies all spaces of the changes detected since the last call to this method.
+
+		Changes are detected by calls to endChange() and accumulated in the same
+		changesets (ISpaceChanges) until this method posts and resets all changesets.
+
+		Automatically called at the end of a level-zero endChange() call.
+	 */
+	void notifyChanges();
 };

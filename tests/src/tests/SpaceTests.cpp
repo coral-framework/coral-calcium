@@ -26,21 +26,21 @@ protected:
 		// create an object model
 		_modelObj = co::newInstance( "ca.Model" );
 		_model = _modelObj->getService<ca::IModel>();
-		assert( _model );
+		assert( _model.isValid() );
 
 		_model->setName( "erm" );
 
 		// create an object universe and bind the model
 		_universeObj = co::newInstance( "ca.Universe" );
 		_universe = _universeObj->getService<ca::IUniverse>();
-		assert( _universe );
+		assert( _universe.isValid() );
 
 		_universeObj->setService( "model", _model.get() );
 
 		// create an object space and bind it to the universe
 		_spaceObj = co::newInstance( "ca.Space" );
 		_space = _spaceObj->getService<ca::ISpace>();
-		assert( _space );
+		assert( _space.isValid() );
 
 		_spaceObj->setService( "universe", _universe.get() );
 	}
