@@ -22,45 +22,41 @@
 namespace ca {
 
 /*
-	Assuming IStruct and ElementType are POD types, allocates memory for IStruct
-	while making room for a number of extra instances of ElementType at the end.
-	All bits are initialized to zero. Memory must be deallocated using free().
+	Kinds of types that can be added to a calcium model.
  */
-template<typename IStruct, typename ElementType>
-inline IStruct* allocateExpanded( co::uint32 numElems )
+enum TypeRecordKind
 {
-	size_t size = sizeof(IStruct) + ( !numElems ? 0 : ( numElems - 1 ) * sizeof(ElementType) );
-	return reinterpret_cast<IStruct*>( calloc( 1, size ) );
-}
+	TRK_ENUM,		// enum
+	TRK_RECORD,		// struct or native class
+	TRK_INTERFACE,	// interface
+	TRK_COMPONENT	// component
+};
 
 /*
-	Base record for a type in the model. Only directly used for enums.
+	Base record for a type in the object model. Only directly used for enums.
  */
 struct TypeRecord
 {
 	co::IType* type;
-
-	enum TypeRecordKind { TRK_ENUM, TRK_RECORD, TRK_COMPONENT };
 	TypeRecordKind kind;
 
 	inline TypeRecord( co::IType* type ) : type( type )
 	{;}
 
 	inline bool isEnum() const { return kind == TRK_ENUM; }
-
-	inline bool isRecordType() const { return kind == TRK_RECORD; }
-
+	inline bool isRecord() const { return kind == TRK_RECORD; }
+	inline bool isInterface() const { return kind == TRK_INTERFACE; }
 	inline bool isComponent() const { return kind == TRK_COMPONENT; }
 
-	void destroy();
+	inline void destroy() { free( this ); }
 
-	static TypeRecord* create( co::IEnum* type )
+	inline void init( co::IType* type, TypeRecordKind kind )
 	{
-		TypeRecord* rec = reinterpret_cast<TypeRecord*>( malloc( sizeof( TypeRecord ) ) );
-		rec->type = type;
-		rec->kind = TRK_ENUM;
-		return rec;
+		this->type = type;
+		this->kind = kind;
 	}
+
+	static TypeRecord* create( co::IEnum* type );
 };
 
 // STL comparator class for keeping TypeRecords in sorted containers
@@ -114,123 +110,44 @@ inline FieldKind fieldKindOf( co::IType* type )
 }
 
 /*
-	Represents a field within a RecordTypeRecord.
- */
-struct FieldRecord
-{
-	co::IField* field;
-	co::IReflector* reflector;
-};
-
-/*
-	Record for a RecordType (interface, struct or native class) in the model.
+	Record for a struct or native class in the object model.
 
 	Field records (in the 'fields' array) are sorted/grouped by FieldKind:
 		- The first 'numRefs' fields in the array are FK_Ref's.
 		- The following 'numRefVecs' fields are FK_RefVec's.
 		- The final 'numValues' fields are FK_Value's.
  */
-struct RecordTypeRecord : TypeRecord
+struct RecordRecord : TypeRecord
 {
-	co::uint8 numRefs;		// references are in fields[0..numRefs-1]
-	co::uint8 numRefVecs;	// ref-vecs are in fields[numRefs..firstValue-1]
-	co::uint8 numValues;	// values are in fields[firstValue..numFields-1]
+	co::uint16 numFields;	// number of elements in 'fields'
+	co::IField* fields[1];	// array of fields
 
-	co::uint16 firstValue;		// numRefs + numRefVecs
-	co::uint16 numFields;	// numRefs + numRefVecs + numValues
+	inline void addField( co::IField* field ) { fields[numFields++] = field; }
 
-	FieldRecord fields[1];
+	static RecordRecord* create( co::IRecordType* type, co::uint16 numFields );
+};
 
-	void addField( FieldKind fieldKind, co::IField* field, co::IReflector* reflector );
+// Represents a field within an InterfaceRecord.
+struct FieldRecord
+{
+	co::IField* field; // field descriptor
+	co::uint32 offset; // position of the field's memory area within its facet
 
-	static RecordTypeRecord* create( co::IRecordType* recordType, co::uint16 numFields )
+	inline co::IReflector* getTypeReflector() const
 	{
-		RecordTypeRecord* rec = allocateExpanded<RecordTypeRecord, FieldRecord>( numFields );
-		rec->type = recordType;
-		rec->kind = TRK_RECORD;
-		rec->firstValue = numFields;
-		rec->numFields = numFields;
-		return rec;
+		return field->getType()->getReflector();
+	}
+
+	inline co::IReflector* getOwnerReflector() const
+	{
+		return field->getOwner()->getReflector();
+	}
+
+	inline co::uint32 getSize() const
+	{
+		return getTypeReflector()->getSize();
 	}
 };
-
-/*
-	Represents a port within a ComponentRecord.
- */
-struct PortRecord
-{
-	co::IPort* port;			// identifies the port within the component
-	RecordTypeRecord* typeRec;	// only relevant for facets
-
-	/*
-		For facets:
-			- firstRef = position of the facet's first Ref field in the object's Ref block.
-			- firstRefVec = position of the facet's first RefVec field in the object's RefVec block.
-			- firstValue = position of the facet's first Value field in the object's Value block.
-		For receptacles: only firstRef is used (other values are always zero).
-	 */
-	co::uint16 firstRef;
-	co::uint16 firstRefVec;
-	co::uint16 firstValue;
-};
-
-/*
-	ComponentRecords are models for calcium objects.
-
-	The set of receptacles and facets defined for a component determines
-	the appropriate memory layout for the objects.
- */
-struct ComponentRecord : TypeRecord
-{
-	co::uint8 numReceptacles;	// receptacles are in ports[0..numReceptacles-1]
-	co::uint8 numFacets;		// facets are in ports[numReceptacles..numPorts-1]
-	co::uint8 numPorts;			// numReceptacles + numFacets
-
-	/*
-		The memory layout of an object is as follows:
-			[ObjectRecord data] // Meta-object data; see the ObjectRecord struct.
-			[References]		// Single references, for all receptacles and facets.
-			[RefVectors]		// Reference vectors for all facets.
-			[Values]			// Values for all facets.
-	 */
-	co::uint16 numRefs;			// total number of Refs in the component
-	co::uint16 numRefVecs;		// total number of RefVecs in the component
-	co::uint16 numValues;		// total number of Values in the component
-
-	co::uint32 objectSize;		// total number of bytes needed for an object instance
-	co::uint32 offset1stValue;	// offset from the start of the ObjectRecord to the first value
-
-	// Receptacles are grouped at the start, facets at the end
-	PortRecord ports[1];
-
-	// Adds a port, keeping the array correctly sorted.
-	void addPort( co::IPort* port );
-
-	// Must be called only after all ports have been initialized with their typeRec.
-	void computeLayout();
-
-	static ComponentRecord* create( co::IComponent* component, co::uint8 numPorts )
-	{
-		ComponentRecord* rec = allocateExpanded<ComponentRecord, PortRecord>( numPorts );
-		rec->type = component;
-		rec->kind = TRK_COMPONENT;
-		rec->numPorts = numPorts;
-		return rec;
-	}
-};
-
-/*
-	Helper function to compute memory alignment.
- */
-template<size_t ALIGNMENT>
-inline size_t align( size_t offset )
-{
-	return ( offset + ALIGNMENT - 1 ) & ~( ALIGNMENT - 1 );
-}
-
-// Helper template to determine the alignment of object fields.
-template<typename T>
-struct alignmentOf {};
 
 // Forward declaration:
 struct ObjectRecord;
@@ -242,19 +159,23 @@ struct RefField
 	ObjectRecord* object;
 };
 
-// RefFields need pointer alignment:
-template<> struct alignmentOf<RefField> { static const size_t value = sizeof(void*); };
-
 // Object field of kind FK_RefVec:
 struct RefVecField
 {
 	co::IService** services; // points to the start of the memory block
 	ObjectRecord** objects;	 // always allocated contiguously after 'services'
 
-	inline void allocate( size_t size )
+	inline void create( size_t size )
 	{
 		services = reinterpret_cast<co::IService**>( malloc( sizeof(void*) * size * 2 ) );
 		objects = reinterpret_cast<ObjectRecord**>( services + size );
+	}
+
+	inline void destroy()
+	{
+		free( services );
+		services = NULL;
+		objects = NULL;
 	}
 
 	inline size_t getSize() const
@@ -263,19 +184,91 @@ struct RefVecField
 	}
 };
 
-// RefVecFields need pointer alignment:
-template<> struct alignmentOf<RefVecField> { static const size_t value = sizeof(void*); };
+/*
+	Record for an interface in the object model.
 
-// Object field of kind FK_Value:
-typedef co::Any ValueField;
- 
-// ValueFields need double alignment:
-template<> struct alignmentOf<ValueField> { static const size_t value = sizeof(double); };
+	The 'fields' array is sorted by FieldKind:
+		- The first 'numRefs' fields in the array are FK_Ref's.
+		- The following 'numRefVecs' fields are FK_RefVec's.
+		- The final 'numValues' fields are FK_Value's.
+ */
+struct InterfaceRecord : TypeRecord
+{
+	co::uint32 size;		// number of bytes required to store all fields
+
+	co::uint16 numRefs;		// references are in fields[0..numRefs-1]
+	co::uint16 numRefVecs;	// ref-vecs are in fields[numRefs..firstValue-1]
+	co::uint16 numValues;	// values are in fields[firstValue..numFields-1]
+
+	co::uint16 firstValue;	// numRefs + numRefVecs
+	co::uint16 numFields;	// numRefs + numRefVecs + numValues
+
+	FieldRecord fields[1];
+
+	void addField( FieldKind fieldKind, co::IField* field );
+
+	/*
+		Must be called only after all fields have been added.
+		This re-orders the value fields by descending size, and allocates
+		all fields (guaranteeing 8-byte alignment for values >= 8 bytes).
+	 */
+	void computeLayout();
+
+	static InterfaceRecord* create( co::IInterface* type, co::uint16 numFields );
+};
+
+/*
+	Represents a port within a ComponentRecord.
+ */
+struct PortRecord
+{
+	co::IPort* port;			// identifies the port within the component
+	co::uint32 offset;			// offset of the port's memory area within an object
+	InterfaceRecord* typeRec;	// only relevant for facets
+};
+
+/*
+	ComponentRecords are blueprints for calcium objects.
+
+	The set of receptacles and facets defined for a component
+	determines its memory layout.
+ */
+struct ComponentRecord : TypeRecord
+{
+	co::uint8 numFacets;		// facets are in ports[0..numFacets-1]
+	co::uint8 numReceptacles;	// receptacles are in ports[numFacets..numPorts-1]
+	co::uint8 numPorts;			// numReceptacles + numFacets
+
+	co::uint32 objectSize;		// total number of bytes needed for an object instance
+
+	// Facets are grouped at the start, receptacles at the end
+	PortRecord ports[1];
+
+	void addPort( co::IPort* port );
+
+	// Must be called only after all ports have been initialized with their typeRec.
+	void computeLayout();
+
+	static ComponentRecord* create( co::IComponent* type, co::uint8 numPorts );
+};
 
 typedef std::map<co::uint16, co::uint32> SpaceRefCountMap;
 
 /*
-	An object instance record.
+	Record for a calcium object instance.
+ 
+	The memory of a calcium object is organized as follows:
+		[ObjectRecord]	// Meta-object data (see the ObjectRecord struct).
+		[Facet Refs]	// Array of IServices for the facets.
+		[Receptacles]	// Array of RefFields for the receptacles.
+		[Facet Data #1]	// All stored fields from facet #1.
+		[Facet Data #2]	// All stored fields from facet #2.
+		...				// etc.
+ 
+	Each facet data block is organized as follows:
+		[References]	// Single reference fields (RefField).
+		[RefVectors]	// Reference vector fields (RefVecField).
+		[Values]		// Value fields (aligned/packed memory blocks).
  */
 struct ObjectRecord
 {
@@ -294,32 +287,112 @@ struct ObjectRecord
 	 */
 	SpaceRefCountMap spaceRefs;
 
+	// Facet Refs: pointers to the services provided by this object
+	co::IService* services[1];
+
 	template<typename T>
-	inline T* atOffset( co::uint32 offset )
+	inline T* get( co::uint32 atOffset )
 	{
-		return reinterpret_cast<T*>( reinterpret_cast<co::uint8*>( this ) + offset );
+		return reinterpret_cast<T*>( reinterpret_cast<co::uint8*>( this ) + atOffset );
 	}
 
-	inline RefField* getRef( co::uint16 i )
+	inline RefField* getReceptacles()
 	{
-		CORAL_STATIC_CHECK( sizeof(ObjectRecord) % sizeof(void*) == 0, alignment_assumption_failed );
-		return atOffset<RefField>( sizeof(ObjectRecord) ) + i;
+		return get<RefField>( model->ports[model->numFacets].offset );
 	}
 
-	inline RefVecField* getRefVec( co::uint16 i )
-	{
-		CORAL_STATIC_CHECK( sizeof(RefField) == sizeof(RefVecField), optimization_assumption_failed );
-		return atOffset<RefVecField>( sizeof(ObjectRecord) ) + model->numRefs + i;
-	}
-
-	inline ValueField* getValue( co::uint16 i )
-	{
-		return atOffset<ValueField>( model->offset1stValue ) + i;
-	}
+	void destroy();
 
 	static ObjectRecord* create( ComponentRecord* model, co::IObject* instance );
-	void destroy();
 };
+
+// Traverses all receptacles in an object using a callback.
+template<typename Callback>
+void traverseReceptacles( ObjectRecord* object, Callback& cb )
+{
+	ComponentRecord* model = object->model;
+	PortRecord* ports = &model->ports[model->numFacets];
+	RefField* refs = object->getReceptacles();
+	for( co::uint8 i = 0; i < model->numReceptacles; ++i )
+		cb( object, ports[i], refs[i] );
+}
+
+// Traverses all Ref fields in an object's facet using a callback.
+template<typename Callback>
+void traverseFacetRefs( ObjectRecord* object, co::uint8 facetId, PortRecord& facet, Callback& cb )
+{
+	InterfaceRecord* itf = facet.typeRec;
+	FieldRecord* fields = &itf->fields[0];
+	RefField* refs = object->get<RefField>( facet.offset + 0 );
+	for( co::uint16 i = 0; i < itf->numRefs; ++i )
+		cb( object, facetId, fields[i], refs[i] );
+}
+
+//! Traverses all RefVec fields in an object's facet using a callback.
+template<typename Callback>
+void traverseFacetRefVecs( ObjectRecord* object, co::uint8 facetId, PortRecord& facet, Callback& cb )
+{
+	InterfaceRecord* itf = facet.typeRec;
+	FieldRecord* fields = &itf->fields[itf->numRefs];
+	RefVecField* refVecs = object->get<RefVecField>( facet.offset + sizeof(RefField) * itf->numRefs );
+	for( co::uint16 i = 0; i < itf->numRefVecs; ++i )
+		cb( object, facetId, fields[i], refVecs[i] );
+}
+
+//! Traverses all Value fields in an object's facet using a callback.
+template<typename Callback>
+void traverseFacetValues( ObjectRecord* object, co::uint8 facetId, PortRecord& facet, Callback& cb )
+{
+	InterfaceRecord* itf = facet.typeRec;
+	FieldRecord* fields = &itf->fields[itf->firstValue];
+	for( co::uint16 i = 0; i < itf->numValues; ++i )
+		cb( object, facetId, fields[i], object->get<void>( facet.offset + fields[i].offset ) );
+}
+
+// Traverses all fields in an object's facet using a callback.
+template<typename Callback>
+void traverseFacet( ObjectRecord* object, co::uint8 facetId, Callback& cb )
+{
+	PortRecord& facet = object->model->ports[facetId];
+
+	if( facet.typeRec->numRefs > 0 )
+		traverseFacetRefs( object, facetId, facet, cb );
+
+	if( facet.typeRec->numRefVecs > 0 )
+		traverseFacetRefVecs( object, facetId, facet, cb );
+
+	if( facet.typeRec->numValues > 0 )
+		traverseFacetValues( object, facetId, facet, cb );
+}
+
+// Traverses all object receptacles and fields (of all kinds).
+template<typename Callback>
+void traverseObject( ObjectRecord* object, Callback& cb )
+{
+	traverseReceptacles( object, cb );
+
+	co::uint8 numFacets = object->model->numFacets;
+	for( co::uint8 i = 0; i < numFacets; ++i )
+		traverseFacet( object, i, cb );
+}
+
+// Traverses all object receptacles and fields of Ref/RefVec kind.
+template<typename Callback>
+void traverseObjectRefs( ObjectRecord* object, Callback& cb )
+{
+	traverseReceptacles( object, cb );
+
+	ComponentRecord* model = object->model;
+	for( co::uint8 i = 0; i < model->numFacets; ++i )
+	{
+		PortRecord& facet = model->ports[i];
+		if( facet.typeRec->numRefs > 0 )
+			traverseFacetRefs( object, i, facet, cb );
+
+		if( facet.typeRec->numRefVecs > 0 )
+			traverseFacetRefVecs( object, i, facet, cb );
+	}
+}
 
 /*!
 	The ca.Model component.
@@ -331,8 +404,26 @@ public:
 	virtual ~Model();
 
 	// Restricted Methods:
-	RecordTypeRecord* getRecordType( co::IRecordType* recordType );
-	ComponentRecord* getComponent( co::IComponent* component );
+	inline RecordRecord* getRecord( co::IRecordType* type )
+	{
+		TypeRecord* rec = getTypeOrThrow( type );
+		assert( rec->isRecord() );
+		return static_cast<RecordRecord*>( rec );
+	}
+
+	inline InterfaceRecord* getInterface( co::IInterface* type )
+	{
+		TypeRecord* rec = getTypeOrThrow( type );
+		assert( rec->isInterface() );
+		return static_cast<InterfaceRecord*>( rec );
+	}
+
+	inline ComponentRecord* getComponent( co::IComponent* type )
+	{
+		TypeRecord* rec = getTypeOrThrow( type );
+		assert( rec->isComponent() );
+		return static_cast<ComponentRecord*>( rec );
+	}
 
 	// IModel Methods:
 	const std::string& getName();

@@ -7,6 +7,7 @@
 #include <ca/IUniverse.h>
 #include <co/RefPtr.h>
 #include <co/IllegalStateException.h>
+#include <co/IllegalArgumentException.h>
 
 namespace ca {
 
@@ -42,16 +43,16 @@ public:
 		_universe->getRootObjects( _spaceId, result );
 	}
 
-	void beginChange( co::IService* facet )
+	co::uint32 beginChange( co::IService* facet )
 	{
 		checkRegistered();
-		_universe->beginChange( facet );
+		return _universe->beginChange( _spaceId, facet );
 	}
 
-	void endChange( co::IService* facet )
+	void endChange( co::uint32 level )
 	{
 		checkRegistered();
-		_universe->endChange( facet );
+		_universe->endChange( _spaceId, level );
 	}
 
 protected:
@@ -70,6 +71,9 @@ protected:
 	{
 		if( _universe.isValid() )
 			throw co::IllegalStateException( "once set, the universe of a ca.Space cannot be changed" );
+
+		if( !universe )
+			throw co::IllegalArgumentException( "illegal null universe" );
 
 		_spaceId = universe->registerSpace( this );
 		_universe = universe;

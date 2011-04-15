@@ -1,4 +1,4 @@
-// Provides a calcium object model (IModel).
+// Provides a calcium object model.
 component Model
 {
 	provides IModel model;

@@ -1,0 +1,14 @@
+/*
+	Immutable list of changes made to an object since a previous point in time.
+ */
+interface IObjectChanges
+{
+	// The changed object.
+	readonly co.IObject object;
+
+	// List of changes made to services provided by the object.
+	readonly IServiceChanges[] changedServices;
+
+	// List of changed object receptacles.
+	readonly IReceptacleChange[] changedReceptacles;
+};

@@ -54,9 +54,9 @@ bool containsMemberOfType( co::RefVector<T> vec, const std::string& memberName, 
 
 TEST( ModelTests, simpleValidModels )
 {
-	co::IEnum* someEnum = dynamic_cast<co::IEnum*>( co::getType( "camodels.SomeEnum" ) );
-	co::IInterface* someInterface = dynamic_cast<co::IInterface*>( co::getType( "camodels.SomeInterface" ) );
-	co::IStruct* someStruct = dynamic_cast<co::IStruct*>( co::getType( "camodels.SomeStruct" ) );
+	co::IEnum* someEnum = co::cast<co::IEnum>( co::getType( "camodels.SomeEnum" ) );
+	co::IInterface* someInterface = co::cast<co::IInterface>( co::getType( "camodels.SomeInterface" ) );
+	co::IStruct* someStruct = co::cast<co::IStruct>( co::getType( "camodels.SomeStruct" ) );
 
 	co::RefPtr<ca::IModel> model = loadModel( "valid1" );
 	ASSERT_TRUE( model->contains( someEnum ) );
@@ -136,13 +136,10 @@ TEST( ModelTests, simpleInvalidModels )
 
 	ASSERT_MODEL_ERROR( "invalid12", someEnum, "cannot define primitive type 'int32'" );
 
-	ASSERT_MODEL_ERROR( "invalid13", someEnum, "could not obtain a reflector for 'invalidModule.SomeStruct': "
-							"none of the module loaders recognized 'invalidModule' as a module" );
-
-	ASSERT_MODEL_ERROR( "invalid14", someEnum, "illegal reference field 'interface1' in complex "
+	ASSERT_MODEL_ERROR( "invalid13", someEnum, "illegal reference field 'interface1' in complex "
 							"value type 'camodels.SomeStruct'" );
 
-	ASSERT_MODEL_ERROR( "invalid15", someEnum, "illegal reference field 'interfaceArray' "
+	ASSERT_MODEL_ERROR( "invalid14", someEnum, "illegal reference field 'interfaceArray' "
 							"in complex value type 'camodels.SomeStruct'" );
 }
 

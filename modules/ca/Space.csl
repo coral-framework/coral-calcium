@@ -1,4 +1,4 @@
-// Provides a calcium object space (ISpace) within a certain universe (IUniverse).
+// Provides an object space within a calcium universe.
 component Space
 {
 	provides ISpace space;

@@ -12,23 +12,44 @@
 
 namespace ca {
 
-void TypeRecord::destroy()
+/*
+	Assuming Struct and ElementType are POD types, allocates memory for Struct
+	while making room for a number of extra instances of ElementType at the end.
+	All bits are initialized to zero. Memory must be deallocated using free().
+ */
+template<typename Struct, typename ElementType>
+inline Struct* allocateExpanded( co::uint32 numElems )
 {
-	if( kind == TRK_RECORD )
-	{
-		RecordTypeRecord* rec = static_cast<RecordTypeRecord*>( this );
-		for( co::uint16 i = 0; i < rec->numFields; ++i )
-		{
-			co::IReflector* reflector = rec->fields[i].reflector;
-			if( reflector )
-				reflector->serviceRelease();
-		}
-	}
-
-	free( this );
+	size_t size = sizeof(Struct) + ( !numElems ? 0 : ( numElems - 1 ) * sizeof(ElementType) );
+	return reinterpret_cast<Struct*>( calloc( 1, size ) );
 }
 
-void RecordTypeRecord::addField( FieldKind fieldKind, co::IField* field, co::IReflector* reflector )
+TypeRecord* TypeRecord::create( co::IEnum* type )
+{
+	TypeRecord* rec = reinterpret_cast<TypeRecord*>( malloc( sizeof( TypeRecord ) ) );
+	rec->init( type, TRK_ENUM );
+	return rec;
+}
+
+RecordRecord* RecordRecord::create( co::IRecordType* type, co::uint16 numFields )
+{
+	assert( type->getKind() != co::TK_INTERFACE );
+	RecordRecord* rec = allocateExpanded<RecordRecord, co::IField*>( numFields );
+	rec->init( type, TRK_RECORD );
+	rec->numFields = 0;
+	return rec;
+}
+
+InterfaceRecord* InterfaceRecord::create( co::IInterface* type, co::uint16 numFields )
+{
+	InterfaceRecord* rec = allocateExpanded<InterfaceRecord, FieldRecord>( numFields );
+	rec->init( type, TRK_INTERFACE );
+	rec->firstValue = numFields;
+	rec->numFields = numFields;
+	return rec;
+}
+
+void InterfaceRecord::addField( FieldKind fieldKind, co::IField* field )
 {
 	co::uint16 idx;
 	if( fieldKind == FK_Value )
@@ -50,74 +71,179 @@ void RecordTypeRecord::addField( FieldKind fieldKind, co::IField* field, co::IRe
 		idx = numRefs++;
 	}
 
-	assert( numRefs + numRefVecs <= firstValue );
-	assert( firstValue + numValues == numFields );
-
 	fields[idx].field = field;
-	fields[idx].reflector = reflector;
+}
 
-	reflector->serviceRetain();
+// Utility function to help compute aligned offsets.
+inline co::uint32 align( co::uint32 offset, co::uint32 alignment )
+{
+	return ( offset + alignment - 1 ) & ~( alignment - 1 );
+}
+
+inline bool fieldSizeDesc( const FieldRecord& a, const FieldRecord& b )
+{
+	assert( a.field && b.field );
+	return a.getSize() > b.getSize();
+}
+
+void InterfaceRecord::computeLayout()
+{
+	if( size ) return; // already computed
+
+	assert( numRefs + numRefVecs == firstValue );
+	assert( numRefs + numRefVecs + numValues == numFields );
+
+	// sort values by descending size
+	std::sort( &fields[firstValue], &fields[numFields], fieldSizeDesc );
+
+	// allocate all fields:
+	co::uint16 i = 0;
+	co::uint32 offset = 0;
+
+	// first all Ref and RefVec fields
+	CORAL_STATIC_CHECK( sizeof(RefField) == sizeof(RefVecField), unexpected_size_mismatch );
+	for( ; i < firstValue; ++i )
+	{
+		fields[i].offset = offset;
+		offset += sizeof(RefField);
+	}
+
+	// then all Value fields
+	for( ; i < numFields; ++i )
+	{
+		// guarantee proper alignment
+		co::uint32 size = fields[i].getSize();
+		assert( size > 0 && ( size >= sizeof(double) || size == 4 || size < 3 ) );
+		offset = align( offset, ( size >= sizeof(double) ? sizeof(double) : size ) );
+
+		fields[i].offset = offset;
+		offset += size;
+	}
+
+	size = offset;
+}
+
+ComponentRecord* ComponentRecord::create( co::IComponent* type, co::uint8 numPorts )
+{
+	ComponentRecord* rec = allocateExpanded<ComponentRecord, PortRecord>( numPorts );
+	rec->init( type, TRK_COMPONENT );
+	rec->numPorts = numPorts;
+	return rec;
 }
 
 void ComponentRecord::addPort( co::IPort* port )
 {
-	// group receptacles at the start and facets at the end
-	int idx = port->getIsFacet() ? ( numPorts - ++numFacets ) : numReceptacles++;
+	// group facets at the start and receptacles at the end
+	int idx = port->getIsFacet() ? numFacets++ : ( numPorts - ++numReceptacles );
 	ports[idx].port = port;
 }
 
 void ComponentRecord::computeLayout()
 {
+	assert( objectSize == 0 );
 	assert( numReceptacles + numFacets == numPorts );
-	assert( numRefs == 0 && numRefVecs == 0 && numValues == 0 );
 
-	// process receptacles
-	numRefs = numReceptacles;
-	for( co::uint8 i = 0; i < numReceptacles; ++i )
-		ports[i].firstRef = i;
+	// we start off at &services[0] within the ObjectRecord
+	co::uint32 offset = ( sizeof(ObjectRecord) - sizeof(void*) );
 
-	// process facets
-	for( co::uint8 i = numReceptacles; i < numPorts; ++i )
+	// allocate the facet refs
+	offset += sizeof(void*) * numFacets;
+
+	// allocate all receptacles
+	for( co::uint8 i = numFacets; i < numPorts; ++i )
 	{
-		PortRecord& facet = ports[i];
-		assert( facet.typeRec );
-
-		facet.firstRef = numRefs;
-		numRefs += facet.typeRec->numRefs;
-
-		facet.firstRefVec = numRefVecs;
-		numRefVecs += facet.typeRec->numRefVecs;
-
-		facet.firstValue = numValues;
-		numValues += facet.typeRec->numValues;
+		ports[i].offset = offset;
+		offset += sizeof(RefField);
 	}
 
-	// compute the memory layout/size
-	co::uint32 size = sizeof(ObjectRecord);
-	assert( size % alignmentOf<RefField>::value == 0 );
+	// allocate all facet data blocks
+	for( co::uint8 i = 0; i < numFacets; ++i )
+	{
+		/*
+			Guarantee pointer alignment at the beginning of each data block,
+			since we always start off with an array of RefFields.
+		 */
+		offset = align( offset, sizeof(void*) );
+		ports[i].offset = offset;
+		ports[i].typeRec->computeLayout();
+		offset += ports[i].typeRec->size;
+	}
 
-	CORAL_STATIC_CHECK( sizeof(RefField) == sizeof(RefVecField), optimization_assumption_failed );
-	size += sizeof(RefField) * ( numRefs + numRefVecs );
-
-	// guarantee proper alignment for ValueFields
-	offset1stValue = align<alignmentOf<ValueField>::value>( size );
-	assert( offset1stValue >= size );
-
-	objectSize = offset1stValue + sizeof(ValueField) * numValues;
+	objectSize = offset;
 }
+
+struct ObjectCreationTraverser
+{
+	void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	{
+		ref.service = NULL;
+		ref.object = NULL;
+	}
+
+	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	{
+		ref.service = NULL;
+		ref.object = NULL;
+	}
+
+	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	{
+		refVec.services = NULL;
+		refVec.objects = NULL;
+	}
+
+	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, void* valuePtr )
+	{
+		field.getTypeReflector()->createValue( valuePtr );
+	}
+};
 
 ObjectRecord* ObjectRecord::create( ComponentRecord* model, co::IObject* instance )
 {
-	ObjectRecord* rec = reinterpret_cast<ObjectRecord*>( calloc( 1, model->objectSize ) );
+	ObjectRecord* rec = reinterpret_cast<ObjectRecord*>( malloc( model->objectSize ) );
 	rec->model = model;
 	rec->instance = instance;
 
+	rec->inDegree = 0;
+	rec->outDegree = 0;
+
 	new( &rec->spaceRefs ) SpaceRefCountMap();
+
+	// initialize the facet refs
+	for( co::uint8 i = 0; i < model->numFacets; ++i )
+		rec->services[i] = instance->getService( model->ports[i].port );
+
+	// initialize all fields
+	ObjectCreationTraverser traverser;
+	traverseObject( rec, traverser );
 
 	instance->serviceRetain();
 
 	return rec;
 }
+
+struct ObjectDestructionTraverser
+{
+	void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	{
+		// NOP
+	}
+
+	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	{
+		// NOP
+	}
+
+	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	{
+		refVec.destroy();
+	}
+
+	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, void* valuePtr )
+	{
+		field.getTypeReflector()->destroyValue( valuePtr );
+	}
+};
 
 void ObjectRecord::destroy()
 {
@@ -130,15 +256,9 @@ void ObjectRecord::destroy()
 	// destroy the std::map
 	spaceRefs.~map();
 
-	// destroy all RefVecFields
-	RefVecField* refVecs = getRefVec( 0 );
-	for( co::uint16 i = 0; i < model->numRefVecs; ++i )
-		free( refVecs[i].services );
-
-	// destroy all ValueFields
-	ValueField* values = getValue( 0 );
-	for( co::uint16 i = 0; i < model->numValues; ++i )
-		values[i].~Any();
+	// destroy all fields
+	ObjectDestructionTraverser traverser;
+	traverseObject( this, traverser );
 
 	instance->serviceRelease();
 
@@ -164,22 +284,6 @@ Model::~Model()
 	size_t count = _types.size();
 	for( size_t i = 0; i < count; ++i )
 		_types[i]->destroy();
-}
-
-RecordTypeRecord* Model::getRecordType( co::IRecordType* recordType )
-{
-	assert( recordType );
-	TypeRecord* rec = getTypeOrThrow( recordType );
-	assert( rec->isRecordType() );
-	return static_cast<RecordTypeRecord*>( rec );
-}
-
-ComponentRecord* Model::getComponent( co::IComponent* component )
-{
-	assert( component );
-	TypeRecord* rec = getTypeOrThrow( component );
-	assert( rec->isComponent() );
-	return static_cast<ComponentRecord*>( rec );
 }
 
 const std::string& Model::getName()
@@ -208,11 +312,22 @@ bool Model::contains( co::IType* type )
 
 void Model::getFields( co::IRecordType* recordType, co::RefVector<co::IField>& fields )
 {
-	RecordTypeRecord* rec = getRecordType( recordType );
+	TypeRecord* typeRec = getTypeOrThrow( recordType );
 	fields.clear();
-	fields.reserve( rec->numFields );
-	for( co::int32 i = 0; i < rec->numFields; ++i )
-		fields.push_back( rec->fields[i].field );
+	if( typeRec->kind == TRK_INTERFACE )
+	{
+		InterfaceRecord* rec = static_cast<InterfaceRecord*>( typeRec );
+		fields.reserve( rec->numFields );
+		for( co::int32 i = 0; i < rec->numFields; ++i )
+			fields.push_back( rec->fields[i].field );
+	}
+	else
+	{
+		RecordRecord* rec = static_cast<RecordRecord*>( typeRec );
+		fields.reserve( rec->numFields );
+		for( co::int32 i = 0; i < rec->numFields; ++i )
+			fields.push_back( rec->fields[i] );
+	}
 }
 
 void Model::getPorts( co::IComponent* component, co::RefVector<co::IPort>& ports )
@@ -277,13 +392,28 @@ void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField* co
 	checkCanAddType( recordType );
 
 	co::uint16 numFields = static_cast<co::uint16>( fields.getSize() );
-	RecordTypeRecord* rec = RecordTypeRecord::create( recordType, numFields );
+
+	co::IInterface* itf;
+	union
+	{
+		TypeRecord* rec;
+		RecordRecord* recRec;
+		InterfaceRecord* itfRec;
+	};
+
+	if( recordType->getKind() == co::TK_INTERFACE )
+	{
+		itf = static_cast<co::IInterface*>( recordType );
+		itfRec = InterfaceRecord::create( itf, numFields );
+	}
+	else
+	{
+		itf = NULL;
+		recRec = RecordRecord::create( recordType, numFields );
+	}
 
 	try
 	{
-		co::IInterface* itf = ( recordType->getKind() == co::TK_INTERFACE ?
-						   static_cast<co::IInterface*>( recordType ) : NULL );
-
 		for( co::int32 i = 0; i < numFields; ++i )
 		{
 			co::IField* field = fields[i];
@@ -311,7 +441,10 @@ void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField* co
 			}
 
 			if( fieldIsValid )
-				rec->addField( fieldKind, field, ct->getReflector() );
+				if( itf )
+					itfRec->addField( fieldKind, field );
+				else
+					recRec->addField( field );
 			else
 				CORAL_THROW( co::IllegalArgumentException, "field '" << field->getName() <<
 								"' does not belong to type '" << recordType->getFullName() <<
@@ -450,35 +583,48 @@ void Model::validateTransaction()
 		for( TypeSet::iterator it = _transaction.begin(); it != _transaction.end(); ++it )
 		{
 			typeRec = *it;
-			if( typeRec->isEnum() )
+			switch( typeRec->kind )
 			{
-				// no need to validate enums
-			}
-			else if( typeRec->isComponent() )
-			{
-				// validate a component
-				ComponentRecord* rec = static_cast<ComponentRecord*>( typeRec );
-				for( co::uint8 k = 0; k < rec->numPorts; ++k )
+			case TRK_ENUM: break; // no need to validate enums
+			case TRK_RECORD:
 				{
-					co::IPort* port = rec->ports[k].port;
-					member = port;
-					TypeRecord* depRec = validateTypeDependency( port->getType() );
-					assert( depRec->isRecordType() );
-					rec->ports[k].typeRec = static_cast<RecordTypeRecord*>( depRec );
+					RecordRecord* rec = static_cast<RecordRecord*>( typeRec );
+					for( co::uint16 k = 0; k < rec->numFields; ++k )
+					{
+						co::IField* field = rec->fields[k];
+						member = field;
+						validateTypeDependency( field->getType() );
+					}
 				}
-				rec->computeLayout();
-			}
-			else
-			{
-				// validate what must be a record type
-				assert( typeRec->isRecordType() );
-				RecordTypeRecord* rec = static_cast<RecordTypeRecord*>( typeRec );
-				for( co::uint16 k = 0; k < rec->numFields; ++k )
+				break;
+			case TRK_INTERFACE:
 				{
-					co::IField* field = rec->fields[k].field;
-					member = field;
-					validateTypeDependency( field->getType() );
+					InterfaceRecord* rec = static_cast<InterfaceRecord*>( typeRec );
+					for( co::uint16 k = 0; k < rec->numFields; ++k )
+					{
+						co::IField* field = rec->fields[k].field;
+						member = field;
+						validateTypeDependency( field->getType() );
+					}
+					rec->computeLayout();
 				}
+				break;
+			case TRK_COMPONENT:
+				{
+					ComponentRecord* rec = static_cast<ComponentRecord*>( typeRec );
+					for( co::uint8 k = 0; k < rec->numPorts; ++k )
+					{
+						co::IPort* port = rec->ports[k].port;
+						member = port;
+						TypeRecord* depRec = validateTypeDependency( port->getType() );
+						assert( depRec->isInterface() );
+						rec->ports[k].typeRec = static_cast<InterfaceRecord*>( depRec );
+					}
+					rec->computeLayout();
+				}
+				break;
+			default:
+				assert( false );
 			}
 		}
 	}

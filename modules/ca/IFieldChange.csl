@@ -1,0 +1,14 @@
+/*
+	A field change event.
+ */
+interface IFieldChange
+{
+	// The changed service field.
+	readonly co.IField field;
+
+	// Previous field value.
+	readonly any previous;
+
+	// Current field value.
+	readonly any current;
+};

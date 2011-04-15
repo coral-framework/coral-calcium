@@ -1,0 +1,5 @@
+// Provides an immutable list of changes made to an object.
+component ObjectChanges
+{
+	provides IObjectChanges objectChanges;
+};

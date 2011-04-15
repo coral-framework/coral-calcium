@@ -1,0 +1,11 @@
+/*
+	Immutable list of changes made to a service since a previous point in time.
+ */
+interface IServiceChanges
+{
+	// The changed service.
+	readonly co.IService service;
+
+	// List of changed fields.
+	readonly IFieldChange[] changedFields;
+};

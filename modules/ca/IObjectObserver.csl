@@ -1,8 +1,7 @@
 /*
-	TODO
+	Callback interface to observe changes to an object.
  */
 interface IObjectObserver
 {
-	void onServiceChanged( in co.IObject object, in co.IPort receptacle,
-			in co.IService previous, in co.IService current );
+	void onObjectChanged( in IObjectChanges changes );
 };

@@ -41,22 +41,31 @@ interface ISpace
 	//---------- Change Management ----------//
 
 	/*
-		Marks the beginning of a change section.
+		Starts a change section.
 
 		The argument must be a \a service whose type is in the object model,
 		and whose provider object is in this space.
 
+		\return The nesting level of the current change section. Zero indicates a
+			"root" change section, which defines a new changeset (see ISpaceChanges).
+			Nested change sections are included in the same change set, and change
+			notifications are only posted when the root change section ends.
+
 		\throw NoSuchObjectException if the object that provides the \a service is not in this space.
 		\throw ModelException if the \a service's facet/component is not defined in the object model.
 	 */
-	void beginChange( in co.IService service ) raises NoSuchObjectException;
+	uint32 beginChange( in co.IService service ) raises NoSuchObjectException;
 
 	/*
-		Marks the end of a change section.
+		Finishes all change sections up to (and including) the specified \a level.
+		A \a level of zero finishes all change sections.
 
-		\throw co.IllegalArgumentException if called without a corresponding preceding call to beginChange().
+		\note All calls to beginChange() should be paired with a call to endChange(). A warning
+			is generated whenever 2+ sections are finished by a single call to endChange().
+
+		\throw co.IllegalArgumentException if \a level is deeper than the current section's level.
 	 */
-	void endChange( in co.IService service );
+	void endChange( in uint32 level );
 
 	//---------- Change Notification ----------//
 

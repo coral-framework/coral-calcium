@@ -1,0 +1,5 @@
+// Provides an object receptacle change event.
+component ReceptacleChange
+{
+	provides IReceptacleChange receptacleChange;
+};

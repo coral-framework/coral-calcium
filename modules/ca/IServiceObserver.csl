@@ -1,7 +1,7 @@
 /*
-	TODO
+	Callback interface to observe changes to a service.
  */
 interface IServiceObserver
 {
-	void onFieldChanged( in co.IService service, in co.IField field, in any previous, in any current );
+	void onServiceChanged( in IServiceChanges changes );
 };

@@ -1,4 +1,4 @@
-// Provides a calcium object universe (IUniverse) that operates under a certain IModel.
+// Provides a calcium object universe that operates under a certain model.
 component Universe
 {
 	provides IUniverse universe;

@@ -38,18 +38,26 @@ interface IUniverse
 	//---------- Change Management ----------//
 
 	/*
-		Marks the beginning of a change section.
+		Starts a change section.
 
 		The argument must be a \a service whose type is in the object model,
-		and whose provider object is in this universe.
+		and whose provider object is in the specified space within this universe.
+
+		\return The nesting level of the current change section.
 
 		\throw NoSuchObjectException if the object that provides the \a service is not in this universe.
 		\throw ModelException if the \a service's facet/component is not defined in the object model.
 	 */
-	void beginChange( in co.IService service ) raises NoSuchObjectException;
+	uint32 beginChange( in uint16 spaceId, in co.IService service ) raises NoSuchObjectException;
 
 	/*
-		TODO
+		Finishes all change sections up to (and including) the specified \a level.
+		A \a level of zero finishes all change sections.
+
+		\note All calls to beginChange() should be paired with a call to endChange(). A warning
+			is generated whenever 2+ sections are finished by a single call to endChange().
+
+		\throw co.IllegalArgumentException if \a level is deeper than the current section's level.
 	 */
-	void endChange( in co.IService service );
+	void endChange( in uint16 spaceId, in uint32 level );
 };

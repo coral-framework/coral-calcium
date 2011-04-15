@@ -1,0 +1,5 @@
+// Provides a field change event.
+component FieldChange
+{
+	provides IFieldChange fieldChange;
+};

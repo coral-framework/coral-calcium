@@ -1,13 +1,7 @@
 /*
-	TODO
+	Callback interface to observe changes to a space.
  */
 interface ISpaceObserver
 {
-	void onObjectAdded( in co.IObject object );
-
-	void onReferenceAdded( in co.IObject from, in co.IObject to );
-
-	void onReferenceRemoved( in co.IObject from, in co.IObject to );
-
-	void onObjectRemoved( in co.IObject object );
+	void onSpaceChanged( in ca.ISpaceChanges changes );
 };

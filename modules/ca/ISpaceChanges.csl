@@ -1,0 +1,18 @@
+/*
+	Immutable list of changes made to a space's object graph
+	since a previous point in time.
+ */
+interface ISpaceChanges
+{
+	// Space where the changes occurred.
+	readonly ca.ISpace space;
+
+	// List of objects added to the space.
+	readonly co.IObject[] addedObjects;
+
+	// List of objects removed from the space.
+	readonly co.IObject[] removedObjects;
+
+	// List of changes made to objects in the space.
+	readonly IObjectChanges[] changedObjects;
+};

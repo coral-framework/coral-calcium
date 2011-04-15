@@ -15,7 +15,7 @@ Type "camodels.SomeStruct"
 	int1 = "int32",
 	str1 = "string",
 	enum1 = "camodels.SomeEnum",
-	interface1 = "camodels.SomeInterface",
+	interfaceArray = "camodels.SomeInterface[]",
 }
 
 Type "erm.Model"

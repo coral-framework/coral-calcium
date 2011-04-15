@@ -10,6 +10,7 @@
 #include <co/IComponent.h>
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
+#include <ca/ModelException.h>
 #include <ca/NoSuchObjectException.h>
 #include <sstream>
 
@@ -81,6 +82,8 @@ public:
 
 	void addRootObject( co::uint16 spaceId, co::IObject* root )
 	{
+		checkHasModel();
+
 		SpaceRecord* space = getSpace( spaceId );
 		ObjectRecord* object = findObject( root );
 		if( object )
@@ -114,21 +117,57 @@ public:
 			result.push_back( rootObjects[i]->instance );
 	}
 
-	void beginChange( co::IService* service )
+	co::uint32 beginChange( co::uint16 spaceId, co::IService* service )
 	{
+		checkHasModel();
+
 		if( !service )
 			throw ca::NoSuchObjectException( "illegal null service" );
 
 		ObjectRecord* object = getObject( service->getProvider() );
-		assert( object );
+		if( !object )
+			throw ca::NoSuchObjectException( "service is not provided by an object in this universe" );
+
+		#ifndef CORAL_NDEBUG
+			// for debug builds, we also check if the object is in the space
+			if( object->spaceRefs[spaceId] < 1 )
+				throw ca::NoSuchObjectException( "service is not provided by an object in this space" );
+		#else
+			CORAL_UNUSED( spaceId );
+		#endif
+
+		// locate the service's facet
+		co::uint8 numFacets = object->model->numFacets;
+		co::uint8 facetId = 0;
+		while( 1 )
+		{
+			if( facetId >= numFacets )
+				throw ca::ModelException( "illegal service: facet is not in the object model" );
+
+			if( service == object->services[facetId] )
+				break;
+
+			++facetId;
+		}
+
+		// TODO
+		return 0;
 	}
 
-	void endChange( co::IService* service )
+	void endChange( co::uint16 spaceId, co::uint32 level )
 	{
 		// TODO
+		CORAL_UNUSED( spaceId );
+		CORAL_UNUSED( level );
 	}
 
 protected:
+	inline void checkHasModel()
+	{
+		if( !_model.isValid() )
+			throw co::IllegalStateException( "the ca.Universe requires a model for this operation" );
+	}
+
 	ca::IModel* getModelService()
 	{
 		return _model.get();
@@ -142,16 +181,22 @@ protected:
 		if( !model )
 			throw co::IllegalArgumentException( "illegal null model" );
 
-		Model* castModel = dynamic_cast<Model*>( model );
-		if( !castModel )
+		if( model->getProvider()->getComponent()->getFullName() != "ca.Model" )
 			CORAL_THROW( co::IllegalArgumentException,
 				"illegal model instance (expected a ca.Model, got a "
 				<< model->getProvider()->getComponent()->getFullName() << ")" );
 
-		_model = castModel;
+		_model = static_cast<Model*>( model );
 	}
 
 private:
+	inline Model* getModel()
+	{
+		if( !_model.isValid() )
+			throw co::IllegalStateException( "" );
+		return _model.get();
+	}
+
 	inline SpaceRecord* getSpace( co::uint16 spaceId )
 	{
 		return _spaces[spaceId];
@@ -236,41 +281,46 @@ private:
 			}
 		}
 
-		void operator()( ObjectRecord* object, PortRecord& receptacle, RefField* ref )
+		void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
 		{
-			assert( !ref->service && !ref->object );
-			initRef( object, ref->service, ref->object, object->instance->getService( receptacle.port ) );
+			assert( !ref.service && !ref.object );
+			initRef( object, ref.service, ref.object, object->instance->getService( receptacle.port ) );
 		}
-		
-		void operator()( ObjectRecord* object, FieldRecord& field, RefField* ref )
+
+		void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
 		{
-			assert( !ref->service && !ref->object );
+			assert( !ref.service && !ref.object );
 
 			co::Any any;
-			field.reflector->getField( object->instance, field.field, any );
+			field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
 			assert( any.getKind() == co::TK_INTERFACE );
 
-			initRef( object, ref->service, ref->object, any.getState().data.service );
+			initRef( object, ref.service, ref.object, any.getState().data.service );
 		}
 
-		void operator()( ObjectRecord* object, FieldRecord& field, RefVecField* refVec )
+		void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 		{
-			assert( !refVec->services && !refVec->objects );
+			assert( !refVec.services && !refVec.objects );
 
 			co::Any any;
-			field.reflector->getField( object->instance, field.field, any );
+			field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
 			co::Range<co::IService* const> range = any.get<co::Range<co::IService* const> >();
 
 			size_t size = range.getSize();
-			refVec->allocate( size );
+			refVec.create( size );
 			for( size_t i = 0; i < size; ++i )
-				initRef( object, refVec->services[i], refVec->objects[i], range[i] );
+				initRef( object, refVec.services[i], refVec.objects[i], range[i] );
 		}
 
-		void operator()( ObjectRecord* object, FieldRecord& field, ValueField* value )
+		void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, void* valuePtr )
 		{
-			field.reflector->getField( object->instance, field.field, *value );
-			value->makeOut( field.field->getType() );
+			co::Any any;
+			field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
+
+			co::TypeKind kind = any.getKind();
+			bool isPrimitive = ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE || kind == co::TK_ENUM );
+			const void* fromPtr = ( isPrimitive ? &any.getState().data : any.getState().data.ptr );
+			field.getTypeReflector()->copyValue( fromPtr, valuePtr );
 		}
 	};
 
@@ -282,21 +332,21 @@ private:
 			: self( self ), spaceId( spaceId )
 		{;}
 
-		void operator()( ObjectRecord* object, PortRecord& receptacle, RefField* ref )
+		void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
 		{
-			self->addRef( object, ref->object, spaceId );
+			self->addRef( object, ref.object, spaceId );
 		}
 
-		void operator()( ObjectRecord* object, FieldRecord& field, RefField* ref )
+		void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
 		{
-			self->addRef( object, ref->object, spaceId );
+			self->addRef( object, ref.object, spaceId );
 		}
 
-		void operator()( ObjectRecord* object, FieldRecord& field, RefVecField* refVec )
+		void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 		{
-			size_t size = refVec->getSize();
+			size_t size = refVec.getSize();
 			for( size_t i = 0; i < size; ++i )
-				self->addRef( object, refVec->objects[i], spaceId );
+				self->addRef( object, refVec.objects[i], spaceId );
 		}
 	};
 
@@ -308,21 +358,21 @@ private:
 			: self( self ), spaceId( spaceId )
 		{;}
 
-		void operator()( ObjectRecord* object, PortRecord& receptacle, RefField* ref )
+		void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
 		{
-			self->removeRef( object, ref->object, spaceId );
+			self->removeRef( object, ref.object, spaceId );
 		}
 
-		void operator()( ObjectRecord* object, FieldRecord& field, RefField* ref )
+		void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
 		{
-			self->removeRef( object, ref->object, spaceId );
+			self->removeRef( object, ref.object, spaceId );
 		}
 
-		void operator()( ObjectRecord* object, FieldRecord& field, RefVecField* refVec )
+		void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 		{
-			size_t size = refVec->getSize();
+			size_t size = refVec.getSize();
 			for( size_t i = 0; i < size; ++i )
-				self->removeRef( object, refVec->objects[i], spaceId );
+				self->removeRef( object, refVec.objects[i], spaceId );
 		}
 	};
 
