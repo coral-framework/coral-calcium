@@ -369,7 +369,8 @@ void traverseFacet( ObjectRecord* object, co::uint8 facetId, Callback& cb )
 template<typename Callback>
 void traverseObject( ObjectRecord* object, Callback& cb )
 {
-	traverseReceptacles( object, cb );
+	if( object->model->numReceptacles > 0 )
+		traverseReceptacles( object, cb );
 
 	co::uint8 numFacets = object->model->numFacets;
 	for( co::uint8 i = 0; i < numFacets; ++i )
@@ -380,7 +381,8 @@ void traverseObject( ObjectRecord* object, Callback& cb )
 template<typename Callback>
 void traverseObjectRefs( ObjectRecord* object, Callback& cb )
 {
-	traverseReceptacles( object, cb );
+	if( object->model->numReceptacles > 0 )
+		traverseReceptacles( object, cb );
 
 	ComponentRecord* model = object->model;
 	for( co::uint8 i = 0; i < model->numFacets; ++i )
