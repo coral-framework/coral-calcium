@@ -276,6 +276,22 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		refVec = newRefVec;
 	}
 
+	template<typename ET>
+	static inline bool isEqualAligned( void* a, void* b, size_t len )
+	{
+		for( size_t i = 0; i < len; ++i )
+			if( reinterpret_cast<ET*>( a )[i] != reinterpret_cast<ET*>( b )[i] )
+				return false;
+		return true;
+	}
+
+	static inline bool isEqual( void* a, void* b, size_t len )
+	{
+		return ( ( len % sizeof(size_t) ) == 0 ) ?
+			isEqualAligned<size_t>( a, b, len / sizeof(size_t) ) :
+			isEqualAligned<co::uint8>( a, b, len );
+	}
+
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		co::Any any;
@@ -289,7 +305,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		bool isPrimitive = ( s.kind <= co::TK_DOUBLE || s.kind == co::TK_ENUM );
 		assert( !s.isPointer && ( ( isPrimitive && !s.isReference ) || ( !isPrimitive && s.isReference ) ) );
 		void* newValuePtr = ( isPrimitive ? &s.data : s.data.ptr );
-		if( memcmp( newValuePtr, valuePtr, reflector->getSize() ) == 0 )
+		if( isEqual( newValuePtr, valuePtr, reflector->getSize() ) )
 			return; // no change
 
 		ChangedValueField& cf = getServiceChanges( facetId )->addChangedValueField();
@@ -614,7 +630,7 @@ public:
 				if( cs->facet < 0 )
 					traverser.traverseReceptacles();
 				else
-					traverser.traverseFacet( cs->facet );
+					traverser.traverseFacet( static_cast<co::uint8>( cs->facet ) );
 			}
 
 			_u.changedServices.clear();
