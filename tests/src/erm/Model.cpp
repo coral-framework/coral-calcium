@@ -30,7 +30,7 @@ public:
 
 	void setEntities( co::Range<IEntity* const> entities )
 	{
-		entities.assignTo( _entities );
+		co::assign( entities, _entities );
 	}
 
 	void addEntity( IEntity* entity )
@@ -45,7 +45,7 @@ public:
 
 	void setRelationships( co::Range<IRelationship* const> relationships )
 	{
-		relationships.assignTo( _relationships );
+		co::assign( relationships, _relationships );
 	}
 	
 	void addRelationship( IRelationship* rel )
@@ -60,7 +60,7 @@ public:
 
 	void setDependencies( co::Range<IModel* const> dependencies )
 	{
-		dependencies.assignTo( _dependencies );
+		co::assign( dependencies, _dependencies );
 	}
 
 private:

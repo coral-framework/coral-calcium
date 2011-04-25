@@ -3,41 +3,97 @@
  * See copyright notice in LICENSE.md
  */
 
-#include "SpaceChanges_Base.h"
-#include <ca/IFieldChange.h>
+#include "SpaceChanges.h"
+#include <algorithm>
 
 namespace ca {
 
-class SpaceChanges : public SpaceChanges_Base
+SpaceChanges::SpaceChanges()
 {
-public:
-	SpaceChanges()
-	{
-		// empty constructor
-	}
+	// empty
+}
 
-	virtual ~SpaceChanges()
-	{
-		// empty destructor
-	}
+SpaceChanges::~SpaceChanges()
+{
+	// empty
+}
 
-	// ------ ca.IServiceChanges Methods ------ //
+inline int objectCompare( const co::IObject* a, const co::IObject* b )
+{
+	return ( a < b ? -1 : ( a == b ? 0 : 1 ) );
+}
 
-	co::Range<ca::IFieldChange* const> getChangedFields()
-	{
-		// TODO: implement this method.
-		return co::Range<ca::IFieldChange* const>();
-	}
+inline bool changesStdCompare( const co::RefPtr<ca::IObjectChanges>& a,
+							   const co::RefPtr<ca::IObjectChanges>& b )
+{
+	return static_cast<ObjectChanges*>( a.get() )->getObjectInl()
+			< static_cast<ObjectChanges*>( b.get() )->getObjectInl();
+}
 
-	co::IService* getService()
-	{
-		// TODO: implement this method.
-		return NULL;
-	}
+inline int changesKeyCompare( const co::IObject* key, ca::IObjectChanges* changes )
+{
+	co::IObject* object = static_cast<ObjectChanges*>( changes )->getObjectInl();
+	return ( key == object ? 0 : ( key < object ? -1 : 1 ) );
+}
 
-private:
-	// member variables go here
-};
+ISpaceChanges* SpaceChanges::finalize( ca::ISpace* space )
+{
+	assert( !_space.isValid() );
+
+	// sort all arrays
+	std::sort( _addedObjects.begin(), _addedObjects.end() );
+	std::sort( _removedObjects.begin(), _removedObjects.end() );
+	std::sort( _changedObjects.begin(), _changedObjects.end(), changesStdCompare );
+
+	// clone this object
+	SpaceChanges* object = new SpaceChanges( *this );
+	object->_space = space;
+
+	// reset state
+	_addedObjects.clear();
+	_removedObjects.clear();
+	_changedObjects.clear();
+
+	return object;
+}
+
+ca::ISpace* SpaceChanges::getSpace()
+{
+	return _space.get();
+}
+
+co::Range<co::IObject* const> SpaceChanges::getAddedObjects()
+{
+	return _addedObjects;
+}
+
+co::Range<co::IObject* const> SpaceChanges::getRemovedObjects()
+{
+	return _removedObjects;
+}
+
+co::Range<ca::IObjectChanges* const> SpaceChanges::getChangedObjects()
+{
+	return _changedObjects;
+}
+
+bool SpaceChanges::wasAdded( co::IObject* object )
+{
+	size_t pos;
+	return co::binarySearch( co::Range<co::IObject*>( _addedObjects ), object, objectCompare, pos );
+}
+
+bool SpaceChanges::wasChanged( co::IObject* object )
+{
+	size_t pos;
+	return co::binarySearch( co::Range<ca::IObjectChanges*>( _changedObjects ), object, changesKeyCompare, pos );
+}
+
+bool SpaceChanges::wasRemoved( co::IObject* object )
+{
+	size_t pos;
+	return co::binarySearch( co::Range<co::IObject*>( _removedObjects ), object, objectCompare, pos );
+}
 
 CORAL_EXPORT_COMPONENT( SpaceChanges, SpaceChanges );
 

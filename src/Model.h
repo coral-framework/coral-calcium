@@ -122,9 +122,12 @@ struct RecordRecord : TypeRecord
 	co::uint16 numFields;	// number of elements in 'fields'
 	co::IField* fields[1];	// array of fields
 
+	static RecordRecord* create( co::IRecordType* type, co::uint16 numFields );
+
 	inline void addField( co::IField* field ) { fields[numFields++] = field; }
 
-	static RecordRecord* create( co::IRecordType* type, co::uint16 numFields );
+	// Must be called after all fields have been added.
+	void finalize();
 };
 
 // Represents a field within an InterfaceRecord.
@@ -205,16 +208,16 @@ struct InterfaceRecord : TypeRecord
 
 	FieldRecord fields[1];
 
+	static InterfaceRecord* create( co::IInterface* type, co::uint16 numFields );
+
 	void addField( FieldKind fieldKind, co::IField* field );
 
 	/*
 		Must be called only after all fields have been added.
-		This re-orders the value fields by descending size, and allocates
-		all fields (guaranteeing 8-byte alignment for values >= 8 bytes).
+		This sorts all fields by name, and allocates them by descending
+		size (guaranteeing 8-byte alignment for values >= 8 bytes).
 	 */
-	void computeLayout();
-
-	static InterfaceRecord* create( co::IInterface* type, co::uint16 numFields );
+	void finalize();
 };
 
 /*
@@ -244,12 +247,12 @@ struct ComponentRecord : TypeRecord
 	// Facets are grouped at the start, receptacles at the end
 	PortRecord ports[1];
 
+	static ComponentRecord* create( co::IComponent* type, co::uint8 numPorts );
+
 	void addPort( co::IPort* port );
 
 	// Must be called only after all ports have been initialized with their typeRec.
-	void computeLayout();
-
-	static ComponentRecord* create( co::IComponent* type, co::uint8 numPorts );
+	void finalize();
 };
 
 typedef std::map<co::uint16, co::uint32> SpaceRefCountMap;
@@ -306,95 +309,108 @@ struct ObjectRecord
 	static ObjectRecord* create( ComponentRecord* model, co::IObject* instance );
 };
 
-// Traverses all receptacles in an object using a callback.
-template<typename Callback>
-void traverseReceptacles( ObjectRecord* object, Callback& cb )
+/*
+	Base template for object traversers.
+ */
+template<typename ConcreteType>
+struct Traverser
 {
-	ComponentRecord* model = object->model;
-	PortRecord* ports = &model->ports[model->numFacets];
-	RefField* refs = object->getReceptacles();
-	for( co::uint8 i = 0; i < model->numReceptacles; ++i )
-		cb( object, ports[i], refs[i] );
-}
+	typedef Traverser<ConcreteType> T;
 
-// Traverses all Ref fields in an object's facet using a callback.
-template<typename Callback>
-void traverseFacetRefs( ObjectRecord* object, co::uint8 facetId, PortRecord& facet, Callback& cb )
-{
-	InterfaceRecord* itf = facet.typeRec;
-	FieldRecord* fields = &itf->fields[0];
-	RefField* refs = object->get<RefField>( facet.offset + 0 );
-	for( co::uint16 i = 0; i < itf->numRefs; ++i )
-		cb( object, facetId, fields[i], refs[i] );
-}
+	ObjectRecord* source;
 
-//! Traverses all RefVec fields in an object's facet using a callback.
-template<typename Callback>
-void traverseFacetRefVecs( ObjectRecord* object, co::uint8 facetId, PortRecord& facet, Callback& cb )
-{
-	InterfaceRecord* itf = facet.typeRec;
-	FieldRecord* fields = &itf->fields[itf->numRefs];
-	RefVecField* refVecs = object->get<RefVecField>( facet.offset + sizeof(RefField) * itf->numRefs );
-	for( co::uint16 i = 0; i < itf->numRefVecs; ++i )
-		cb( object, facetId, fields[i], refVecs[i] );
-}
+	Traverser( ObjectRecord* source ) : source( source ) {;}
 
-//! Traverses all Value fields in an object's facet using a callback.
-template<typename Callback>
-void traverseFacetValues( ObjectRecord* object, co::uint8 facetId, PortRecord& facet, Callback& cb )
-{
-	InterfaceRecord* itf = facet.typeRec;
-	FieldRecord* fields = &itf->fields[itf->firstValue];
-	for( co::uint16 i = 0; i < itf->numValues; ++i )
-		cb( object, facetId, fields[i], object->get<void>( facet.offset + fields[i].offset ) );
-}
-
-// Traverses all fields in an object's facet using a callback.
-template<typename Callback>
-void traverseFacet( ObjectRecord* object, co::uint8 facetId, Callback& cb )
-{
-	PortRecord& facet = object->model->ports[facetId];
-
-	if( facet.typeRec->numRefs > 0 )
-		traverseFacetRefs( object, facetId, facet, cb );
-
-	if( facet.typeRec->numRefVecs > 0 )
-		traverseFacetRefVecs( object, facetId, facet, cb );
-
-	if( facet.typeRec->numValues > 0 )
-		traverseFacetValues( object, facetId, facet, cb );
-}
-
-// Traverses all object receptacles and fields (of all kinds).
-template<typename Callback>
-void traverseObject( ObjectRecord* object, Callback& cb )
-{
-	if( object->model->numReceptacles > 0 )
-		traverseReceptacles( object, cb );
-
-	co::uint8 numFacets = object->model->numFacets;
-	for( co::uint8 i = 0; i < numFacets; ++i )
-		traverseFacet( object, i, cb );
-}
-
-// Traverses all object receptacles and fields of Ref/RefVec kind.
-template<typename Callback>
-void traverseObjectRefs( ObjectRecord* object, Callback& cb )
-{
-	if( object->model->numReceptacles > 0 )
-		traverseReceptacles( object, cb );
-
-	ComponentRecord* model = object->model;
-	for( co::uint8 i = 0; i < model->numFacets; ++i )
+	inline ConcreteType* getSelf()
 	{
-		PortRecord& facet = model->ports[i];
-		if( facet.typeRec->numRefs > 0 )
-			traverseFacetRefs( object, i, facet, cb );
-
-		if( facet.typeRec->numRefVecs > 0 )
-			traverseFacetRefVecs( object, i, facet, cb );
+		return static_cast<ConcreteType*>( this );
 	}
-}
+
+	inline ComponentRecord* getModel() { return source->model; }
+
+	// Traverses all receptacles.
+	void traverseReceptacles()
+	{
+		PortRecord* ports = &getModel()->ports[getModel()->numFacets];
+		RefField* refs = source->getReceptacles();
+		co::uint8 numReceptacles = getModel()->numReceptacles;
+		for( co::uint8 i = 0; i < numReceptacles; ++i )
+			getSelf()->onReceptacle( ports[i], refs[i] );
+	}
+
+	// Traverses all Ref fields in a facet.
+	void traverseFacetRefs( co::uint8 facetId, PortRecord& facet )
+	{
+		InterfaceRecord* itf = facet.typeRec;
+		FieldRecord* fields = &itf->fields[0];
+		RefField* refs = source->get<RefField>( facet.offset + 0 );
+		for( co::uint16 i = 0; i < itf->numRefs; ++i )
+			getSelf()->onRefField( facetId, fields[i], refs[i] );
+	}
+
+	//! Traverses all RefVec fields in a facet.
+	void traverseFacetRefVecs( co::uint8 facetId, PortRecord& facet )
+	{
+		InterfaceRecord* itf = facet.typeRec;
+		FieldRecord* fields = &itf->fields[itf->numRefs];
+		RefVecField* refVecs = source->get<RefVecField>( facet.offset + sizeof(RefField) * itf->numRefs );
+		for( co::uint16 i = 0; i < itf->numRefVecs; ++i )
+			getSelf()->onRefVecField( facetId, fields[i], refVecs[i] );
+	}
+
+	//! Traverses all Value fields in a facet.
+	void traverseFacetValues( co::uint8 facetId, PortRecord& facet )
+	{
+		InterfaceRecord* itf = facet.typeRec;
+		FieldRecord* fields = &itf->fields[itf->firstValue];
+		for( co::uint16 i = 0; i < itf->numValues; ++i )
+			getSelf()->onValueField( facetId, fields[i], source->get<void>( facet.offset + fields[i].offset ) );
+	}
+
+	// Traverses all fields in a facet.
+	void traverseFacet( co::uint8 facetId )
+	{
+		PortRecord& facet = getModel()->ports[facetId];
+
+		if( facet.typeRec->numRefs > 0 )
+			traverseFacetRefs( facetId, facet );
+		
+		if( facet.typeRec->numRefVecs > 0 )
+			traverseFacetRefVecs( facetId, facet );
+		
+		if( facet.typeRec->numValues > 0 )
+			traverseFacetValues( facetId, facet );
+	}
+
+	// Full traversal (all receptacles and fields).
+	void traverseObject()
+	{
+		if( getModel()->numReceptacles > 0 )
+			traverseReceptacles();
+
+		co::uint8 numFacets = getModel()->numFacets;
+		for( co::uint8 i = 0; i < numFacets; ++i )
+			traverseFacet( i );
+	}
+
+	// Reference traversal (only receptacles and Ref/RefVec fields).
+	void traverseObjectRefs()
+	{
+		if( getModel()->numReceptacles > 0 )
+			traverseReceptacles();
+
+		co::uint8 numFacets = getModel()->numFacets;
+		for( co::uint8 i = 0; i < numFacets; ++i )
+		{
+			PortRecord& facet = getModel()->ports[i];
+			if( facet.typeRec->numRefs > 0 )
+				traverseFacetRefs( i, facet );
+
+			if( facet.typeRec->numRefVecs > 0 )
+				traverseFacetRefVecs( i, facet );
+		}
+	}
+};
 
 /*!
 	The ca.Model component.

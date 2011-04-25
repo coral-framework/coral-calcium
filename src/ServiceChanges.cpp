@@ -3,41 +3,42 @@
  * See copyright notice in LICENSE.md
  */
 
-#include "ServiceChanges_Base.h"
-#include <ca/IFieldChange.h>
+#include "ServiceChanges.h"
+#include <algorithm>
 
 namespace ca {
 
-class ServiceChanges : public ServiceChanges_Base
+ServiceChanges::ServiceChanges()
 {
-public:
-	ServiceChanges()
-	{
-		// empty constructor
-	}
+	// empty
+}
 
-	virtual ~ServiceChanges()
-	{
-		// empty destructor
-	}
+ServiceChanges::~ServiceChanges()
+{
+	// empty
+}
 
-	// ------ ca.IServiceChanges Methods ------ //
+// ------ ca.IServiceChanges Methods ------ //
 
-	co::Range<ca::IFieldChange* const> getChangedFields()
-	{
-		// TODO: implement this method.
-		return co::Range<ca::IFieldChange* const>();
-	}
+co::IService* ServiceChanges::getService()
+{
+	return _service.get();
+}
 
-	co::IService* getService()
-	{
-		// TODO: implement this method.
-		return NULL;
-	}
+co::Range<ChangedRefField const> ServiceChanges::getChangedRefFields()
+{
+	return _changedRefFields;
+}
 
-private:
-	// member variables go here
-};
+co::Range<ChangedRefVecField const> ServiceChanges::getChangedRefVecFields()
+{
+	return _changedRefVecFields;
+}
+
+co::Range<ChangedValueField const> ServiceChanges::getChangedValueFields()
+{
+	return _changedValueFields;
+}
 
 CORAL_EXPORT_COMPONENT( ServiceChanges, ServiceChanges );
 

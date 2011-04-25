@@ -36,6 +36,13 @@ public:
 	const std::string& getRelation() { return _relation; }
 	void setRelation( const std::string& relation ) { _relation = relation; }
 
+protected:
+	IEntity* getEntityAService() { return _entityA; }
+	void setEntityAService( IEntity* entity ) { _entityA = entity; }
+
+	IEntity* getEntityBService() { return _entityB; }
+	void setEntityBService( IEntity* entity ) { _entityB = entity; }
+
 private:
 	IEntity* _entityA;
 	IEntity* _entityB;

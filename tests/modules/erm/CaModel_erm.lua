@@ -12,7 +12,9 @@ Type "erm.Model"
 
 Type "erm.Relationship"
 {
-	relationship = "erm.IRelationship"
+	relationship = "erm.IRelationship",
+	entityA = "erm.IEntity",
+	entityB = "erm.IEntity",
 }
 
 Type "erm.Multiplicity"
@@ -24,6 +26,7 @@ Type "erm.Multiplicity"
 Type "erm.IEntity"
 {
 	name = "string",
+	parent = "erm.IEntity",
 }
 
 Type "erm.IModel"

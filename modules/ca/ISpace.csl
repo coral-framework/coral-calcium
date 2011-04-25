@@ -8,8 +8,13 @@
 
 	A space posts notifications at various points. For instance, when changes are
 	detected for an object (or a branch of the object graph), when.
+
+	A word of caution about reference counting: a space always keeps strong
+	references to all of its observers; therefore, observers must not contain
+	a strong reference back to the space. As a rule of thumb, avoid keeping
+	strong references to spaces except where it's absolutely necessary.
  */
-interface ISpace
+interface ISpace extends ISpaceObserver
 {
 	//---------- Object Management ----------//
 
@@ -38,36 +43,36 @@ interface ISpace
 	 */
 	void getRootObjects( out co.IObject[] roots );
 
-	//---------- Change Management ----------//
+	//---------- Change Tracking ----------//
 
 	/*
-		Starts a change section.
+		Marks a \a service as having been changed.
+		The service will be checked for changes in the next call to notifyChanges().
 
-		The argument must be a \a service whose type is in the object model,
-		and whose provider object is in this space.
-
-		\return The nesting level of the current change section. Zero indicates a
-			"root" change section, which defines a new changeset (see ISpaceChanges).
-			Nested change sections are included in the same change set, and change
-			notifications are only posted when the root change section ends.
-
-		\throw NoSuchObjectException if the object that provides the \a service is not in this space.
-		\throw ModelException if the \a service's facet/component is not defined in the object model.
+		\throw NoSuchObjectException if the object that provides \a service is not in this space.
+		\throw ModelException if the \a service's facet is not in the object model.
 	 */
-	uint32 beginChange( in co.IService service ) raises NoSuchObjectException;
+	void addChange( in co.IService service ) raises NoSuchObjectException, ModelException;
 
 	/*
-		Finishes all change sections up to (and including) the specified \a level.
-		A \a level of zero finishes all change sections.
+		Gathers a list of changes and posts all change notifications.
 
-		\note All calls to beginChange() should be paired with a call to endChange(). A warning
-			is generated whenever 2+ sections are finished by a single call to endChange().
-
-		\throw co.IllegalArgumentException if \a level is deeper than the current section's level.
+		Changes are detected by examining all services marked as changed (e.g.
+		by using addChange()) since the last call to notifyChanges().
 	 */
-	void endChange( in uint32 level );
+	void notifyChanges();
 
-	//---------- Change Notification ----------//
+	//---------- Change Notifications ----------//
 
-	//void addObserver( in IObjectSpaceObserver observer );
+	/*
+		Adds an \a observer to be notified of all changes to this space's object graph.
+		\throw co.IllegalArgumentException if \a observer is invalid.
+	 */
+	void addSpaceObserver( in ISpaceObserver observer ) raises co.IllegalArgumentException;
+
+	/*
+		Removes \a observer from the list of space observers.
+		\throw co.IllegalArgumentException if \a observer is not in the list of space observers.
+	 */
+	void removeSpaceObserver( in ISpaceObserver observer ) raises co.IllegalArgumentException;
 };

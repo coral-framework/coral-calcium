@@ -1,5 +1,5 @@
 // Provides an immutable list of changes made to a service.
 component SpaceChanges
 {
-	provides IServiceChanges serviceChanges;
+	provides ISpaceChanges spaceChanges;
 };

@@ -5,7 +5,9 @@
 
 #include "Space_Base.h"
 #include <ca/IUniverse.h>
+#include <co/Coral.h>
 #include <co/RefPtr.h>
+#include <co/IComponent.h>
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
 
@@ -43,16 +45,58 @@ public:
 		_universe->getRootObjects( _spaceId, result );
 	}
 
-	co::uint32 beginChange( co::IService* facet )
+	void addChange( co::IService* facet )
 	{
 		checkRegistered();
-		return _universe->beginChange( _spaceId, facet );
+		return _universe->addChange( _spaceId, facet );
 	}
 
-	void endChange( co::uint32 level )
+	void notifyChanges()
 	{
 		checkRegistered();
-		_universe->endChange( _spaceId, level );
+		_universe->notifyChanges( _spaceId );
+	}
+
+	void onSpaceChanged( ca::ISpaceChanges* changes )
+	{
+		size_t numObservers = _spaceObservers.size();
+		for( size_t i = 0; i < numObservers; ++i )
+		{
+			assert( _spaceObservers[i] != this );
+			_spaceObservers[i]->onSpaceChanged( changes );
+		}
+	}
+
+	void addSpaceObserver( ca::ISpaceObserver* observer )
+	{
+		if( !observer )
+			throw co::IllegalArgumentException( "illegal null observer" );
+
+		_spaceObservers.push_back( observer );
+	}
+
+	void removeSpaceObserver( ca::ISpaceObserver* observer )
+	{
+		if( !observer )
+			throw co::IllegalArgumentException( "illegal null observer" );
+
+		co::int32 numObservers = static_cast<co::int32>( _spaceObservers.size() );
+		co::int32 numRemaining = numObservers;
+		for( co::int32 i = numObservers - 1; i >= 0; --i )
+		{
+			co::RefPtr<ca::ISpaceObserver>& current = _spaceObservers[i];
+			if( current == observer )
+				current.swap( _spaceObservers[--numRemaining] );
+		}
+
+		co::int32 numRemoved = ( numObservers - numRemaining );
+		if( numRemoved == 0 )
+			throw co::IllegalArgumentException( "observer is not in the list of space observers" );
+		else if( numRemoved > 1 )
+			co::debug( co::Dbg_Warning, "ca.Space: observer (%s)%p was removed %i times.",
+				observer->getProvider()->getComponent()->getFullName().c_str(), observer, numRemoved );
+
+		_spaceObservers.resize( numRemaining );
 	}
 
 protected:
@@ -80,8 +124,9 @@ protected:
 	}
 
 private:
-	co::RefPtr<ca::IUniverse> _universe;
 	co::int16 _spaceId;
+	co::RefPtr<ca::IUniverse> _universe;
+	co::RefVector<ca::ISpaceObserver> _spaceObservers;
 };
 	
 CORAL_EXPORT_COMPONENT( Space, Space )

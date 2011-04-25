@@ -1,4 +1,11 @@
 component Relationship
 {
 	provides IRelationship relationship;
+
+	/*
+		These mirror the values of their homonymous properties
+		in 'relationship':
+	 */
+	receives IEntity entityA;
+	receives IEntity entityB;
 };

@@ -35,40 +35,22 @@ interface IUniverse
 	 */
 	void getRootObjects( in uint16 spaceId, out co.IObject[] roots );
 
-	//---------- Change Sections and Notifications ----------//
+	//---------- Change Tracking and Notifications ----------//
 
 	/*
-		Starts a change section.
+		Marks a \a service as having been changed.
+		The service will be checked for changes in the next call to notifyChanges().
 
-		The argument must be a \a service whose type is in the object model,
-		and whose provider object is in the specified space within this universe.
-
-		\return The nesting level of the current change section.
-
-		\throw NoSuchObjectException if the object that provides the \a service is not in this universe.
-		\throw ModelException if the \a service's facet/component is not defined in the object model.
+		\throw NoSuchObjectException if the object that provides \a service is not in this universe or space.
+		\throw ModelException if the \a service's facet is not in the object model.
 	 */
-	uint32 beginChange( in uint16 spaceId, in co.IService service ) raises NoSuchObjectException;
+	void addChange( in uint16 spaceId, in co.IService service ) raises NoSuchObjectException, ModelException;
 
 	/*
-		Ends all change sections up to (and including) the specified \a level.
-		A \a level of zero ends all active change sections.
+		Gathers and posts a list of changes (ISpaceChanges) for each space.
 
-		\note All calls to beginChange() should be paired with a call to endChange().
-			A warning is generated whenever 2+ sections are finished by a single call
-			to endChange().
-
-		\throw co.IllegalArgumentException if \a level is deeper than the current stack.
+		Changes are detected by examining all services marked as changed (e.g.
+		by using addChange()) since the last call to notifyChanges().
 	 */
-	void endChange( in uint16 spaceId, in uint32 level );
-
-	/*
-		Notifies all spaces of the changes detected since the last call to this method.
-
-		Changes are detected by calls to endChange() and accumulated in the same
-		changesets (ISpaceChanges) until this method posts and resets all changesets.
-
-		Automatically called at the end of a level-zero endChange() call.
-	 */
-	void notifyChanges();
+	void notifyChanges( in uint16 spaceId );
 };

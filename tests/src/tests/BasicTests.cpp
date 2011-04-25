@@ -57,7 +57,7 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 
 	// now the whole setup should be ready for use
 	EXPECT_THROW( space->addRootObject( spaceObj.get() ), ca::ModelException );
-	EXPECT_THROW( space->beginChange( spaceObj.get() ), ca::NoSuchObjectException );
+	EXPECT_THROW( space->addChange( spaceObj.get() ), ca::NoSuchObjectException );
 
 	// and we cannot change the model's name after it's been set
 	EXPECT_THROW( model->setName( "test" ), co::IllegalStateException );	

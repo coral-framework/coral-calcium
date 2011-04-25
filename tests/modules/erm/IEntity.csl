@@ -1,6 +1,11 @@
 interface IEntity
 {
+	// Name of this entity.
 	string name;
 
+	// Silly field just to test cycles
+	IEntity parent;
+
+	// List of relationships associated with this entity.
 	readonly IRelationship[] relationships;
 };

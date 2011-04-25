@@ -1,0 +1,9 @@
+/*
+	A value change event for value-type fields.
+ */
+struct ChangedValueField
+{
+	co.IField field;	//< The affected field.
+	any previous;		//< Previous field value.
+	any current;		//< Current field value.
+};

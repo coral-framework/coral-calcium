@@ -8,6 +8,7 @@
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
 #include <lua/IState.h>
+#include <algorithm>
 #include <sstream>
 
 namespace ca {
@@ -38,6 +39,16 @@ RecordRecord* RecordRecord::create( co::IRecordType* type, co::uint16 numFields 
 	rec->init( type, TRK_RECORD );
 	rec->numFields = 0;
 	return rec;
+}
+
+bool compareIFieldNames( co::IField* a, co::IField* b )
+{
+	return a->getName() < b->getName();
+}
+
+void RecordRecord::finalize()
+{
+	std::sort( fields, fields + numFields, compareIFieldNames );
 }
 
 InterfaceRecord* InterfaceRecord::create( co::IInterface* type, co::uint16 numFields )
@@ -80,21 +91,29 @@ inline co::uint32 align( co::uint32 offset, co::uint32 alignment )
 	return ( offset + alignment - 1 ) & ~( alignment - 1 );
 }
 
-inline bool fieldSizeDesc( const FieldRecord& a, const FieldRecord& b )
+inline bool compareFieldNames( const FieldRecord& a, const FieldRecord& b )
 {
-	assert( a.field && b.field );
+	return a.field->getName() < b.field->getName();
+}
+
+inline bool compareFieldSizes( const FieldRecord& a, const FieldRecord& b )
+{
 	return a.getSize() > b.getSize();
 }
 
-void InterfaceRecord::computeLayout()
+void InterfaceRecord::finalize()
 {
 	if( size ) return; // already computed
 
 	assert( numRefs + numRefVecs == firstValue );
 	assert( numRefs + numRefVecs + numValues == numFields );
 
+	// sort Refs and RefVecs by name
+	std::sort( &fields[0], &fields[numRefs], compareFieldNames );
+	std::sort( &fields[numRefs], &fields[firstValue], compareFieldNames );
+
 	// sort values by descending size
-	std::sort( &fields[firstValue], &fields[numFields], fieldSizeDesc );
+	std::sort( &fields[firstValue], &fields[numFields], compareFieldSizes );
 
 	// allocate all fields:
 	co::uint16 i = 0;
@@ -121,6 +140,9 @@ void InterfaceRecord::computeLayout()
 	}
 
 	size = offset;
+
+	// re-sort the values by name
+	std::sort( &fields[firstValue], &fields[numFields], compareFieldNames );
 }
 
 ComponentRecord* ComponentRecord::create( co::IComponent* type, co::uint8 numPorts )
@@ -138,10 +160,19 @@ void ComponentRecord::addPort( co::IPort* port )
 	ports[idx].port = port;
 }
 
-void ComponentRecord::computeLayout()
+inline bool comparePortNames( const PortRecord& a, const PortRecord& b )
+{
+	return a.port->getName() < b.port->getName();
+}
+
+void ComponentRecord::finalize()
 {
 	assert( objectSize == 0 );
 	assert( numReceptacles + numFacets == numPorts );
+
+	// sort ports by name
+	std::sort( &ports[0], &ports[numFacets], comparePortNames );
+	std::sort( &ports[numFacets], &ports[numPorts], comparePortNames );
 
 	// we start off at &services[0] within the ObjectRecord
 	co::uint32 offset = ( sizeof(ObjectRecord) - sizeof(void*) );
@@ -165,34 +196,37 @@ void ComponentRecord::computeLayout()
 		 */
 		offset = align( offset, sizeof(void*) );
 		ports[i].offset = offset;
-		ports[i].typeRec->computeLayout();
+		ports[i].typeRec->finalize();
 		offset += ports[i].typeRec->size;
 	}
 
 	objectSize = offset;
 }
 
-struct ObjectCreationTraverser
+struct ObjectCreationTraverser : public Traverser<ObjectCreationTraverser>
 {
-	void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	ObjectCreationTraverser( ObjectRecord* object ) : T( object )
+	{;}
+
+	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
 		ref.service = NULL;
 		ref.object = NULL;
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
 		ref.service = NULL;
 		ref.object = NULL;
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
 		refVec.services = NULL;
 		refVec.objects = NULL;
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, void* valuePtr )
+	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		field.getTypeReflector()->createValue( valuePtr );
 	}
@@ -214,32 +248,35 @@ ObjectRecord* ObjectRecord::create( ComponentRecord* model, co::IObject* instanc
 		rec->services[i] = instance->getService( model->ports[i].port );
 
 	// initialize all fields
-	ObjectCreationTraverser traverser;
-	traverseObject( rec, traverser );
+	ObjectCreationTraverser traverser( rec );
+	traverser.traverseObject();
 
 	instance->serviceRetain();
 
 	return rec;
 }
 
-struct ObjectDestructionTraverser
+struct ObjectDestructionTraverser : public Traverser<ObjectDestructionTraverser>
 {
-	void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	ObjectDestructionTraverser( ObjectRecord* object ) : T( object )
+	{;}
+
+	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
 		// NOP
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
 		// NOP
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
 		refVec.destroy();
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, void* valuePtr )
+	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		field.getTypeReflector()->destroyValue( valuePtr );
 	}
@@ -257,8 +294,8 @@ void ObjectRecord::destroy()
 	spaceRefs.~map();
 
 	// destroy all fields
-	ObjectDestructionTraverser traverser;
-	traverseObject( this, traverser );
+	ObjectDestructionTraverser traverser( this );
+	traverser.traverseObject();
 
 	instance->serviceRelease();
 
@@ -595,6 +632,7 @@ void Model::validateTransaction()
 						member = field;
 						validateTypeDependency( field->getType() );
 					}
+					rec->finalize();
 				}
 				break;
 			case TRK_INTERFACE:
@@ -606,7 +644,7 @@ void Model::validateTransaction()
 						member = field;
 						validateTypeDependency( field->getType() );
 					}
-					rec->computeLayout();
+					rec->finalize();
 				}
 				break;
 			case TRK_COMPONENT:
@@ -620,7 +658,7 @@ void Model::validateTransaction()
 						assert( depRec->isInterface() );
 						rec->ports[k].typeRec = static_cast<InterfaceRecord*>( depRec );
 					}
-					rec->computeLayout();
+					rec->finalize();
 				}
 				break;
 			default:

@@ -15,4 +15,13 @@ interface ISpaceChanges
 
 	// List of changes made to objects in the space.
 	readonly IObjectChanges[] changedObjects;
+
+	//! Whether the given \a object is in \c 'addedObjects'.
+	bool wasAdded( in co.IObject object );
+
+	//! Whether the given \a object is in \c 'removedObjects'.
+	bool wasRemoved( in co.IObject object );
+
+	//! Whether the given \a object is in \c 'changedObjects'.
+	bool wasChanged( in co.IObject object );
 };

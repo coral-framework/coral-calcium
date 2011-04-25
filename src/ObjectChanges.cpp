@@ -3,49 +3,36 @@
  * See copyright notice in LICENSE.md
  */
 
-#include "ObjectChanges_Base.h"
-#include <ca/IReceptacleChange.h>
-#include <co/IObject.h>
-#include <ca/IServiceChanges.h>
+#include "ObjectChanges.h"
 
 namespace ca {
 
-class ObjectChanges : public ObjectChanges_Base
+ObjectChanges::ObjectChanges()
 {
-public:
-	ObjectChanges()
-	{
-		// empty constructor
-	}
+	// empty
+}
 
-	virtual ~ObjectChanges()
-	{
-		// empty destructor
-	}
+ObjectChanges::~ObjectChanges()
+{
+	// empty
+}
 
-	// ------ ca.IObjectChanges Methods ------ //
+// ------ ca.IObjectChanges Methods ------ //
 
-	co::Range<ca::IReceptacleChange* const> getChangedReceptacles()
-	{
-		// TODO: implement this method.
-		return co::Range<ca::IReceptacleChange* const>();
-	}
+co::IObject* ObjectChanges::getObject()
+{
+	return _object.get();
+}
 
-	co::Range<ca::IServiceChanges* const> getChangedServices()
-	{
-		// TODO: implement this method.
-		return co::Range<ca::IServiceChanges* const>();
-	}
+co::Range<IServiceChanges* const> ObjectChanges::getChangedServices()
+{
+	return _changedServices;
+}
 
-	co::IObject* getObject()
-	{
-		// TODO: implement this method.
-		return NULL;
-	}
-
-private:
-	// member variables go here
-};
+co::Range<ChangedConnection const> ObjectChanges::getChangedConnections()
+{
+	return _changedConnections;
+}
 
 CORAL_EXPORT_COMPONENT( ObjectChanges, ObjectChanges );
 

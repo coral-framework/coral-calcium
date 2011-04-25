@@ -12,61 +12,113 @@
 
 namespace ca {
 
-//------ InitTraverser ---------------------------------------------------------
+//------ UniverseTraverser (base for most traversers) --------------------------
 
-struct InitTraverser
+template<typename ConcreteType>
+struct UniverseTraverser : public Traverser<ConcreteType>
 {
-	UniverseRecord* _u;
+	typedef UniverseTraverser<ConcreteType> UT;
 
-	InitTraverser( UniverseRecord* u ) : _u( u ) {;}
+	UniverseRecord& u;
 
-	void initRef( ObjectRecord* from, co::IService*& service, ObjectRecord*& to, co::IService* newService )
+	UniverseTraverser( UniverseRecord& u, ObjectRecord* source )
+		: Traverser<ConcreteType>( source ), u( u )
+	{;}
+
+	void initRef( co::IService*& service, ObjectRecord*& target, co::IService* newService )
 	{
 		service = newService;
-		co::IObject* newInstance = newService->getProvider();
-		ObjectRecord* newTo = _u->findObject( newInstance );
-		if( newTo )
-			_u->addRef( from, newTo );
-		else
-			newTo = _u->createObject( from, newInstance );
-		to = newTo;
+
+		ObjectRecord* newTarget = NULL;
+		if( newService )
+		{
+			co::IObject* newInstance = newService->getProvider();
+			newTarget = u.findObject( newInstance );
+			if( newTarget )
+				u.addRef( this->source, newTarget );
+			else
+				newTarget = u.createObject( this->source, newInstance );
+		}
+
+		target = newTarget;
 	}
 
-	inline void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	void updateRef( co::IService*& service, ObjectRecord*& target, co::IService* newService )
+	{
+		assert( service != newService );
+		service = newService;
+
+		ObjectRecord* newTarget = NULL;
+		if( newService )
+		{		
+			co::IObject* newInstance = newService->getProvider();
+			newTarget = u.findObject( newInstance );
+			if( newTarget )
+			{
+				if( target != newTarget )
+					u.addRef( this->source, newTarget );
+			}
+			else
+			{
+				newTarget = u.createObject( this->source, newInstance );
+			}
+		}
+
+		if( target != newTarget )
+		{
+			if( target )
+				u.removeRef( this->source, target );
+			
+			target = newTarget;
+		}
+	}
+};
+
+//------ InitTraverser (initializes a new object) ------------------------------
+
+struct InitTraverser : public UniverseTraverser<InitTraverser>
+{
+	InitTraverser( UniverseRecord& u, ObjectRecord* source ) : UT( u, source )
+	{;}
+
+	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
 		assert( !ref.service && !ref.object );
-		initRef( object, ref.service, ref.object, object->instance->getService( receptacle.port ) );
+		initRef( ref.service, ref.object, source->instance->getService( receptacle.port ) );
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
 		assert( !ref.service && !ref.object );
 
 		co::Any any;
-		field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
+		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
 		assert( any.getKind() == co::TK_INTERFACE );
 
-		initRef( object, ref.service, ref.object, any.getState().data.service );
+		initRef( ref.service, ref.object, any.getState().data.service );
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
 		assert( !refVec.services && !refVec.objects );
 
 		co::Any any;
-		field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
+		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
 		co::Range<co::IService* const> range = any.get<co::Range<co::IService* const> >();
 
 		size_t size = range.getSize();
-		refVec.create( size );
-		for( size_t i = 0; i < size; ++i )
-			initRef( object, refVec.services[i], refVec.objects[i], range[i] );
+		if( size )
+		{
+			refVec.create( size );
+			for( size_t i = 0; i < size; ++i )
+				initRef( refVec.services[i], refVec.objects[i], range[i] );
+		}
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, void* valuePtr )
+	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		co::Any any;
-		field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
+		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
 
 		co::TypeKind kind = any.getKind();
 		bool isPrimitive = ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE || kind == co::TK_ENUM );
@@ -85,109 +137,205 @@ ObjectRecord* UniverseRecord::createObject( T from, co::IObject* instance )
 
 	addRef( from, object );
 
-	InitTraverser traverser( this );
-	traverseObject( object, traverser );
+	InitTraverser traverser( *this, object );
+	traverser.traverseObject();
 
 	return object;
 }
 
-//------ UpdateTraverser -------------------------------------------------------
+//------ UpdateTraverser (updates an existing object) --------------------------
 
-struct UpdateTraverser
+struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 {
-	UniverseRecord* _u;
+	ObjectChanges* objectChanges;
+	ServiceChanges* serviceChanges;
+	co::int16 lastFacet;
 
-	UpdateTraverser( UniverseRecord* u ) : _u( u ) {;}
+	UpdateTraverser( UniverseRecord& u ) : UT( u, NULL ),
+		objectChanges( NULL ), serviceChanges( NULL ), lastFacet( -1 )
+	{;}
 
-	void updateRef( ObjectRecord* from, co::IService*& service, ObjectRecord*& to, co::IService* newService )
+	~UpdateTraverser()
 	{
-		if( service == newService )
-			return;
+		clear();
+	}
 
-		service = newService;
-
-		co::IObject* newInstance = newService->getProvider();
-		ObjectRecord* newTo = _u->findObject( newInstance );
-		if( to != newTo )
+	void clear()
+	{
+		if( !objectChanges )
 		{
-			if( newTo )
-				_u->addRef( from, newTo );
-			else
-				newTo = _u->createObject( from, newInstance );
-			if( to )
-				_u->removeRef( from, to );
-			to = newTo;
+			co::debug( co::Dbg_Warning, "ca.Universe: addChange() called for (%s)%p without changes.",
+				source->model->type->getFullName().c_str(), source->instance );
+			return;
 		}
+
+		// add the 'changes' to each of this object's spaces
+		SpaceRefCountMap::iterator end = source->spaceRefs.end();
+		for( SpaceRefCountMap::iterator it = source->spaceRefs.begin(); it != end; ++it )
+			u.onChangedObject( it->first, objectChanges );
+
+		lastFacet = -1;
+		objectChanges = NULL;
+		serviceChanges = NULL;
 	}
 
-	void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	void reset( ObjectRecord* newSource )
 	{
-		assert( !ref.service && !ref.object );
-		updateRef( object, ref.service, ref.object, object->instance->getService( receptacle.port ) );
+		assert( source != newSource );
+		if( source )
+			clear();
+		source = newSource;
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	ObjectChanges* getObjectChanges()
 	{
-		assert( !ref.service && !ref.object );
+		if( !objectChanges )
+			objectChanges = new ObjectChanges( source->instance );
+		return objectChanges;
+	}
 
+	ServiceChanges* getServiceChanges( co::uint8 facetId )
+	{
+		if( lastFacet != facetId )
+		{
+			serviceChanges = new ServiceChanges( source->services[facetId] );
+			getObjectChanges()->addChangedService( serviceChanges );
+			lastFacet = facetId;
+		}
+		return serviceChanges;
+	}
+
+	void onReceptacle( PortRecord& receptacle, RefField& ref )
+	{
+		co::IService* service = source->instance->getService( receptacle.port );
+		if( service == ref.service )
+			return; // no change
+
+		ChangedConnection& cc = getObjectChanges()->addChangedConnection();
+		cc.receptacle = receptacle.port;
+		cc.previous = ref.service;
+		cc.current = service;
+
+		updateRef( ref.service, ref.object, service );
+	}
+
+	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
+	{
 		co::Any any;
-		field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
+		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
 		assert( any.getKind() == co::TK_INTERFACE );
 
-		updateRef( object, ref.service, ref.object, any.getState().data.service );
+		co::IService* service = any.getState().data.service;
+		if( service == ref.service )
+			return; // no change
+
+		ChangedRefField& cf = getServiceChanges( facetId )->addChangedRefField();
+		cf.field = field.field;
+		cf.previous = ref.service;
+		cf.current = service;
+
+		updateRef( ref.service, ref.object, service );
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
-		assert( !refVec.services && !refVec.objects );
-
 		co::Any any;
-		field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
+		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
 		co::Range<co::IService* const> range = any.get<co::Range<co::IService* const> >();
 
-		size_t size = range.getSize();
-		refVec.create( size );
-		for( size_t i = 0; i < size; ++i )
-			updateRef( object, refVec.services[i], refVec.objects[i], range[i] );
+		size_t newSize = range.getSize();
+		size_t oldSize = refVec.getSize();
+		if( newSize == oldSize && ( !newSize ||
+				std::equal( &range.getFirst(), &range.getLast(), refVec.services ) ) )
+			return; // no change
+
+		ChangedRefVecField& cf = getServiceChanges( facetId )->addChangedRefVecField();
+		cf.field = field.field;
+	
+		// populate the 'previous' RefVector
+		cf.previous.resize( oldSize );
+		for( size_t i = 0; i < oldSize; ++i )
+			cf.previous[i] = refVec.services[i];
+
+		// populate the 'current' RefVector
+		cf.current.resize( newSize );
+		for( size_t i = 0; i < newSize; ++i )
+			cf.current[i] = range[i];
+
+		// create a new RefVec
+		RefVecField newRefVec;
+		newRefVec.create( newSize );
+		for( size_t i = 0; i < newSize; ++i )
+			initRef( newRefVec.services[i], newRefVec.objects[i], range[i] );
+
+		// destroy the old RefVec
+		for( size_t i = 0; i < oldSize; ++i )
+			u.removeRef( source, refVec.objects[i] );
+
+		refVec.destroy();
+		refVec = newRefVec;
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, void* valuePtr )
+	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		co::Any any;
-		field.getOwnerReflector()->getField( object->services[facetId], field.field, any );
+		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
 
-		co::TypeKind kind = any.getKind();
-		bool isPrimitive = ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE || kind == co::TK_ENUM );
-		const void* fromPtr = ( isPrimitive ? &any.getState().data : any.getState().data.ptr );
-		field.getTypeReflector()->copyValue( fromPtr, valuePtr );
+		co::IType* type = field.field->getType();
+		co::IReflector* reflector = type->getReflector();
+
+		// perform raw memory comparison
+		co::Any::State& s = any.getState();
+		bool isPrimitive = ( s.kind <= co::TK_DOUBLE || s.kind == co::TK_ENUM );
+		assert( !s.isPointer && ( ( isPrimitive && !s.isReference ) || ( !isPrimitive && s.isReference ) ) );
+		void* newValuePtr = ( isPrimitive ? &s.data : s.data.ptr );
+		if( memcmp( newValuePtr, valuePtr, reflector->getSize() ) == 0 )
+			return; // no change
+
+		ChangedValueField& cf = getServiceChanges( facetId )->addChangedValueField();
+		cf.field = field.field;
+
+		if( isPrimitive )
+		{
+			cf.previous.setVariable( type, co::Any::VarIsValue, valuePtr );
+			cf.current = any;
+		}
+		else
+		{
+			reflector->copyValue( valuePtr, cf.previous.createComplexValue( type ) );
+			reflector->copyValue( newValuePtr, cf.current.createComplexValue( type ) );
+		}
+
+		// update our internal value
+		reflector->copyValue( newValuePtr, valuePtr );
 	}
 };
 
 //------ AddRefTraverser -------------------------------------------------------
 
-struct AddRefTraverser
+struct AddRefTraverser : public UniverseTraverser<AddRefTraverser>
 {
-	UniverseRecord* _u;
 	co::uint16 spaceId;
 
-	AddRefTraverser( UniverseRecord* u, co::uint16 spaceId ) : _u( u ), spaceId( spaceId )
+	AddRefTraverser( UniverseRecord& u, co::uint16 spaceId, ObjectRecord* source )
+		: UT( u, source ), spaceId( spaceId )
 	{;}
 
-	void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
-		_u->addRef( object, ref.object, spaceId );
+		u.addRef( source, ref.object, spaceId );
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
-		_u->addRef( object, ref.object, spaceId );
+		u.addRef( source, ref.object, spaceId );
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
 		size_t size = refVec.getSize();
 		for( size_t i = 0; i < size; ++i )
-			_u->addRef( object, refVec.objects[i], spaceId );
+			u.addRef( source, refVec.objects[i], spaceId );
 	}
 };
 
@@ -200,12 +348,13 @@ void UniverseRecord::addRef( co::uint16 spaceId, ObjectRecord* root )
 		return; // object was already in this space
 
 	// this object has just been added to a new space...
+	onAddedObject( spaceId, root );
 
 	// recursively update ref-counts for the new space
 	if( root->outDegree )
 	{
-		AddRefTraverser traverser( this, spaceId );
-		traverseObjectRefs( root, traverser );
+		AddRefTraverser traverser( *this, spaceId, root );
+		traverser.traverseObjectRefs();
 	}
 }
 
@@ -218,12 +367,13 @@ void UniverseRecord::addRef( ObjectRecord* from, ObjectRecord* to, co::uint16 sp
 	if( ++to->spaceRefs[spaceId] == 1 )
 	{
 		// 'to' has just been added to a new space...
+		onAddedObject( spaceId, to );
 
 		// recursively update ref-counts for the new space
 		if( to->outDegree )
 		{
-			AddRefTraverser traverser( this, spaceId );
-			traverseObjectRefs( to, traverser );
+			AddRefTraverser traverser( *this, spaceId, to );
+			traverser.traverseObjectRefs();
 		}
 	}
 }
@@ -240,29 +390,29 @@ void UniverseRecord::addRef( ObjectRecord* from, ObjectRecord* to )
 
 //------ RemoveRefTraverser ----------------------------------------------------
 
-struct RemoveRefTraverser
+struct RemoveRefTraverser : public UniverseTraverser<RemoveRefTraverser>
 {
-	UniverseRecord* _u;
 	co::uint16 spaceId;
 
-	RemoveRefTraverser( UniverseRecord* u, co::uint16 spaceId ) : _u( u ), spaceId( spaceId )
+	RemoveRefTraverser( UniverseRecord& u, co::uint16 spaceId, ObjectRecord* source )
+		: UT( u, source ), spaceId( spaceId )
 	{;}
 
-	void operator()( ObjectRecord* object, PortRecord& receptacle, RefField& ref )
+	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
-		_u->removeRef( object, ref.object, spaceId );
+		u.removeRef( source, ref.object, spaceId );
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefField& ref )
+	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
-		_u->removeRef( object, ref.object, spaceId );
+		u.removeRef( source, ref.object, spaceId );
 	}
 
-	void operator()( ObjectRecord* object, co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
+	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
 		size_t size = refVec.getSize();
 		for( size_t i = 0; i < size; ++i )
-			_u->removeRef( object, refVec.objects[i], spaceId );
+			u.removeRef( source, refVec.objects[i], spaceId );
 	}
 };
 
@@ -275,12 +425,13 @@ void UniverseRecord::removeRef( co::uint16 spaceId, ObjectRecord* root )
 		return;
 
 	// object was removed from space
+	onRemovedObject( spaceId, root );
 
 	// propagate removal from space
 	if( root->outDegree )
 	{
-		RemoveRefTraverser traverser( this, spaceId );
-		traverseObjectRefs( root, traverser );
+		RemoveRefTraverser traverser( *this, spaceId, root );
+		traverser.traverseObjectRefs();
 	}
 
 	// if this was the last space, destroy the object
@@ -290,19 +441,21 @@ void UniverseRecord::removeRef( co::uint16 spaceId, ObjectRecord* root )
 
 void UniverseRecord::removeRef( ObjectRecord* from, ObjectRecord* to, co::uint16 spaceId )
 {
-	assert( from && to );
+	assert( from );
+	if( !to ) return; // null reference
 
 	--from->outDegree;
 	--to->inDegree;
 	if( --to->spaceRefs[spaceId] == 0 )
 	{
 		// 'to' was removed from space
+		onRemovedObject( spaceId, to );
 
 		// propagate removal from this space
 		if( to->outDegree )
 		{
-			RemoveRefTraverser traverser( this, spaceId );
-			traverseObjectRefs( to, traverser );
+			RemoveRefTraverser traverser( *this, spaceId, to );
+			traverser.traverseObjectRefs();
 		}
 
 		// if this was to's last space, destroy it
@@ -406,7 +559,7 @@ public:
 			result.push_back( rootObjects[i]->instance );
 	}
 
-	co::uint32 beginChange( co::uint16 spaceId, co::IService* service )
+	void addChange( co::uint16 spaceId, co::IService* service )
 	{
 		checkHasModel();
 
@@ -415,47 +568,78 @@ public:
 
 		ObjectRecord* object = _u.getObject( service->getProvider() );
 		if( !object )
-			throw ca::NoSuchObjectException( "service is not provided by an object in this universe" );
+			throw ca::NoSuchObjectException(
+				"service is not provided by an object in this space (nor universe)" );
 
-		#ifndef CORAL_NDEBUG
-			// for debug builds, we also check if the object is in the space
-			if( object->spaceRefs[spaceId] < 1 )
-				throw ca::NoSuchObjectException( "service is not provided by an object in this space" );
-		#else
-			CORAL_UNUSED( spaceId );
-		#endif
+		if( object->spaceRefs[spaceId] < 1 )
+			throw ca::NoSuchObjectException( "service is not provided by an object in this space" );
 
 		// locate the service's facet
-		co::uint8 numFacets = object->model->numFacets;
-		co::uint8 facetId = 0;
-		while( 1 )
+		co::int16 facet = -1; // -1 means the object's co.IObject facet
+		if( object->instance != service )
 		{
-			if( facetId >= numFacets )
-				throw ca::ModelException( "illegal service: facet is not in the object model" );
+			co::int16 numFacets = object->model->numFacets;
+			while( 1 )
+			{
+				if( facet >= numFacets )
+					throw ca::ModelException( "the service's facet is not in the object model" );
 
-			if( service == object->services[facetId] )
-				break;
+				if( service == object->services[facet] )
+					break;
 
-			++facetId;
+				++facet;
+			}
 		}
 
-		// TODO
-		return 0;
+		_u.addChangedService( object, facet );
 	}
 
-	void endChange( co::uint16 spaceId, co::uint32 level )
+	void notifyChanges( co::uint16 spaceId )
 	{
-		// TODO
-		CORAL_UNUSED( spaceId );
-		CORAL_UNUSED( level );
+		// process the list of changed services
+		if( !_u.changedServices.empty() )
+		{
+			ChangedService* cs = &_u.changedServices.front();
+			ChangedService* lastCS = &_u.changedServices.back();
+			std::sort( cs, lastCS + 1 );
+
+			UpdateTraverser traverser( _u );
+			for( ; cs <= lastCS ; ++cs )
+			{
+				if( cs->object != traverser.source )
+					traverser.reset( cs->object );
+				else if( cs->facet == traverser.lastFacet )
+					continue;
+
+				if( cs->facet < 0 )
+					traverser.traverseReceptacles();
+				else
+					traverser.traverseFacet( cs->facet );
+			}
+
+			_u.changedServices.clear();
+		}
+
+		// notify all spaces with changes
+		size_t numSpaces = _u.spaces.size();
+		for( size_t i = 0; i < numSpaces; ++i )
+		{
+			SpaceRecord* s = _u.spaces[i];
+			if( s->hasChanges )
+			{
+				co::RefPtr<ISpaceChanges> changes( s->changes.finalize( s->space ) );
+				s->space->onSpaceChanged( changes.get() );
+				s->hasChanges = false;
+			}
+		}
 	}
 
-	void notifyChanges()
+private:
+	inline SpaceRecord* getSpace( co::uint16 spaceId )
 	{
-		// TODO
+		return _u.spaces[spaceId];
 	}
 
-protected:
 	inline void checkHasModel()
 	{
 		if( !_u.model.isValid() )
@@ -481,12 +665,6 @@ protected:
 				<< model->getProvider()->getComponent()->getFullName() << ")" );
 
 		_u.model = static_cast<Model*>( model );
-	}
-
-private:
-	inline SpaceRecord* getSpace( co::uint16 spaceId )
-	{
-		return _u.spaces[spaceId];
 	}
 
 private:

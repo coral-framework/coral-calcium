@@ -1,11 +1,17 @@
 /*
-	Immutable list of changes made to a service since a previous point in time.
+	Immutable list of changes made to a service.
  */
 interface IServiceChanges
 {
-	// The changed service.
+	// The affected service.
 	readonly co.IService service;
 
-	// List of changed fields.
-	readonly IFieldChange[] changedFields;
+	// List of changed reference-type fields.
+	readonly ChangedRefField[] changedRefFields;
+
+	// List of changed ref-vector-type fields.
+	readonly ChangedRefVecField[] changedRefVecFields;
+
+	// List of changed value-type fields.
+	readonly ChangedValueField[] changedValueFields;
 };

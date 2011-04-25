@@ -1,0 +1,9 @@
+/*
+	A value change event for reference-type fields.
+ */
+struct ChangedRefField
+{
+	co.IField field;		//< The affected field.
+	co.IService previous;	//< Previous field value.
+	co.IService current;	//< Current field value.
+};

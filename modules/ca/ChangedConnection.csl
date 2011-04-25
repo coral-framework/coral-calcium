@@ -1,0 +1,9 @@
+/*
+	A receptacle connection change event.
+ */
+struct ChangedConnection
+{
+	co.IPort receptacle;	//< The affected object receptacle.
+	co.IService previous;	//< Service previously connected to the receptacle (may be null).
+	co.IService current;	//< Service currently connected to the receptacle (may be null).
+};
