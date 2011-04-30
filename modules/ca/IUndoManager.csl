@@ -1,13 +1,21 @@
 /*
-	Manages a pair of undo/redo stacks.
+	Provides support for undoing and redoing changes to an object space.
 
-	An undo/redo manager records all changes made to an object graph
-	and allows any set of changes to be reverted or re-applied.
+	An undo/redo manager can be used to track specific sets of changes made
+	to an object space, and then revert or re-apply these changes.
 
-	Individual changes can be grouped into a single ChangeSet, so that performing
-	an undo reverts all grouped changes.
+	All changes made between a pair of beginChange() and endChange() calls are
+	stored in a \e changeset that is pushed onto the <em>undo stack</em>.
+	Whenever undo() is called, the changeset at the top of the undo stack is
+	reverted, and these changes are recorded onto the <em>redo stack</em>.
+	Calling redo() reverts the changeset at the top of the redo stack, which
+	effectively re-does the changes that had been reverted by an undo().
+
+	Nested beginChange() / endChange() calls are allowed, as long as they are
+	balanced. Currently, all nested calls are ignored, and only the top-level
+	calls generate an entry on the undo stack.
  */
-interface IUndoManager
+interface IUndoManager extends ISpaceObserver
 {
 	// Whether there are any changes to undo.
 	readonly bool canUndo;
@@ -15,34 +23,41 @@ interface IUndoManager
 	// Whether there are any changes to redo.
 	readonly bool canRedo;
 
-	// Strings describing each ChangeSet in the undo stack.
+	// List of strings describing the changesets in the undo stack.
 	readonly string[] undoList;
 
-	// Strings describing each ChangeSet in the redo stack.
+	// List of strings describing the changesets in the redo stack.
 	readonly string[] redoList;
 
 	/*
-		TODO
+		Starts recording changes into a changeset. Must be paired with an endChange() call.
+		The given \a description will be associated with the changeset in the undo/redo lists.
 	 */
-	void beginChange( in string message );
+	void beginChange( in string description );
 
 	/*
-		TODO
+		Finishes recording changes and pushes a changeset onto the undo stack.
+		\throw co.IllegalStateException if this manager is not currently recording a changeset.
 	 */
-	void endChange();
+	void endChange() raises co.IllegalStateException;
 
 	/*
-		Undoes the most recent ChangeSet on the undo stack, recording the operations on the redo stack.
+		Undoes the top changeset on the undo stack, recording the changes on the redo stack.
+		\throw co.IllegalStateException if this manager is currently recording a changeset.
+		\throw NoChangeException if the undo stack is empty.
 	 */
-	void undo();
+	void undo() raises co.IllegalStateException, NoChangeException;
 
 	/*
-		Redoes the most recent ChangeSet on the redo stack, recording the operations on the undo stack.
+		Redoes the top changeset on the redo stack, recording the changes on the undo stack.
+		\throw co.IllegalStateException if this manager is currently recording a changeset.
+		\throw NoChangeException if the redo stack is empty.
 	 */
-	void redo();
+	void redo() raises co.IllegalStateException, NoChangeException;
 
 	/*
 		Clears the undo and redo stacks.
+		\throw co.IllegalStateException if this manager is currently recording a changeset.
 	 */
-	void clear();
+	void clear() raises co.IllegalStateException;
 };

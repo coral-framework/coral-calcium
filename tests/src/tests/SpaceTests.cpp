@@ -3,170 +3,10 @@
  * See copyright notice in LICENSE.md
  */
 
-#include <gtest/gtest.h>
+#include "ERMSpace.h"
 
-#include <co/Coral.h>
-#include <co/IField.h>
-#include <co/IObject.h>
-
-#include <ca/IModel.h>
-#include <ca/ISpace.h>
-#include <ca/IUniverse.h>
-#include <ca/ISpaceChanges.h>
-#include <ca/ISpaceObserver.h>
-#include <ca/IObjectChanges.h>
-#include <ca/IServiceChanges.h>
-#include <ca/ChangedRefField.h>
-#include <ca/ChangedRefVecField.h>
-#include <ca/ChangedValueField.h>
-#include <ca/ChangedConnection.h>
-#include <ca/NoSuchObjectException.h>
-
-#include <erm/IModel.h>
-#include <erm/IEntity.h>
-#include <erm/IRelationship.h>
-#include <erm/Multiplicity.h>
-
-#include <algorithm>
-
-
-class SpaceTests : public ::testing::Test, public ca::ISpaceObserver
-{
-public:
-	void onSpaceChanged( ca::ISpaceChanges* changes )
-	{
-		_changes = changes;
-	}
-
-	co::IInterface* getInterface() { return 0; }
-	co::IObject* getProvider() { return 0; }
-	co::IPort* getFacet() { return 0; }
-	void serviceRetain() {;}
-	void serviceRelease() {;}
-
-protected:
-	virtual void SetUp()
-	{
-		// create an object model
-		_modelObj = co::newInstance( "ca.Model" );
-		_model = _modelObj->getService<ca::IModel>();
-		assert( _model.isValid() );
-
-		_model->setName( "erm" );
-
-		// create an object universe and bind the model
-		_universeObj = co::newInstance( "ca.Universe" );
-		_universe = _universeObj->getService<ca::IUniverse>();
-		assert( _universe.isValid() );
-
-		_universeObj->setService( "model", _model.get() );
-
-		// create an object space and bind it to the universe
-		_spaceObj = co::newInstance( "ca.Space" );
-		_space = _spaceObj->getService<ca::ISpace>();
-		assert( _space.isValid() );
-
-		_spaceObj->setService( "universe", _universe.get() );
-
-		_space->addSpaceObserver( this );
-	}
-
-	co::IObject* createSimpleERM()
-	{
-		// create a simple object graph with 2 entities and 1 relationship
-		_entityA = co::newInstance( "erm.Entity" )->getService<erm::IEntity>();
-		_entityA->setName( "Entity A" );
-		
-		_entityB = co::newInstance( "erm.Entity" )->getService<erm::IEntity>();
-		_entityB->setName( "Entity B" );
-		
-		_relAB = co::newInstance( "erm.Relationship" )->getService<erm::IRelationship>();
-		_relAB->setRelation( "relation A-B" );
-		_relAB->setEntityA( _entityA.get() );
-		_relAB->setEntityB( _entityB.get() );
-		
-		_erm = co::newInstance( "erm.Model" )->getService<erm::IModel>();
-		_erm->addEntity( _entityA.get() );
-		_erm->addEntity( _entityB.get() );
-		_erm->addRelationship( _relAB.get() );
-
-		// 1 entity and 2 rels are created but not added to the graph yet
-		_entityC = co::newInstance( "erm.Entity" )->getService<erm::IEntity>();
-		_entityC->setName( "Entity C" );
-
-		_relBC = co::newInstance( "erm.Relationship" )->getService<erm::IRelationship>();
-		_relBC->setRelation( "relation B-C" );
-
-		_relCA = co::newInstance( "erm.Relationship" )->getService<erm::IRelationship>();
-		_relCA->setRelation( "relation C-A" );
-
-		return _erm->getProvider();
-	}
-
-	void startWithSimpleERM()
-	{
-		_space->addRootObject( createSimpleERM() );
-
-		// skip the first notification with the initial object additions
-		_space->notifyChanges();
-		_changes = NULL;
-	}
-
-	void extendSimpleERM()
-	{
-		// adds 1 entity and 2 relationships, closing a 'loop' in the ERM
-		_relBC->getProvider()->setService( "entityA", _entityB.get() );
-		_relBC->getProvider()->setService( "entityB", _entityC.get() );
-
-		_relCA->setEntityA( _entityC.get() );
-		_relCA->setEntityB( _entityA.get() );
-
-		_erm->addEntity( _entityC.get() );
-		_erm->addRelationship( _relBC.get() );
-		_erm->addRelationship( _relCA.get() );
-	}
-
-	void startWithExtendedERM()
-	{
-		createSimpleERM();
-		extendSimpleERM();
-		_space->addRootObject( _erm->getProvider() );
-
-		// skip the first notification with the initial object additions
-		_space->notifyChanges();
-		_changes = NULL;
-	}
-
-	virtual void TearDown()
-	{
-		_modelObj = NULL;
-		_spaceObj = NULL;
-		_universeObj = NULL;
-
-		_model = NULL;
-		_space = NULL;
-		_universe = NULL;
-	}
-
-protected:
-	co::RefPtr<co::IObject> _modelObj;
-	co::RefPtr<co::IObject> _universeObj;
-	co::RefPtr<co::IObject> _spaceObj;
-
-	co::RefPtr<ca::IModel> _model;
-	co::RefPtr<ca::IUniverse> _universe;
-	co::RefPtr<ca::ISpace> _space;
-
-	co::RefPtr<ca::ISpaceChanges> _changes;
-
-	co::RefPtr<erm::IEntity> _entityA;
-	co::RefPtr<erm::IEntity> _entityB;
-	co::RefPtr<erm::IEntity> _entityC;
-	co::RefPtr<erm::IRelationship> _relAB;
-	co::RefPtr<erm::IRelationship> _relBC;
-	co::RefPtr<erm::IRelationship> _relCA;
-	co::RefPtr<erm::IModel> _erm;
-};
+class SpaceTests : public ERMSpace
+{};
 
 TEST_F( SpaceTests, initialization )
 {
@@ -201,18 +41,18 @@ TEST_F( SpaceTests, initialization )
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 	EXPECT_TRUE( _changes->getChangedObjects().isEmpty() );
 
-	// test wasAdded()
-	EXPECT_FALSE( _changes->wasAdded( NULL ) );
-	EXPECT_FALSE( _changes->wasAdded( _entityC->getProvider() ) );
-	EXPECT_FALSE( _changes->wasAdded( _relBC->getProvider() ) );
-	EXPECT_FALSE( _changes->wasAdded( _relCA->getProvider() ) );
-	EXPECT_TRUE( _changes->wasAdded( _entityA->getProvider() ) );
+	// test findAddedObject()
+	EXPECT_TRUE( _changes->findAddedObject( NULL ) < 0 );
+	EXPECT_TRUE( _changes->findAddedObject( _entityC->getProvider() ) < 0 );
+	EXPECT_TRUE( _changes->findAddedObject( _relBC->getProvider() ) < 0 );
+	EXPECT_TRUE( _changes->findAddedObject( _relCA->getProvider() ) < 0 );
+	EXPECT_TRUE( _changes->findAddedObject( _entityA->getProvider() ) >= 0 );
 
-	// test wasRemoved/wasChanged() with garbage
-	EXPECT_FALSE( _changes->wasRemoved( NULL ) );
-	EXPECT_FALSE( _changes->wasRemoved( _entityC->getProvider() ) );
-	EXPECT_FALSE( _changes->wasChanged( NULL ) );
-	EXPECT_FALSE( _changes->wasChanged( _entityC->getProvider() ) );
+	// test findRemovedObject/findChangedObject() with garbage
+	EXPECT_TRUE( _changes->findRemovedObject( NULL ) < 0 );
+	EXPECT_TRUE( _changes->findRemovedObject( _entityC->getProvider() ) < 0 );
+	EXPECT_TRUE( _changes->findChangedObject( NULL ) < 0 );
+	EXPECT_TRUE( _changes->findChangedObject( _entityC->getProvider() ) < 0 );
 }
 
 TEST_F( SpaceTests, noChange )
@@ -250,9 +90,9 @@ TEST_F( SpaceTests, simpleAdditions )
 
 	// we expect 3 new objects
 	EXPECT_EQ( 3, _changes->getAddedObjects().getSize() );
-	EXPECT_TRUE( _changes->wasAdded( _entityC->getProvider() ) );
-	EXPECT_TRUE( _changes->wasAdded( _relBC->getProvider() ) );
-	EXPECT_TRUE( _changes->wasAdded( _relCA->getProvider() ) );
+	EXPECT_TRUE( _changes->findAddedObject( _entityC->getProvider() ) >= 0 );
+	EXPECT_TRUE( _changes->findAddedObject( _relBC->getProvider() ) >= 0 );
+	EXPECT_TRUE( _changes->findAddedObject( _relCA->getProvider() ) >= 0 );
 
 	// we expect no removed object
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
@@ -318,7 +158,7 @@ TEST_F( SpaceTests, changedRefFields )
 
 	// we expect 1 added and 1 changed object, with 1 changed Ref field
 	EXPECT_EQ( 1, _changes->getAddedObjects().getSize() );
-	EXPECT_TRUE( _changes->wasAdded( _entityC->getProvider() ) );
+	EXPECT_TRUE( _changes->findAddedObject( _entityC->getProvider() ) >= 0 );
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 
 	co::Range<ca::IObjectChanges* const> changedObjects = _changes->getChangedObjects();
@@ -347,7 +187,7 @@ TEST_F( SpaceTests, changedRefFields )
 	// we expect 1 removed and 1 changed object, with 1 changed Ref field
 	EXPECT_TRUE( _changes->getAddedObjects().isEmpty() );
 	EXPECT_EQ( 1, _changes->getRemovedObjects().getSize() );
-	EXPECT_TRUE( _changes->wasRemoved( _entityC->getProvider() ) );
+	EXPECT_TRUE( _changes->findRemovedObject( _entityC->getProvider() ) >= 0 );
 
 	changedObjects = _changes->getChangedObjects();
 	ASSERT_EQ( 1, changedObjects.getSize() );
@@ -397,9 +237,9 @@ TEST_F( SpaceTests, changedRefVecFields )
 
 	// we expect 2 added objects (entityC and relBC)
 	EXPECT_EQ( 2, _changes->getAddedObjects().getSize() );
-	EXPECT_TRUE( _changes->wasAdded( _entityC->getProvider() ) );
-	EXPECT_TRUE( _changes->wasAdded( _relBC->getProvider() ) );
-	EXPECT_FALSE( _changes->wasAdded( _relCA->getProvider() ) );
+	EXPECT_TRUE( _changes->findAddedObject( _entityC->getProvider() ) >= 0 );
+	EXPECT_TRUE( _changes->findAddedObject( _relBC->getProvider() ) >= 0 );
+	EXPECT_FALSE( _changes->findAddedObject( _relCA->getProvider() ) >= 0 );
 
 	// we expect no removed object (since relAB still has a ref to entityB)
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
@@ -454,7 +294,7 @@ TEST_F( SpaceTests, changedRefVecFields )
 	EXPECT_TRUE( _changes->getAddedObjects().isEmpty() );
 
 	EXPECT_EQ( 1, _changes->getRemovedObjects().getSize() );
-	EXPECT_TRUE( _changes->wasRemoved( _entityB->getProvider() ) );
+	EXPECT_TRUE( _changes->findRemovedObject( _entityB->getProvider() ) >= 0 );
 
 	// the changed object (relAB) has 1 changed field and 1 changed connection
 	changedObjects = _changes->getChangedObjects();
@@ -499,20 +339,23 @@ TEST_F( SpaceTests, changedValueFields )
 	co::Range<ca::IObjectChanges* const> changedObjects = _changes->getChangedObjects();
 	ASSERT_EQ( 2, changedObjects.getSize() );
 
-	ca::IObjectChanges* changedEntityAObj = changedObjects[0];
-	ca::IObjectChanges* changedRelBCObj = changedObjects[1];
-	if( _entityA->getProvider() != changedEntityAObj->getObject() )
-		std::swap( changedEntityAObj, changedRelBCObj );
+	co::int32 indexOfEntityA = _changes->findChangedObject( _entityA->getProvider() );
+	co::int32 indexOfRelBC = _changes->findChangedObject( _relBC->getProvider() );
+	ASSERT_TRUE( indexOfEntityA >= 0 );
+	ASSERT_TRUE( indexOfRelBC >= 0 );
 
-	EXPECT_EQ( _entityA->getProvider(), changedEntityAObj->getObject() );
-	ASSERT_EQ( 1, changedEntityAObj->getChangedServices().getSize() );
-	EXPECT_EQ( 0, changedEntityAObj->getChangedConnections().getSize() );
-	EXPECT_EQ( _relBC->getProvider(), changedRelBCObj->getObject() );
-	ASSERT_EQ( 1, changedRelBCObj->getChangedServices().getSize() );
-	EXPECT_EQ( 0, changedRelBCObj->getChangedConnections().getSize() );
+	ca::IObjectChanges* entityAChanges = changedObjects[indexOfEntityA];
+	ca::IObjectChanges* relBCChanges = changedObjects[indexOfRelBC];
+
+	EXPECT_EQ( _entityA->getProvider(), entityAChanges->getObject() );
+	ASSERT_EQ( 1, entityAChanges->getChangedServices().getSize() );
+	EXPECT_EQ( 0, entityAChanges->getChangedConnections().getSize() );
+	EXPECT_EQ( _relBC->getProvider(), relBCChanges->getObject() );
+	ASSERT_EQ( 1, relBCChanges->getChangedServices().getSize() );
+	EXPECT_EQ( 0, relBCChanges->getChangedConnections().getSize() );
 
 	// check changes to entityA	
-	ca::IServiceChanges* changedService = changedEntityAObj->getChangedServices().getFirst();
+	ca::IServiceChanges* changedService = entityAChanges->getChangedServices().getFirst();
 	EXPECT_EQ( _entityA.get(), changedService->getService() );	
 	EXPECT_TRUE( changedService->getChangedRefFields().isEmpty() );
 	EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );
@@ -524,7 +367,7 @@ TEST_F( SpaceTests, changedValueFields )
 	EXPECT_EQ( "New Name", changedValueFields[0].current.get<const std::string&>() );
 
 	// check changes to relAB	
-	changedService = changedRelBCObj->getChangedServices().getFirst();
+	changedService = relBCChanges->getChangedServices().getFirst();
 	EXPECT_EQ( _relBC.get(), changedService->getService() );	
 	EXPECT_TRUE( changedService->getChangedRefFields().isEmpty() );
 	EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );

@@ -51,9 +51,10 @@ public:
 	co::Range<co::IObject* const> getAddedObjects();	
 	co::Range<co::IObject* const> getRemovedObjects();
 	co::Range<ca::IObjectChanges* const> getChangedObjects();
-	bool wasAdded( co::IObject* object );
-	bool wasChanged( co::IObject* object );
-	bool wasRemoved( co::IObject* object );
+	co::int32 findAddedObject( co::IObject* object );
+	co::int32 findRemovedObject( co::IObject* object );
+	co::int32 findChangedObject( co::IObject* object );
+	void revertChanges();
 
 private:
 	co::RefPtr<ca::ISpace> _space;

@@ -1,5 +1,5 @@
 /*
-	Manages a collection of object graphs that are mirrored in a remote data store.
+	Manages a collection of object graphs. Provides change tracking and notifications.
 
 	Objects are guaranteed to be unique within a space. They can also be shared by
 	multiple spaces in the same universe, and have copies in different universes.

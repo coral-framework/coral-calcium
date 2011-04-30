@@ -77,22 +77,87 @@ co::Range<ca::IObjectChanges* const> SpaceChanges::getChangedObjects()
 	return _changedObjects;
 }
 
-bool SpaceChanges::wasAdded( co::IObject* object )
+co::int32 SpaceChanges::findAddedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject*>( _addedObjects ), object, objectCompare, pos );
+	return co::binarySearch( co::Range<co::IObject*>( _addedObjects ),
+		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
-bool SpaceChanges::wasChanged( co::IObject* object )
+co::int32 SpaceChanges::findRemovedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<ca::IObjectChanges*>( _changedObjects ), object, changesKeyCompare, pos );
+	return co::binarySearch( co::Range<co::IObject*>( _removedObjects ),
+		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
-bool SpaceChanges::wasRemoved( co::IObject* object )
+co::int32 SpaceChanges::findChangedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject*>( _removedObjects ), object, objectCompare, pos );
+	return co::binarySearch( co::Range<ca::IObjectChanges*>( _changedObjects ),
+		object, changesKeyCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
+}
+
+void revertFieldChanges( ISpace* space, IServiceChanges* changes )
+{
+	co::IService* service = changes->getService();
+	space->addChange( service );
+
+	co::Any instance( service ), value;
+
+	// revert all Ref fields
+	co::Range<ChangedRefField const> refFields = changes->getChangedRefFields();
+	for( ; refFields; refFields.popFirst() )
+	{
+		co::IField* field = refFields.getFirst().field.get();
+		co::IInterface* type = static_cast<co::IInterface*>( field->getType() );
+		value.setService( refFields.getFirst().previous.get(), type );
+		field->getOwner()->getReflector()->setField( instance, field, value );
+	}
+
+	// revert all RefVec fields
+	co::Range<ChangedRefVecField const> refVecFields = changes->getChangedRefVecFields();
+	for( ; refVecFields; refVecFields.popFirst() )
+	{
+		co::IField* field = refVecFields.getFirst().field.get();
+		const co::uint32 flags = co::Any::VarIsPointer | co::Any::VarIsPointerConst;
+		value.setArray( co::Any::AK_RefVector, field->getType(), flags,
+			const_cast<void*>( reinterpret_cast<const void*>( &refVecFields.getFirst().previous ) ) );
+		field->getOwner()->getReflector()->setField( instance, field, value );
+	}
+
+	// revert all Value fields
+	co::Range<ChangedValueField const> valueFields = changes->getChangedValueFields();
+	for( ; valueFields; valueFields.popFirst() )
+	{
+		co::IField* field = valueFields.getFirst().field.get();
+		field->getOwner()->getReflector()->setField( instance, field, valueFields.getFirst().previous );
+	}
+}
+
+void SpaceChanges::revertChanges()
+{
+	// for each changed object
+	for( co::Range<IObjectChanges* const> objects( _changedObjects ); objects; objects.popFirst() )
+	{
+		// revert connection changes
+		co::Range<ChangedConnection const> connections = objects.getFirst()->getChangedConnections();
+		if( connections )
+		{
+			co::IObject* object = objects.getFirst()->getObject();
+			for( ; connections; connections.popFirst() )
+			{
+				object->setService( connections.getFirst().receptacle.get(),
+								    connections.getFirst().previous.get() );
+			}
+			_space->addChange( object );
+		}
+
+		// revert field changes for each changed service
+		co::Range<IServiceChanges* const> services = objects.getFirst()->getChangedServices();
+		for( ; services; services.popFirst() )
+			revertFieldChanges( _space.get(), services.getFirst() );
+	}
 }
 
 CORAL_EXPORT_COMPONENT( SpaceChanges, SpaceChanges );

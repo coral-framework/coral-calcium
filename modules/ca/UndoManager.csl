@@ -1,0 +1,11 @@
+// Provides an undo manager for an object space.
+component UndoManager
+{
+	provides IUndoManager undoManager;
+
+	/*
+		The space this undo manager should track.
+		This must be set once, before the component is ever used.
+	 */
+	receives ISpace space;
+};

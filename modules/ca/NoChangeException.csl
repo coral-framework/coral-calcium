@@ -1,0 +1,2 @@
+// Raised when no change is detected while a change was expected.
+exception NoChangeException;
