@@ -292,6 +292,11 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 			isEqualAligned<co::uint8>( a, b, len );
 	}
 
+	static inline bool isEqualStr( void* a, void* b )
+	{
+		return *reinterpret_cast<std::string*>( a ) == *reinterpret_cast<std::string*>( b );
+	}
+
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		co::Any any;
@@ -305,7 +310,8 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		bool isPrimitive = ( s.kind <= co::TK_DOUBLE || s.kind == co::TK_ENUM );
 		assert( !s.isPointer && ( ( isPrimitive && !s.isReference ) || ( !isPrimitive && s.isReference ) ) );
 		void* newValuePtr = ( isPrimitive ? &s.data : s.data.ptr );
-		if( isEqual( newValuePtr, valuePtr, reflector->getSize() ) )
+		if( ( s.kind == co::TK_STRING && isEqualStr( newValuePtr, valuePtr ) ) ||
+			isEqual( newValuePtr, valuePtr, reflector->getSize() ) )
 			return; // no change
 
 		ChangedValueField& cf = getServiceChanges( facetId )->addChangedValueField();
