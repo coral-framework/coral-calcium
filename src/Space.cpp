@@ -23,6 +23,9 @@ public:
 
 	virtual ~Space()
 	{
+		// it's highly recommended that observers unregister themselves
+		assert( _spaceObservers.empty() );
+
 		if( _universe.isValid() )
 			_universe->unregisterSpace( _spaceId );
 	}
@@ -61,14 +64,13 @@ public:
 	{
 		size_t numObservers = _spaceObservers.size();
 		for( size_t i = 0; i < numObservers; ++i )
-		{
-			assert( _spaceObservers[i] != this );
 			_spaceObservers[i]->onSpaceChanged( changes );
-		}
 	}
 
 	void addSpaceObserver( ca::ISpaceObserver* observer )
 	{
+		assert( observer != this );
+
 		if( !observer )
 			throw co::IllegalArgumentException( "illegal null observer" );
 
@@ -83,11 +85,8 @@ public:
 		co::int32 numObservers = static_cast<co::int32>( _spaceObservers.size() );
 		co::int32 numRemaining = numObservers;
 		for( co::int32 i = numObservers - 1; i >= 0; --i )
-		{
-			co::RefPtr<ca::ISpaceObserver>& current = _spaceObservers[i];
-			if( current == observer )
-				current.swap( _spaceObservers[--numRemaining] );
-		}
+			if( _spaceObservers[i] == observer )
+				std::swap( _spaceObservers[i], _spaceObservers[--numRemaining] );
 
 		co::int32 numRemoved = ( numObservers - numRemaining );
 		if( numRemoved == 0 )
@@ -100,12 +99,6 @@ public:
 	}
 
 protected:
-	inline void checkRegistered()
-	{
-		if( !_universe.isValid() )
-			throw co::IllegalStateException( "the ca.Space requires a universe for this operation" );
-	}
-
 	ca::IUniverse* getUniverseService()
 	{
 		return _universe.get();
@@ -124,11 +117,18 @@ protected:
 	}
 
 private:
+	inline void checkRegistered()
+	{
+		if( !_universe.isValid() )
+			throw co::IllegalStateException( "the ca.Space requires a universe for this operation" );
+	}
+
+private:
 	co::int16 _spaceId;
 	co::RefPtr<ca::IUniverse> _universe;
-	co::RefVector<ca::ISpaceObserver> _spaceObservers;
+	std::vector<ca::ISpaceObserver*> _spaceObservers;
 };
-	
+
 CORAL_EXPORT_COMPONENT( Space, Space )
 
 } // namespace ca

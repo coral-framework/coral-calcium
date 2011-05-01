@@ -13,6 +13,9 @@
 
 class UndoRedoTests : public ERMSpace
 {
+public:
+	virtual ~UndoRedoTests() {;}
+
 protected:
 	void SetUp()
 	{
@@ -38,6 +41,7 @@ protected:
 	co::RefPtr<co::IObject> _undoManagerObj;
 	co::RefPtr<ca::IUndoManager> _undoManager;
 };
+
 
 TEST_F( UndoRedoTests, setup )
 {
@@ -194,7 +198,7 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	EXPECT_EQ( "Rename Entity A", undoList[0] );
 	ASSERT_EQ( 1, redoList.getSize() );
 	EXPECT_EQ( "Rename Entity B", redoList[0] );
-	
+
 	// check the graph's state
 	EXPECT_EQ( "222", _relAB->getRelation() );
 	EXPECT_EQ( "AAA", _entityA->getName() );

@@ -117,15 +117,13 @@ local function loadModelFile( objModel, filePath )
 
 	chunk()
 
-	local types = currentEnv
-	currentEnv = nil
-
-	processTypes( types, objModel )
+	processTypes( currentEnv, objModel )
 end
 
 local coRaise = co.raise
 local function protectedLoadModelFile( objModel, filePath )
 	local ok, err = pcall( loadModelFile, objModel, filePath )
+	currentEnv = nil
 	if not ok then
 		coRaise( "ca.ModelException", err )
 	end

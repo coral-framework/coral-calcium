@@ -57,6 +57,9 @@ public:
 	void revertChanges();
 
 private:
+	SpaceChanges( ca::ISpace* space, SpaceChanges& other );
+
+private:
 	co::RefPtr<ca::ISpace> _space;
 	co::RefVector<co::IObject> _addedObjects;
 	co::RefVector<co::IObject> _removedObjects;

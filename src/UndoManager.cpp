@@ -26,7 +26,6 @@ public:
 
 	UndoManager()
 	{
-		_space = NULL;
 		_nestingLevel = 0;
 		_targetStack = Stack_Invalid;
 	}
@@ -35,7 +34,9 @@ public:
 	{
 		// still recording a changeset?
 		assert( _nestingLevel == 0 );
-		_space = NULL;
+
+		if( _space.isValid() )
+			_space->removeSpaceObserver( this );
 	}
 
 	// ------ ca.IUndoManager Methods ------ //
@@ -116,7 +117,7 @@ public:
 
 	void onSpaceChanged( ca::ISpaceChanges* changes )
 	{
-		assert( changes && changes->getSpace() == _space );
+		assert( changes && _space.get() == changes->getSpace() );
 
 		// ignore changes if we're not tracking them
 		if( _targetStack == Stack_Invalid )
@@ -149,19 +150,19 @@ protected:
 
 	ca::ISpace* getSpaceService()
 	{
-		return _space;
+		return _space.get();
 	}
 
 	void setSpaceService( ca::ISpace* space )
 	{
-		if( _space )
+		if( _space.isValid() )
 			throw co::IllegalStateException( "once set, the space of a ca.UndoManager cannot be changed" );
 
 		if( !space )
 			throw co::IllegalArgumentException( "illegal null space" );
-
+		
+		space->addSpaceObserver( this );
 		_space = space;
-		_space->addSpaceObserver( this );
 	}
 
 private:
@@ -213,7 +214,7 @@ private:
 	}
 
 private:
-	ca::ISpace* _space;
+	co::RefPtr<ca::ISpace> _space;
 
 	// changeset recording:
 	int _nestingLevel;

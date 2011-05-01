@@ -44,6 +44,8 @@ void ERMSpace::SetUp()
 
 void ERMSpace::TearDown()
 {
+	_space->removeSpaceObserver( this );
+
 	_modelObj = NULL;
 	_spaceObj = NULL;
 	_universeObj = NULL;
@@ -51,6 +53,16 @@ void ERMSpace::TearDown()
 	_model = NULL;
 	_space = NULL;
 	_universe = NULL;
+
+	_changes = NULL;
+
+	_entityA = NULL;
+	_entityB = NULL;
+	_entityC = NULL;
+	_relAB = NULL;
+	_relBC = NULL;
+	_relCA = NULL;
+	_erm = NULL;
 }
 
 co::IObject* ERMSpace::createSimpleERM()

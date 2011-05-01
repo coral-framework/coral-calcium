@@ -9,10 +9,11 @@
 	A space posts notifications at various points. For instance, when changes are
 	detected for an object (or a branch of the object graph), when.
 
-	A word of caution about reference counting: a space always keeps strong
-	references to all of its observers; therefore, observers must not contain
-	a strong reference back to the space. As a rule of thumb, avoid keeping
-	strong references to spaces except where it's absolutely necessary.
+	A note about reference counting: a space never keeps strong references to
+	its observers; therefore, observers must be removed from a space before they
+	become invalid. It's good practice for an observer to always handle its own
+	addition to/removal from a space, as this allows the observer's destructor
+	to unregister itself if necessary.
  */
 interface ISpace extends ISpaceObserver
 {

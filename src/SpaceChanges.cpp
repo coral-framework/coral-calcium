@@ -13,6 +13,13 @@ SpaceChanges::SpaceChanges()
 	// empty
 }
 
+SpaceChanges::SpaceChanges( ca::ISpace* space, SpaceChanges& o ) : _space( space )
+{
+	std::swap( _addedObjects, o._addedObjects );
+	std::swap( _removedObjects, o._removedObjects );
+	std::swap( _changedObjects, o._changedObjects );
+}
+
 SpaceChanges::~SpaceChanges()
 {
 	// empty
@@ -45,16 +52,8 @@ ISpaceChanges* SpaceChanges::finalize( ca::ISpace* space )
 	std::sort( _removedObjects.begin(), _removedObjects.end() );
 	std::sort( _changedObjects.begin(), _changedObjects.end(), changesStdCompare );
 
-	// clone this object
-	SpaceChanges* object = new SpaceChanges( *this );
-	object->_space = space;
-
-	// reset state
-	_addedObjects.clear();
-	_removedObjects.clear();
-	_changedObjects.clear();
-
-	return object;
+	// return a clone with which we swap our state
+	return new SpaceChanges( space, *this );
 }
 
 ca::ISpace* SpaceChanges::getSpace()

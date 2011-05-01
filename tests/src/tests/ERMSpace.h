@@ -33,6 +33,8 @@
 class ERMSpace : public ::testing::Test, public ca::ISpaceObserver
 {
 public:
+	virtual ~ERMSpace() {;}
+
 	void onSpaceChanged( ca::ISpaceChanges* changes );
 
 	co::IInterface* getInterface();

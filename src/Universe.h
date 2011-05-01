@@ -20,7 +20,6 @@
 namespace ca {
 
 typedef std::vector<ObjectRecord*> ObjectList;
-typedef std::map<co::IObject*, ObjectRecord*> ObjectMap;
 
 // Data for a space within a calcium universe.
 struct SpaceRecord
@@ -57,7 +56,10 @@ struct UniverseRecord
 {
 	co::RefPtr<Model> model;
 	std::vector<SpaceRecord*> spaces;
+
+	typedef std::map<co::IObject*, ObjectRecord*> ObjectMap;
 	ObjectMap objectMap;
+
 	std::vector<ChangedService> changedServices;
 
 	// Finds an object given its component instance. Returns NULL on failure.
