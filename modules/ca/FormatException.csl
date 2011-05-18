@@ -1,0 +1,2 @@
+// Indicates data is in an unexpected format or corrupted.
+exception FormatException;

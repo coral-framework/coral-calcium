@@ -105,7 +105,7 @@ interface IModel
 	/*
 		Adds a record type to the transaction, along with a list of fields.
 
-		\throw co.LifeCycleException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalStateException if beginChanges() was not called to start a transaction.
 		\throw co.IllegalArgumentException if either the \a type or one of the \a fields are invalid.
 		\throw ObjectModelException if \a type is already in the object model.
 	 */
@@ -115,7 +115,7 @@ interface IModel
 	/*
 		Adds a component to the transaction, along with a list of ports.
 
-		\throw co.LifeCycleException if beginChanges() was not called to start a transaction.
+		\throw co.IllegalStateException if beginChanges() was not called to start a transaction.
 		\throw co.IllegalArgumentException if either the \a type or one of the \a ports are invalid.
 		\throw ObjectModelException if \a type is already in the object model.
 	 */

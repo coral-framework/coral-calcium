@@ -6,7 +6,6 @@
 #include <gtest/gtest.h>
 
 #include <co/Coral.h>
-#include <co/Platform.h>
 #include <co/IObject.h>
 #include <ca/IUniverse.h>
 

@@ -1,0 +1,7 @@
+/*
+	Interface for services that have a name.
+ */
+interface INamed
+{
+	string name;
+};

@@ -1,0 +1,28 @@
+/*
+	Provides persistence for an object graph through a data archive.
+
+	The object graph that should be saved is defined by a \a rootObject and
+	the calcium model (ca.IModel) in effect. Once an archive is successfully
+	saved, calling restore() on it should return a full copy of the object
+	graph (via a reference to its copy of the \a rootObject).
+
+	Unlike object spaces, archives can handle \e cyclic object graphs.
+ */
+interface IArchive
+{
+	/*
+		Saves an object graph into the archive, \e overwriting previous data.
+		\throw ModelException if a calcium model was not defined for the archive.
+		\throw ModelException if the \a rootObject's component is not defined in the calcium model.
+		\throw IOException if an error occurs while creating/writing the archive.
+	 */
+	void save( in co.IObject rootObject ) raises ModelException, IOException;
+
+	/*
+		Returns a copy of the archived object graph.
+		\throw IOException if an error occurs while opening/reading the archive.
+		\throw ModelException if a calcium model was not defined for the archive.
+		\throw FormatException if the archive is in a different format or corrupted.
+	 */
+	co.IObject restore() raises IOException, ModelException, FormatException;
+};

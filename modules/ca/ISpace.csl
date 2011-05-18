@@ -22,10 +22,10 @@ interface ISpace extends ISpaceObserver
 	/*
 		Adds a root object to the space.
 
-		This operation implicitly adds to the space the whole graph of objects
-		reachable from \a root, in accordance with the object model (IModel) in effect.
+		This indirectly adds to the space the whole graph of objects reachable
+		from \a root, in accordance with the calcium model (IModel) in effect.
 
-		\throw ModelException if \a root's component is not in the object model.
+		\throw ModelException if \a root's component is not defined in the calcium model.
 	 */
 	void addRootObject( in co.IObject root ) raises ModelException;
 
@@ -51,7 +51,7 @@ interface ISpace extends ISpaceObserver
 		The service will be checked for changes in the next call to notifyChanges().
 
 		\throw NoSuchObjectException if the object that provides \a service is not in this space.
-		\throw ModelException if the \a service's facet is not in the object model.
+		\throw ModelException if \a service's interface is not defined in the calcium model.
 	 */
 	void addChange( in co.IService service ) raises NoSuchObjectException, ModelException;
 

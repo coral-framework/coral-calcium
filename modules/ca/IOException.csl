@@ -1,0 +1,2 @@
+// Indicates an error occurred during an I/O operation.
+exception IOException;
