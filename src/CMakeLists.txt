@@ -21,3 +21,27 @@ TARGET_LINK_LIBRARIES( ca ${CORAL_LIBRARIES} )
 ################################################################################
 
 SOURCE_GROUP( "@Generated" FILES ${_GENERATED_FILES} )
+
+################################################################################
+# Install Rules
+################################################################################
+
+# install shared library
+INSTALL( TARGETS ca
+	DESTINATION "modules/ca"
+	COMPONENT "Calcium Module"
+)
+
+INSTALL( FILES "${CMAKE_BINARY_DIR}/modules/ca/ca_debug.pdb"
+	DESTINATION "modules/ca"
+	CONFIGURATIONS Debug
+	COMPONENT "Calcium Module"
+	OPTIONAL
+)
+
+# install module files
+INSTALL( DIRECTORY ${CMAKE_SOURCE_DIR}/modules/ca
+	DESTINATION "modules"
+	CONFIGURATIONS Release RelWithDebInfo
+	COMPONENT "Calcium Module"
+)
