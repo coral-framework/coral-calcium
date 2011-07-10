@@ -18,7 +18,9 @@
 #include <ca/ISpaceChanges.h>
 #include <ca/ISpaceObserver.h>
 #include <ca/IObjectChanges.h>
+#include <ca/IObjectObserver.h>
 #include <ca/IServiceChanges.h>
+#include <ca/IServiceObserver.h>
 #include <ca/ChangedRefField.h>
 #include <ca/ChangedRefVecField.h>
 #include <ca/ChangedValueField.h>
@@ -30,12 +32,17 @@
 #include <erm/IRelationship.h>
 #include <erm/Multiplicity.h>
 
-class ERMSpace : public ::testing::Test, public ca::ISpaceObserver
+class ERMSpace : public ::testing::Test,
+	public ca::ISpaceObserver,
+	public ca::IObjectObserver,
+	public ca::IServiceObserver
 {
 public:
 	virtual ~ERMSpace() {;}
 
 	void onSpaceChanged( ca::ISpaceChanges* changes );
+	void onObjectChanged( ca::IObjectChanges* changes );
+	void onServiceChanged( ca::IServiceChanges* changes );
 
 	co::IInterface* getInterface();
 	co::IObject* getProvider();
@@ -65,6 +72,8 @@ protected:
 	co::RefPtr<ca::ISpace> _space;
 
 	co::RefPtr<ca::ISpaceChanges> _changes;
+	co::RefVector<ca::IObjectChanges> _objectChanges;
+	co::RefVector<ca::IServiceChanges> _serviceChanges;
 
 	co::RefPtr<erm::IEntity> _entityA;
 	co::RefPtr<erm::IEntity> _entityB;

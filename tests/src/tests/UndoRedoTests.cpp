@@ -99,7 +99,7 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	}
 
 	// nothing to undo yet...
-	EXPECT_EQ( false, _undoManager->getCanUndo() );
+	EXPECT_FALSE( _undoManager->getCanUndo() );
 
 	// end of the first undoable change block
 	_undoManager->endChange();
@@ -107,8 +107,8 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	// check the undoManager's state
 	co::Range<std::string const> undoList = _undoManager->getUndoList();
 	co::Range<std::string const> redoList = _undoManager->getRedoList();
-	EXPECT_EQ( true, _undoManager->getCanUndo() );
-	EXPECT_EQ( false, _undoManager->getCanRedo() );
+	EXPECT_TRUE( _undoManager->getCanUndo() );
+	EXPECT_FALSE( _undoManager->getCanRedo() );
 	ASSERT_EQ( 1, undoList.getSize() );
 	EXPECT_EQ( "Rename Entity A", undoList[0] );
 	EXPECT_EQ( 0, redoList.getSize() );
@@ -131,8 +131,8 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	// check the undoManager's state
 	undoList = _undoManager->getUndoList();
 	redoList = _undoManager->getRedoList();
-	EXPECT_EQ( true, _undoManager->getCanUndo() );
-	EXPECT_EQ( false, _undoManager->getCanRedo() );
+	EXPECT_TRUE( _undoManager->getCanUndo() );
+	EXPECT_FALSE( _undoManager->getCanRedo() );
 	ASSERT_EQ( 2, undoList.getSize() );
 	EXPECT_EQ( "Rename Entity A", undoList[0] );
 	EXPECT_EQ( "Rename Entity B", undoList[1] );
@@ -173,8 +173,8 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	// check the undoManager's state
 	undoList = _undoManager->getUndoList();
 	redoList = _undoManager->getRedoList();
-	EXPECT_EQ( true, _undoManager->getCanUndo() );
-	EXPECT_EQ( false, _undoManager->getCanRedo() );	
+	EXPECT_TRUE( _undoManager->getCanUndo() );
+	EXPECT_FALSE( _undoManager->getCanRedo() );	
 	ASSERT_EQ( 2, undoList.getSize() );
 	EXPECT_EQ( "Rename Entity A", undoList[0] );
 	EXPECT_EQ( "Rename Entity B", undoList[1] );
@@ -211,8 +211,8 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	// check the undoManager's state
 	undoList = _undoManager->getUndoList();
 	redoList = _undoManager->getRedoList();
-	EXPECT_EQ( false, _undoManager->getCanUndo() );
-	EXPECT_EQ( true, _undoManager->getCanRedo() );	
+	EXPECT_FALSE( _undoManager->getCanUndo() );
+	EXPECT_TRUE( _undoManager->getCanRedo() );	
 	ASSERT_EQ( 0, undoList.getSize() );
 	ASSERT_EQ( 2, redoList.getSize() );
 	EXPECT_EQ( "Rename Entity B", redoList[0] );

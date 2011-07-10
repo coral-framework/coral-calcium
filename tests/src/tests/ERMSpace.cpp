@@ -10,8 +10,18 @@ void ERMSpace::onSpaceChanged( ca::ISpaceChanges* changes )
 	_changes = changes;
 }
 
+void ERMSpace::onObjectChanged( ca::IObjectChanges* changes )
+{
+	_objectChanges.push_back( changes );
+}
+
+void ERMSpace::onServiceChanged( ca::IServiceChanges* changes )
+{
+	_serviceChanges.push_back( changes );
+}
+
 co::IInterface* ERMSpace::getInterface() { return 0; }
-co::IObject* ERMSpace::getProvider() { return 0; }
+co::IObject* ERMSpace::getProvider() { return _modelObj.get(); }
 co::IPort* ERMSpace::getFacet() { return 0; }
 void ERMSpace::serviceRetain() {;}
 void ERMSpace::serviceRelease() {;}

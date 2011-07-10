@@ -17,7 +17,7 @@
  */
 interface ISpace extends ISpaceObserver
 {
-	//---------- Object Management ----------//
+	//---------- Graph Management ----------//
 
 	/*
 		Adds a root object to the space.
@@ -66,14 +66,42 @@ interface ISpace extends ISpaceObserver
 	//---------- Change Notifications ----------//
 
 	/*
-		Adds an \a observer to be notified of all changes to this space's object graph.
+		Adds an \a observer to be notified of changes in the space's object graph.
 		\throw co.IllegalArgumentException if \a observer is invalid.
 	 */
 	void addSpaceObserver( in ISpaceObserver observer ) raises co.IllegalArgumentException;
 
 	/*
-		Removes \a observer from the list of space observers.
+		Removes an \a observer from the list of space observers.
 		\throw co.IllegalArgumentException if \a observer is not in the list of space observers.
 	 */
 	void removeSpaceObserver( in ISpaceObserver observer ) raises co.IllegalArgumentException;
+
+	/*
+		Adds an \a observer to be notified of changes to a certain \a object.
+		\throw co.IllegalArgumentException if either \a object or \a observer are invalid.
+	 */
+	void addObjectObserver( in co.IObject object, in IObjectObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Removes an \a observer from the list of observers of a certain \a object.
+		\throw co.IllegalArgumentException if \a observer is not in the \a object's list of observers.
+	 */
+	void removeObjectObserver( in co.IObject object, in IObjectObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Adds an \a observer to be notified of changes to a certain \a service.
+		\throw co.IllegalArgumentException if either \a service or \a observer are invalid.
+	 */
+	void addServiceObserver( in co.IService service, in IServiceObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Removes an \a observer from the list of observers of a certain \a service.
+		\throw co.IllegalArgumentException if \a observer is not in the \a service's list of observers.
+	 */
+	void removeServiceObserver( in co.IService service, in IServiceObserver observer )
+		raises co.IllegalArgumentException;
 };
