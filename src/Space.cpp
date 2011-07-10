@@ -46,8 +46,9 @@ inline void removeObserver( Container& c, Observer* observer )
 {
 	typename Container::iterator end = c.end();
 	typename Container::iterator newEnd = std::remove( c.begin(), end, observer );
+	int numRemoved = static_cast<int>( std::distance( newEnd, end ) );
 	c.erase( newEnd, end );
-	checkObserverRemoved( newEnd - end, observer );
+	checkObserverRemoved( numRemoved, observer );
 }
 
 template<typename Container, typename Iterator, typename Observer>
