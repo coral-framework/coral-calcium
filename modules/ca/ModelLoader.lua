@@ -6,7 +6,7 @@
 local function loadFileIn( filePath, env )
 	local file, err = io.open( filePath, 'rb' )
 	if file then
-		local chunk, err = loadin( env, file:lines( 4096 ), filePath )
+		local chunk, err = load( file:lines( 4096 ), filePath, 't', env )
 		file:close()
 		return chunk, err
     end

@@ -8,7 +8,7 @@ local io = io
 local type = type
 local pairs = pairs
 local ipairs = ipairs
-local loadin = loadin
+local load = load
 local rawget = rawget
 local tostring = tostring
 
@@ -296,7 +296,7 @@ function LuaArchive:restore()
 
 	local env = setmetatable( { objects = {} }, archiveEnvMT )
 
-	local chunk, err = loadin( env, file:lines( 4096 ), filePath )
+	local chunk, err = load( file:lines( 4096 ), filePath, 't', env )
 	file:close()
 
 	if not chunk then
