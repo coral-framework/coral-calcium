@@ -1,0 +1,12 @@
+/*
+	Callback interface to observe changes to a space.
+ */
+interface ISpaceSaver
+{
+	void saveChanges();
+	ISpace getVersion( in int32 version );
+	ISpace getLatestVersion();	
+	void setup();
+	void setModel( in IModel model );
+	void setSpace( in ISpace space );
+};

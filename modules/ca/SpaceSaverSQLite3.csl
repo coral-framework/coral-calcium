@@ -1,0 +1,6 @@
+// Provides an persistence interface to Space
+component SpaceSaverSQLite3
+{
+	provides ISpaceObserver spaceObserver;
+	provides ISpaceSaver spaceSaver;
+};
