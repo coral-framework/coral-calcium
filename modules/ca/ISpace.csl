@@ -1,48 +1,31 @@
 /*
-	Manages a collection of object graphs. Provides change tracking and notifications.
+	Manages an object graph, providing change tracking and notifications.
 
-	Objects are guaranteed to be unique within a space. They can also be shared by
-	multiple spaces in the same universe, and have copies in different universes.
+	Objects are guaranteed to be unique within a space. However, they can be shared
+	by multiple spaces in the same universe, and have copies in different universes.
 
-	The space has a central role in the life-cycle of its object graphs.
-
-	A space posts notifications at various points. For instance, when changes are
-	detected for an object (or a branch of the object graph), when.
-
-	A note about reference counting: a space never keeps strong references to
-	its observers; therefore, observers must be removed from a space before they
-	become invalid. It's good practice for an observer to always handle its own
-	addition to/removal from a space, as this allows the observer's destructor
-	to unregister itself if necessary.
+	A note about observers: a space never keeps strong references to its observers;
+	therefore, observers must be removed from a space before they become invalid.
+	It's good practice for an observer to always handle its own addition to/removal from
+	a space, as this allows the observer's destructor to unregister itself if necessary.
  */
 interface ISpace extends ISpaceObserver
 {
 	//---------- Graph Management ----------//
 
 	/*
-		Adds a root object to the space.
+		Root of the object graph. In combination with a calcium model (IModel),
+		the root object fully defines the space's object graph.
+	 */
+	readonly co.IObject rootObject;
 
-		This indirectly adds to the space the whole graph of objects reachable
-		from \a root, in accordance with the calcium model (IModel) in effect.
+	/*
+		Sets the space's root object. This can only be done once for every space.
 
 		\throw ModelException if \a root's component is not defined in the calcium model.
+		\throw co.IllegalStateException if the space's root object has already been set.
 	 */
-	void addRootObject( in co.IObject root ) raises ModelException;
-
-	/*
-		Removes a root object from the space.
-
-		This operation implicitly removes from the space all objects that are
-		no longer reachable after removing the \a root object.
-
-		\throw NoSuchObjectException if \a root is not in the list of root objects.
-	 */
-	void removeRootObject( in co.IObject root ) raises NoSuchObjectException;
-
-	/*
-		Returns the list of root objects in the space.
-	 */
-	void getRootObjects( out co.IObject[] roots );
+	void setRootObject( in co.IObject root ) raises ModelException, co.IllegalStateException;
 
 	//---------- Change Tracking ----------//
 

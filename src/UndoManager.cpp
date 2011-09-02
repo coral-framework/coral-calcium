@@ -7,7 +7,7 @@
 
 #include <ca/ISpaceChanges.h>
 #include <ca/NoChangeException.h>
-
+#include <co/RefVector.h>
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
 
@@ -160,7 +160,7 @@ protected:
 
 		if( !space )
 			throw co::IllegalArgumentException( "illegal null space" );
-		
+
 		space->addSpaceObserver( this );
 		_space = space;
 	}

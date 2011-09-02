@@ -19,17 +19,16 @@
 
 namespace ca {
 
-typedef std::vector<ObjectRecord*> ObjectList;
-
 // Data for a space within a calcium universe.
 struct SpaceRecord
 {
-	ISpace* space;			// the space's facade service
-	ObjectList rootObjects;	// list of root objects in the space
-	SpaceChanges changes;	// list of changes detected in the space
-	bool hasChanges;		// whether the list of 'changes' is non-empty
+	ISpace* space;				// the space's facade service
+	ObjectRecord* rootObject;	// the space's root object
+	SpaceChanges changes;		// list of changes detected in the space
+	bool hasChanges;			// whether the list of 'changes' is non-empty
 
-	SpaceRecord( ISpace* space ) : space( space ), hasChanges( false )
+	SpaceRecord( ISpace* space )
+		: space( space ), rootObject( NULL ), hasChanges( false )
 	{;}
 };
 

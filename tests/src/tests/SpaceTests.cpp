@@ -4,6 +4,7 @@
  */
 
 #include "ERMSpace.h"
+#include <co/IllegalStateException.h>
 
 class SpaceTests : public ERMSpace
 {};
@@ -21,8 +22,12 @@ TEST_F( SpaceTests, initialization )
 	EXPECT_THROW( _space->addChange( _entityB.get() ), ca::NoSuchObjectException );
 	EXPECT_THROW( _space->addChange( _relAB.get() ), ca::NoSuchObjectException );
 
-	// add the graph's root object (the erm.Model) to the space
-	_space->addRootObject( _erm->getProvider() );
+	// set the graph's root object (the erm.Model)
+	_space->setRootObject( _erm->getProvider() );
+
+	// once set, the root object cannot be changed
+	EXPECT_THROW( _space->setRootObject( NULL ), co::IllegalStateException );	
+	EXPECT_THROW( _space->setRootObject( _entityA->getProvider() ), co::IllegalStateException );
 
 	// now the space should contain the whole graph
 	EXPECT_NO_THROW( _space->addChange( _erm.get() ) );

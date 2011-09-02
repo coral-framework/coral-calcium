@@ -19,21 +19,16 @@ interface IUniverse
 	void unregisterSpace( in uint16 spaceId );
 
 	/*
-		Adds a root object to a space.
+		Sets the root object of a space.
 		\throw ModelException if \a root's component is not in the object model.
+		\throw co.IllegalStateException if the space's root object has already been set.
 	 */
-	void addRootObject( in uint16 spaceId, in co.IObject root ) raises ModelException;
+	void setRootObject( in uint16 spaceId, in co.IObject root ) raises ModelException, co.IllegalStateException;
 
 	/*
-		Removes a root object from a space.
-		\throw NoSuchObjectException if \a root is not in the space's list of root objects.
+		Returns the root object of a space.
 	 */
-	void removeRootObject( in uint16 spaceId, in co.IObject root ) raises NoSuchObjectException;
-
-	/*
-		Returns the list of root objects in a space.
-	 */
-	void getRootObjects( in uint16 spaceId, out co.IObject[] roots );
+	co.IObject getRootObject( in uint16 spaceId );
 
 	//---------- Change Tracking and Notifications ----------//
 

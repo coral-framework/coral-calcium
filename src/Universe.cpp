@@ -535,50 +535,45 @@ public:
 	{
 		SpaceRecord* space = getSpace( spaceId );
 
-		// remove all root objects in the space
-		size_t numObjects = space->rootObjects.size();
-		for( size_t i = 0; i < numObjects; ++i )
-			_u.removeRef( spaceId, space->rootObjects[i] );
+		if( space->rootObject )
+			_u.removeRef( spaceId, space->rootObject );
 
 		delete space;
 		_u.spaces[spaceId] = NULL;
 	}
 
-	void addRootObject( co::uint16 spaceId, co::IObject* root )
+	void setRootObject( co::uint16 spaceId, co::IObject* root )
 	{
 		checkHasModel();
 
 		SpaceRecord* space = getSpace( spaceId );
+
+		if( space->rootObject )
+			throw co::IllegalStateException( "a root object was already set for this space" );
+
+#if 0
+		// if we ever want to allow the root object to be 'reset':
+		if( root == NULL )
+		{
+			_u.removeRef( spaceId, space->rootObject );
+			space->rootObject = NULL;
+			return;
+		}
+#endif
+
 		ObjectRecord* object = _u.findObject( root );
 		if( object )
 			_u.addRef( spaceId, object );
 		else
 			object = _u.createObject( spaceId, root );
-		space->rootObjects.push_back( object );
+
+		space->rootObject = object;
 	}
 
-	void removeRootObject( co::uint16 spaceId, co::IObject* root )
+	co::IObject* getRootObject( co::uint16 spaceId )
 	{
-		ObjectList& rootObjects = getSpace( spaceId )->rootObjects;
-		size_t numObjects = rootObjects.size();
-		for( size_t i = 0; i < numObjects; ++i )
-		{
-			if( rootObjects[i]->instance == root )
-			{
-				_u.removeRef( spaceId, rootObjects[i] );
-				rootObjects.erase( rootObjects.begin() + i );
-				return;
-			}
-		}
-		throw ca::NoSuchObjectException( "no such root object in this space" );
-	}
-
-	void getRootObjects( co::uint16 spaceId, co::RefVector<co::IObject>& result )
-	{
-		ObjectList& rootObjects = getSpace( spaceId )->rootObjects;
-		size_t numObjects = rootObjects.size();
-		for( size_t i = 0; i < numObjects; ++i )
-			result.push_back( rootObjects[i]->instance );
+		ObjectRecord* object = getSpace( spaceId )->rootObject;
+		return object ? object->instance : NULL;
 	}
 
 	void addChange( co::uint16 spaceId, co::IService* service )

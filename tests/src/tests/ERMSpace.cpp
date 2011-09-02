@@ -109,7 +109,7 @@ co::IObject* ERMSpace::createSimpleERM()
 
 void ERMSpace::startWithSimpleERM()
 {
-	_space->addRootObject( createSimpleERM() );
+	_space->setRootObject( createSimpleERM() );
 
 	// skip the first notification with the initial object additions
 	_space->notifyChanges();
@@ -134,7 +134,7 @@ void ERMSpace::startWithExtendedERM()
 {
 	createSimpleERM();
 	extendSimpleERM();
-	_space->addRootObject( _erm->getProvider() );
+	_space->setRootObject( _erm->getProvider() );
 
 	// skip the first notification with the initial object additions
 	_space->notifyChanges();

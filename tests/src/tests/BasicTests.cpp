@@ -25,7 +25,7 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	assert( space );
 
 	// try using a space without an universe
-	EXPECT_THROW( space->addRootObject( spaceObj.get() ), co::IllegalStateException );
+	EXPECT_THROW( space->setRootObject( spaceObj.get() ), co::IllegalStateException );
 
 	// try binding a null universe to a space
 	EXPECT_THROW( spaceObj->setService( "universe", NULL ), co::IllegalArgumentException );
@@ -39,11 +39,10 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	EXPECT_THROW( spaceObj->setService( "universe", universe ), co::IllegalStateException );
 
 	// we should already be able to call methods that don't require a model
-	co::RefVector<co::IObject> rootObjs;
-	EXPECT_NO_THROW( space->getRootObjects( rootObjs ) );
+	EXPECT_NO_THROW( space->getRootObject() );
 
 	// but we should not be able to call methos that do require a model
-	EXPECT_THROW( space->addRootObject( spaceObj.get() ), co::IllegalStateException );
+	EXPECT_THROW( space->setRootObject( spaceObj.get() ), co::IllegalStateException );
 
 	// create a plain model and bind it to the universe
 	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
@@ -51,12 +50,12 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	universeObj->setService( std::string( "model" ), model );
 
 	// we should not be able to use the model because it doesn't have a name
-	EXPECT_THROW( space->addRootObject( spaceObj.get() ), co::IllegalStateException );
+	EXPECT_THROW( space->setRootObject( spaceObj.get() ), co::IllegalStateException );
 
 	model->setName( "test" );
 
 	// now the whole setup should be ready for use
-	EXPECT_THROW( space->addRootObject( spaceObj.get() ), ca::ModelException );
+	EXPECT_THROW( space->setRootObject( spaceObj.get() ), ca::ModelException );
 	EXPECT_THROW( space->addChange( spaceObj.get() ), ca::NoSuchObjectException );
 
 	// and we cannot change the model's name after it's been set
