@@ -8,9 +8,24 @@
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
 #include <ca/ModelException.h>
+#include <ca/UnexpectedException.h>
 #include <sstream>
 
 namespace ca {
+
+//------ Utility Macros for Handling Exceptions --------------------------------
+
+#define GEN_BARRIER( code, facetId, msg ) try { code; } catch( std::exception& e ) { \
+	const char* name = getServiceTypeName( source, facetId ); \
+	CORAL_THROW( ca::UnexpectedException, \
+		"unexpected exception while tracking changes to service (" << \
+		name << ")" << source->instance << ", raised by " << msg ); }
+
+#define OBJ_BARRIER( code ) \
+	GEN_BARRIER( code, -1, "receptacle '" << receptacle.port->getName() << "'" )
+
+#define SVC_BARRIER( code ) \
+	GEN_BARRIER( code, facetId, "field '" << field.field->getName() << "'" )
 
 //------ UniverseTraverser (base for most traversers) --------------------------
 
@@ -84,7 +99,9 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
 		assert( !ref.service && !ref.object );
-		initRef( ref.service, ref.object, source->instance->getService( receptacle.port ) );
+		co::IService* newService;
+		OBJ_BARRIER( newService = source->instance->getService( receptacle.port ) );
+		initRef( ref.service, ref.object, newService );
 	}
 
 	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
@@ -92,7 +109,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 		assert( !ref.service && !ref.object );
 
 		co::Any any;
-		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 		assert( any.getKind() == co::TK_INTERFACE );
 
 		initRef( ref.service, ref.object, any.getState().data.service );
@@ -103,7 +120,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 		assert( !refVec.services && !refVec.objects );
 
 		co::Any any;
-		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 		co::Range<co::IService* const> range = any.get<co::Range<co::IService* const> >();
 
 		size_t size = range.getSize();
@@ -118,7 +135,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		co::Any any;
-		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 
 		co::TypeKind kind = any.getKind();
 		bool isPrimitive = ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE || kind == co::TK_ENUM );
@@ -138,7 +155,15 @@ ObjectRecord* UniverseRecord::createObject( T from, co::IObject* instance )
 	addRef( from, object );
 
 	InitTraverser traverser( *this, object );
-	traverser.traverseObject();
+	try
+	{
+		traverser.traverseObject();
+	}
+	catch( ... )
+	{
+		removeRef( from, object );
+		throw;
+	}
 
 	return object;
 }
@@ -207,7 +232,8 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 
 	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
-		co::IService* service = source->instance->getService( receptacle.port );
+		co::IService* service;
+		OBJ_BARRIER( service = source->instance->getService( receptacle.port ) );
 		if( service == ref.service )
 			return; // no change
 
@@ -222,7 +248,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
 		co::Any any;
-		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 		assert( any.getKind() == co::TK_INTERFACE );
 
 		co::IService* service = any.getState().data.service;
@@ -240,7 +266,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
 		co::Any any;
-		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 		co::Range<co::IService* const> range = any.get<co::Range<co::IService* const> >();
 
 		size_t newSize = range.getSize();
@@ -300,7 +326,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
 		co::Any any;
-		field.getOwnerReflector()->getField( source->services[facetId], field.field, any );
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 
 		co::IType* type = field.field->getType();
 		co::IReflector* reflector = type->getReflector();
@@ -621,17 +647,27 @@ public:
 			std::sort( cs, lastCS + 1 );
 
 			UpdateTraverser traverser( _u );
-			for( ; cs <= lastCS ; ++cs )
+			try
 			{
-				if( cs->object != traverser.source )
-					traverser.reset( cs->object );
-				else if( cs->facet == traverser.lastFacet )
-					continue;
+				for( ; cs <= lastCS ; ++cs )
+				{
+					if( cs->object != traverser.source )
+						traverser.reset( cs->object );
+					else if( cs->facet == traverser.lastFacet )
+						continue;
 
-				if( cs->facet < 0 )
-					traverser.traverseReceptacles();
-				else
-					traverser.traverseFacet( static_cast<co::uint8>( cs->facet ) );
+					if( cs->facet < 0 )
+						traverser.traverseReceptacles();
+					else
+						traverser.traverseFacet( static_cast<co::uint8>( cs->facet ) );
+				}
+			}
+			catch( std::exception& e )
+			{
+				CORAL_THROW( ca::UnexpectedException,
+					"unexpected exception while tracking changes to service (" <<
+						getServiceTypeName( cs->object, cs->facet ) << ")" <<
+							cs->object->instance << ", " << e.what() );
 			}
 
 			_u.changedServices.clear();

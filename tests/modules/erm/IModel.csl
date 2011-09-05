@@ -4,6 +4,10 @@ interface IModel
 	IRelationship[] relationships;
 	IModel[] dependencies;
 
+	bool throwsOnGet;
+	bool throwsOnGetAndSet;
+	bool throwsOnSet;
+
 	void addEntity( in IEntity entity );
 	void addRelationship( in IRelationship rel );
 };

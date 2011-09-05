@@ -23,9 +23,10 @@ interface ISpace extends ISpaceObserver
 		Sets the space's root object. This can only be done once for every space.
 
 		\throw ModelException if \a root's component is not defined in the calcium model.
+		\throw UnexpectedException if an object raises an exception while the graph is being initialized.
 		\throw co.IllegalStateException if the space's root object has already been set.
 	 */
-	void setRootObject( in co.IObject root ) raises ModelException, co.IllegalStateException;
+	void setRootObject( in co.IObject root ) raises ModelException, UnexpectedException, co.IllegalStateException;
 
 	//---------- Change Tracking ----------//
 
@@ -41,10 +42,12 @@ interface ISpace extends ISpaceObserver
 	/*
 		Gathers a list of changes and posts all change notifications.
 
-		Changes are detected by examining all services marked as changed (e.g.
-		by using addChange()) since the last call to notifyChanges().
+		Changes are detected by examining all services marked as changed (e.g. by
+		using addChange()) since the last call to notifyChanges().
+
+		\throw UnexpectedException if an object raises an exception while being inspected for changes.
 	 */
-	void notifyChanges();
+	void notifyChanges() raises UnexpectedException;
 
 	//---------- Change Notifications ----------//
 

@@ -36,8 +36,8 @@ struct SpaceRecord
 struct ChangedService
 {
 	ObjectRecord* object;	// object that has been changed
-	co::int16 facet;	// index of the service that has been changed,
-						// or -1 if it was the object's co.IObject facet
+	co::int16 facet;		// index of the service that has been changed,
+							// or -1 if it was the object's co.IObject facet
 
 	ChangedService( ObjectRecord* object, co::int16 facet )
 		: object( object ), facet( facet )

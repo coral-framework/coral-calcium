@@ -6,6 +6,7 @@
 #include "Model_Base.h"
 #include <erm/IEntity.h>
 #include <erm/IRelationship.h>
+#include <co/Exception.h>
 #include <co/RefVector.h>
 
 namespace erm {
@@ -61,6 +62,36 @@ public:
 	void setDependencies( co::Range<IModel* const> dependencies )
 	{
 		co::assign( dependencies, _dependencies );
+	}
+
+	bool getThrowsOnGet()
+	{
+		throw co::Exception( "getThrowsOnGet exception" );
+	}
+	
+	void setThrowsOnGet( bool )
+	{
+		// empty
+	}
+
+	bool getThrowsOnGetAndSet()
+	{
+		throw co::Exception( "getThrowsOnGetAndSet exception" );
+	}
+
+	void setThrowsOnGetAndSet( bool )
+	{
+		throw co::Exception( "setThrowsOnGetAndSet exception" );
+	}
+
+	bool getThrowsOnSet()
+	{
+		return false;
+	}
+	
+	void setThrowsOnSet( bool )
+	{
+		throw co::Exception( "setThrowsOnSet exception" );
 	}
 
 private:

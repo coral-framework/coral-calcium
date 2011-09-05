@@ -26,6 +26,11 @@ co::IPort* ERMSpace::getFacet() { return 0; }
 void ERMSpace::serviceRetain() {;}
 void ERMSpace::serviceRelease() {;}
 
+const char* ERMSpace::getModelName()
+{
+	return "erm";
+}
+
 void ERMSpace::SetUp()
 {
 	// create an object model
@@ -33,7 +38,7 @@ void ERMSpace::SetUp()
 	_model = _modelObj->getService<ca::IModel>();
 	assert( _model.isValid() );
 
-	_model->setName( "erm" );
+	_model->setName( getModelName() );
 
 	// create an object universe and bind the model
 	_universeObj = co::newInstance( "ca.Universe" );
