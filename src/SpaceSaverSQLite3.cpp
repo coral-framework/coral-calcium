@@ -44,54 +44,37 @@ namespace ca {
 
 			void setup()
 			{
-				co::RefVector<co::IField> fields;
+				create_tables();
 				co::RefVector<co::IObject> objects;
+				co::RefVector<co::IPort>  ports;
+				co::RefVector<co::IField> fields;
 				char buffer[100];
 				char* error;
-				_space->getRootObjects( objects );
-				for( int i = 0; i < objects.size(); i++ ) 
-				{
-					// For each object, creates its own table.
-					sprintf( buffer, "create table if not exists 'object_%d'\
-							( id integer not null primary key )", i );
-					sqlite3_exec( db, buffer, NULL, 0, NULL );
-					for( co::Range<co::IPort* const>  ports = objects[i]->getComponent()->getPorts(); ports; ports.popFirst() )
-					{
-						// For each port, creates its own table and
-						// a collum on the object table
-						const char* name = ports.getFirst()->getName().c_str();
-						_model->getFields( ports.getFirst()->getType(), fields );
-						// Create a table for the port
-						sprintf( buffer, "create table if not exists 'object_%d_port_%s'\
-								( id integer not null primary key );", i, name );
-						sqlite3_exec( db, buffer, NULL, 0, &error );
-						if(error)
-							puts(error);
-						// if there isnt a column on the object referencing the port,
-						// creates one
-						sprintf( buffer, "select port_%s_id from object_%d", name, i );
-						sqlite3_exec( db, buffer, callback, 0, &error );
-						sprintf( buffer, "no such column: port_%s_id", name );
-						if( strcmp( error, buffer ) == 0 )
-						{
-							sprintf( buffer, "alter table object_%d add port_%s_id default NULL references object_%d_port_%s( id )", i, name, i, name );
-							sqlite3_exec( db, buffer, callback, 0, &error );
-							if(error)
-								puts(error);
-						}
-						foo(fields, i, name);
-						printf("12\n");
-//						for( int j = 0; j < fields.size(); j++)
-//						{
-//							printf("%s\n", fields[j]->getOwner()->getMembers()[fields[j]->getIndex()]->getName().c_str() );
-//							printf("%s\n", fields[j]->getName().c_str() );
-//							printf("%s\n", fields[j]->getType()->getName().c_str() );
-//						}
-
-						printf("21\n");
-					}
-					printf("a\n");
-				}
+				//				_space->getRootObjects( objects );
+				//				for( int i = 0; i < objects.size(); i++ ) 
+				//				{
+				//					sprintf( buffer, "insert into objects values (%d)", i );
+				//					sqlite3_exec( db, buffer, callback, 0, &error );
+				//					if( error )
+				//						puts( error );
+				//					_model->getPorts( objects[i]->getComponent(), ports);
+				//					for( co::Range<co::IPort*> r( ports ); r; r.popFirst() )
+				//					{
+				//						// For each port, adds a row in ports table 
+				//						const char* name = r.getFirst()->getName().c_str();
+				//						_model->getFields( r.getFirst()->getType(), fields );
+				//						sprintf( buffer, "insert into ports( object_id, name ) values( %d, %s )", i, name );
+				//						sqlite3_exec( db, buffer, callback, 0, &error );
+				//						if( error )
+				//							puts( error );
+				//						for( int j = 0; j < fields.size(); j++)
+				//						{
+				//							printf("%s\n", fields[j]->getOwner()->getMembers()[fields[j]->getIndex()]->getName().c_str() );
+				//							printf("%s\n", fields[j]->getName().c_str() );
+				//							printf("%s\n", fields[j]->getType()->getName().c_str() );
+				//						}
+				//}
+				//}
 				sqlite3_free( error );
 			}
 
@@ -130,7 +113,8 @@ namespace ca {
 			co::RefPtr<ca::IModel> _model;
 			// member variables go here
 			// A callback to show the result of a query. It just prints for test reasons
-			static int callback(void *NotUsed, int argc, char **argv, char **azColName){
+			static int callback(void *NotUsed, int argc, char **argv, char **azColName)
+			{
 				int i;
 				for(i=0; i<argc; i++){
 					printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
@@ -138,47 +122,31 @@ namespace ca {
 				printf("\n");
 				return 0;
 			}
-			//recursive function that 
-			//creates a table for the object, and for each port if its a basic type creates a column
-			//if not creates a foreign key column and call the function for that port
-			void foo( const co::RefVector<co::IField>& fields, int object, const char* portName )
-			{	
+			void create_tables()
+			{
+				char *error;
 				char buffer[100];
-				char* error;
-				printf("entrou\n");
-				for(int i = 0; i < fields.size(); i++) {
-					printf("i - %d\n", i);
-					if( fields[i]->getType()->getName() == "string" ) {
-						sprintf( buffer, "alter table object_%d_port_%s add %s", object, portName, fields[i]->getName().c_str() );
-						sqlite3_exec( db, buffer, callback, 0, &error );
-						if( error )
-							puts( error );	
-					}
-					else
-					{
-						sprintf( buffer, "create table object_%d_port_%s_field_%s ( id integer not null primary key )",
-							       	object, portName, fields[i]->getName().c_str() );
-						sqlite3_exec( db, buffer, callback, 0, &error );
-						if( error )
-							puts( error );
-						sprintf( buffer, "alter table object_%d_port_%s add %s \
-							       	default NULL references object_%d_port_%s_field_%s( id )",
-							       	object, portName, fields[i]->getName().c_str(), object, portName,
-							       	fields[i]->getName().c_str() );
-						sqlite3_exec( db, buffer, callback, 0, &error );
-						if( error )
-							puts( error );	
-						co::RefVector<co::IField> fields2;
-						printf("É AQUI\n");
-						sprintf( buffer, "%s_field_%s", portName, fields[i]->getName().c_str() );
-						printf("é aqui.\n");
-						_model->getFields( static_cast<co::IRecordType*>( fields[i]->getType() ), fields2 );
-						printf("provado.\n");
-						fflush(stdout);
-//						foo( fields2, object, buffer );
-					}
-					printf("final\n");
-				}
+				sprintf( buffer, "create table if not exists 'objects'\
+						( id integer not null primary key )" );
+				sqlite3_exec( db, buffer, callback, 0, &error );
+				if( error )
+					puts( error );
+				sprintf( buffer, "create table if not exists 'ports'\
+						( id integer not null primary key autoincrement, object_id integer not null, name text not null );");
+				sqlite3_exec( db, buffer, callback, 0, &error );
+				if(error)
+					puts(error);
+				sprintf( buffer, "create table if not exists 'fields'\
+						( id integer not null, port_id integer not null );");
+				sqlite3_exec( db, buffer, callback, 0, &error );
+				if(error)
+					puts(error);
+				sprintf( buffer, "create table if not exists 'field_values'\
+						( id integer not null primary key, name text not null );");
+				sqlite3_exec( db, buffer, callback, 0, &error );
+				if(error)
+					puts(error);
+				sqlite3_free( error );
 			}
 	};
 
