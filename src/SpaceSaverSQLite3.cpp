@@ -50,31 +50,31 @@ namespace ca {
 				co::RefVector<co::IField> fields;
 				char buffer[100];
 				char* error;
-				//				_space->getRootObjects( objects );
-				//				for( int i = 0; i < objects.size(); i++ ) 
-				//				{
-				//					sprintf( buffer, "insert into objects values (%d)", i );
-				//					sqlite3_exec( db, buffer, callback, 0, &error );
-				//					if( error )
-				//						puts( error );
-				//					_model->getPorts( objects[i]->getComponent(), ports);
-				//					for( co::Range<co::IPort*> r( ports ); r; r.popFirst() )
-				//					{
-				//						// For each port, adds a row in ports table 
-				//						const char* name = r.getFirst()->getName().c_str();
-				//						_model->getFields( r.getFirst()->getType(), fields );
-				//						sprintf( buffer, "insert into ports( object_id, name ) values( %d, %s )", i, name );
-				//						sqlite3_exec( db, buffer, callback, 0, &error );
-				//						if( error )
-				//							puts( error );
-				//						for( int j = 0; j < fields.size(); j++)
-				//						{
-				//							printf("%s\n", fields[j]->getOwner()->getMembers()[fields[j]->getIndex()]->getName().c_str() );
-				//							printf("%s\n", fields[j]->getName().c_str() );
-				//							printf("%s\n", fields[j]->getType()->getName().c_str() );
-				//						}
-				//}
-				//}
+				_space->getRootObjects( objects );
+				for( int i = 0; i < objects.size(); i++ ) 
+				{
+					sprintf( buffer, "insert into objects values (%d)", i );
+					sqlite3_exec( db, buffer, callback, 0, &error );
+					if( error )
+						puts( error );
+					_model->getPorts( objects[i]->getComponent(), ports);
+					for( co::Range<co::IPort*> r( ports ); r; r.popFirst() )
+					{
+						// For each port, adds a row in ports table 
+						const char* name = r.getFirst()->getName().c_str();
+						_model->getFields( r.getFirst()->getType(), fields );
+						sprintf( buffer, "insert into ports( object_id, name ) values( %d, '%s' )", i, name );
+						sqlite3_exec( db, buffer, callback, 0, &error );
+						if( error )
+							puts( error );
+						for( int j = 0; j < fields.size(); j++)
+						{
+							printf("%s\n", fields[j]->getOwner()->getMembers()[fields[j]->getIndex()]->getName().c_str() );
+							printf("%s\n", fields[j]->getName().c_str() );
+							printf("%s\n", fields[j]->getType()->getName().c_str() );
+						}
+					}
+				}
 				sqlite3_free( error );
 			}
 
@@ -125,14 +125,14 @@ namespace ca {
 			void create_tables()
 			{
 				char *error;
-				char buffer[100];
+				char buffer[500];
 				sprintf( buffer, "create table if not exists 'objects'\
-						( id integer not null primary key )" );
+						( id integer not null primary key autoincrement )" );
 				sqlite3_exec( db, buffer, callback, 0, &error );
 				if( error )
 					puts( error );
 				sprintf( buffer, "create table if not exists 'ports'\
-						( id integer not null primary key autoincrement, object_id integer not null, name text not null );");
+						( id integer not null primary key autoincrement, object_id integer not null, name text not null )" );
 				sqlite3_exec( db, buffer, callback, 0, &error );
 				if(error)
 					puts(error);
