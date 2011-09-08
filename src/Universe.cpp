@@ -5,10 +5,11 @@
 
 #include "Universe.h"
 #include "Universe_Base.h"
-#include <co/IllegalStateException.h>
-#include <co/IllegalArgumentException.h>
 #include <ca/ModelException.h>
 #include <ca/UnexpectedException.h>
+#include <co/Log.h>
+#include <co/IllegalStateException.h>
+#include <co/IllegalArgumentException.h>
 #include <sstream>
 
 namespace ca {
@@ -189,8 +190,9 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	{
 		if( !objectChanges )
 		{
-			co::debug( co::Dbg_Warning, "ca.Universe: addChange() called for (%s)%p without changes.",
-				source->model->type->getFullName().c_str(), source->instance );
+			CORAL_LOG(WARNING) << "ca.Universe: addChange() called for (" <<
+				source->model->type->getFullName() << ')' <<
+				source->instance << " without changes.";
 			return;
 		}
 
