@@ -4,9 +4,16 @@
  */
 
 #include "ERMSpace.h"
+#include <co/IllegalStateException.h>
+#include <ca/UnexpectedException.h>
 
 class SpaceTests : public ERMSpace
 {};
+
+class SpaceTestsFaulty : public ERMSpace
+{
+	const char* getModelName() { return "faulty"; }
+};
 
 TEST_F( SpaceTests, initialization )
 {
@@ -21,8 +28,12 @@ TEST_F( SpaceTests, initialization )
 	EXPECT_THROW( _space->addChange( _entityB.get() ), ca::NoSuchObjectException );
 	EXPECT_THROW( _space->addChange( _relAB.get() ), ca::NoSuchObjectException );
 
-	// add the graph's root object (the erm.Model) to the space
-	_space->addRootObject( _erm->getProvider() );
+	// set the graph's root object (the erm.Model)
+	_space->setRootObject( _erm->getProvider() );
+
+	// once set, the root object cannot be changed
+	EXPECT_THROW( _space->setRootObject( NULL ), co::IllegalStateException );	
+	EXPECT_THROW( _space->setRootObject( _entityA->getProvider() ), co::IllegalStateException );
 
 	// now the space should contain the whole graph
 	EXPECT_NO_THROW( _space->addChange( _erm.get() ) );
@@ -382,4 +393,11 @@ TEST_F( SpaceTests, changedValueFields )
 	EXPECT_EQ( "relation", changedValueFields[1].field->getName() );
 	EXPECT_EQ( "relation B-C", changedValueFields[1].previous.get<const std::string&>() );
 	EXPECT_EQ( "New Relation", changedValueFields[1].current.get<const std::string&>() );
+}
+
+TEST_F( SpaceTestsFaulty, unexpectedExceptions )
+{
+	createSimpleERM();
+	ASSERT_EXCEPTION( _space->setRootObject( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
+	ASSERT_EXCEPTION( _space->setRootObject( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
 }

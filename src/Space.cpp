@@ -86,23 +86,17 @@ public:
 		if( _universe.isValid() )
 			_universe->unregisterSpace( _spaceId );
 	}
-
-	void addRootObject( co::IObject* root )
-	{
-		checkRegistered();
-		_universe->addRootObject( _spaceId, root );
-	}
-
-	void removeRootObject( co::IObject* root )
-	{
-		checkRegistered();
-		_universe->removeRootObject( _spaceId, root );
-	}
 	
-	void getRootObjects( co::RefVector<co::IObject>& result )
+	co::IObject* getRootObject()
 	{
 		checkRegistered();
-		_universe->getRootObjects( _spaceId, result );
+		return _universe->getRootObject( _spaceId );
+	}
+
+	void setRootObject( co::IObject* root )
+	{
+		checkRegistered();
+		_universe->setRootObject( _spaceId, root );
 	}
 
 	void addChange( co::IService* facet )

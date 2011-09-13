@@ -309,6 +309,9 @@ struct ObjectRecord
 	static ObjectRecord* create( ComponentRecord* model, co::IObject* instance );
 };
 
+// Given an object and a facetId, returns the service type name.
+const char* getServiceTypeName( ObjectRecord* object, co::int16 facetId );
+
 /*
 	Base template for object traversers.
  */

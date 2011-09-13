@@ -1,0 +1,2 @@
+// Indicates an exception was unexpectedly caught in the middle of a task.
+exception UnexpectedException;

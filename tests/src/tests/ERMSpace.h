@@ -6,7 +6,7 @@
 #ifndef _ERMSPACE_H_
 #define _ERMSPACE_H_
 
-#include <gtest/gtest.h>
+#include "TestUtils.h"
 
 #include <co/Coral.h>
 #include <co/IField.h>
@@ -51,6 +51,8 @@ public:
 	void serviceRelease();
 
 protected:
+	virtual const char* getModelName();
+
 	void SetUp();
 	void TearDown();
 
@@ -63,6 +65,8 @@ protected:
 	void startWithExtendedERM();
 
 protected:
+	std::string _modelName;
+
 	co::RefPtr<co::IObject> _modelObj;
 	co::RefPtr<co::IObject> _universeObj;
 	co::RefPtr<co::IObject> _spaceObj;

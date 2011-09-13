@@ -3,7 +3,7 @@
  * See copyright notice in LICENSE.md
  */
 
-#include <gtest/gtest.h>
+#include "TestUtils.h"
 
 #include <co/Coral.h>
 #include <co/IEnum.h>
@@ -39,18 +39,9 @@ bool containsMemberOfType( co::RefVector<T> vec, const std::string& memberName, 
 	return false;
 }
 
-#define ASSERT_EXCEPTION( code, expectedErrorMsg ) \
-	try { code; FAIL() << "an exception should have been raised"; } \
-	catch( const std::exception& e ) { std::string raisedMsg( e.what() ); \
-		if( raisedMsg.find( expectedErrorMsg ) == std::string::npos ) \
-			FAIL()	<< "raised message (\"" << raisedMsg << "\") does not contain the expected message (\"" \
-					<< expectedErrorMsg << "\")"; \
-	}
-
 #define ASSERT_MODEL_ERROR( modelName, type, expectedErrorMsg ) \
 	{ co::RefPtr<ca::IModel> m = loadModel( modelName ); \
 		ASSERT_EXCEPTION( m->contains( type ), expectedErrorMsg ); }
-
 
 TEST( ModelTests, simpleValidModels )
 {
