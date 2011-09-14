@@ -34,7 +34,7 @@ namespace ca {
 
 			void onSpaceChanged( ca::ISpaceChanges* changes )
 			{
-				// TODO: implement this method.
+				spaceChanges.push_back( changes );
 			}
 
 			void setup()
@@ -115,6 +115,7 @@ namespace ca {
 			sqlite3* db;
 			co::RefPtr<ca::ISpace> _space;
 			co::RefPtr<ca::IModel> _model;
+			co::RefPtr<cca::ISpaceChanges> spaceChanges; 
 			// member variables go here
 			// A callback to show the result of a query. It just prints for test reasons
 			static int callback(void *NotUsed, int argc, char **argv, char **azColName)
