@@ -2,6 +2,7 @@
  * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
+#include "ERMSpace.h"
 
 #include <gtest/gtest.h>
 
@@ -19,35 +20,29 @@
 #include <ca/IUniverse.h>
 #include <ca/ModelException.h>
 #include <ca/NoSuchObjectException.h>
-#include <stdio.h>
+#include <cstdio>
 
+class SpaceSaverTest : public ERMSpace {};
 
-
-TEST( SpaceSaverTest, simpleTest )
+TEST_F( SpaceSaverTest, simpleTest )
 {
-	co::IInterface* someInterface = co::cast<co::IInterface>( co::getType( "camodels.SomeInterface" ) );
-	co::RefPtr<co::IObject> ermObj = co::newInstance( "erm.Entity" );
 
 	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
 	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
+
+	startWithExtendedERM();
 
 	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
 	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 	spaceObj->setService( "universe", universe );
 
-	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
-	ca::IModel* model = modelObj->getService<ca::IModel>();
-	universeObj->setService( std::string( "model" ), model );
-	model->setName( "erm" );
-
-	space->addRootObject( ermObj.get() );
-
+	universeObj->setService("model", _model.get());
+	
+	space->setRootObject(_erm->getProvider());
+	
 	co::RefPtr<co::IObject> obj = co::newInstance( "ca.SpaceSaverSQLite3" );
 	co::RefPtr<ca::ISpaceSaver> spaceSav = obj->getService<ca::ISpaceSaver>();
-	
-	spaceSav->setModel( model );
+	spaceSav->setModel( _model.get() );
 	spaceSav->setSpace( space );
 	spaceSav->setup();
 }
-
-
