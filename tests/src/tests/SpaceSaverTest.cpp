@@ -17,6 +17,7 @@
 
 #include <ca/IModel.h>
 #include <ca/ISpace.h>
+#include <ca/INamed.h>
 #include <ca/IUniverse.h>
 #include <ca/ModelException.h>
 #include <ca/NoSuchObjectException.h>
@@ -42,7 +43,13 @@ TEST_F( SpaceSaverTest, simpleTest )
 	
 	co::RefPtr<co::IObject> obj = co::newInstance( "ca.SpaceSaverSQLite3" );
 	co::RefPtr<ca::ISpaceSaver> spaceSav = obj->getService<ca::ISpaceSaver>();
+
+	ca::INamed* file = (obj->getService<ca::INamed>());
+	file->setName( "SimpleSpaceSave.db" );
+	
 	spaceSav->setModel( _model.get() );
+	spaceSav->setModelVersion(1);
 	spaceSav->setSpace( space );
-	spaceSav->setup();
+	ASSERT_NO_THROW(spaceSav->setup());
+
 }

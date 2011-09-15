@@ -24,7 +24,6 @@ namespace ca {
 		public:
 			SpaceSaverSQLite3()
 			{
-				_modelVersion = 1;
 			}
 
 			virtual ~SpaceSaverSQLite3()
@@ -38,14 +37,14 @@ namespace ca {
 
 			void onSpaceChanged( ca::ISpaceChanges* changes )
 			{
-				// TODO: implement this method.
+				spaceChanges.push_back( changes );
 			}
 
 			void setup()
 			{
 				char *error;
 				
-				sqlite3_open( "space.db", &db );
+				sqlite3_open( _fileName.c_str(), &db );
 				sqlite3_exec( db, "PRAGMA foreign_keys = 1", 0, 0, &error );
 				if( error )
 					puts( error );
@@ -62,9 +61,24 @@ namespace ca {
 				_model = model;
 			}
 
+			void setModelVersion( co::int32 modelVersion)
+			{
+				_modelVersion = modelVersion;
+			}
+
 			void setSpace( ca::ISpace* space )
 			{
 				_space = space;
+			}
+
+			void setName(const std::string& name)
+			{
+				_fileName = name;
+			}
+
+			const std::string& getName()
+			{
+				return _fileName;
 			}
 
 			// ------ ca.ISpaceSaver Methods ------ //
@@ -92,8 +106,9 @@ namespace ca {
 			co::RefPtr<ca::IModel> _model;
 			co::int32 _modelVersion;
 
-			map<std::string, int> entityIdMap;
-			map<std::string, int> fieldIdMap;
+			std::string _fileName;
+
+			co::RefVector<ca::ISpaceChanges> spaceChanges; 
 
 			char *error;
 			char buffer[500];
@@ -102,7 +117,6 @@ namespace ca {
 
 			static int entityIdCallback(void *NotUsed, int argc, char **argv, char **azColName)
 			{
-				
 				if(argv)
 					queriedId = argv[0] ? atoi(argv[0]) : -1;
 				return 0;
@@ -119,7 +133,6 @@ namespace ca {
 
 			static int calciumModelIdCallback(void *NotUsed, int argc, char **argv, char **azColName)
 			{
-				
 				if(argv)
 					queriedId = argv[0] ? atoi(argv[0]) : -1;
 				return 0;
@@ -135,7 +148,6 @@ namespace ca {
 
 			static int fieldIdCallback(void *NotUsed, int argc, char **argv, char **azColName)
 			{
-				
 				if(argv)
 					queriedId = argv[0] ? atoi(argv[0]) : -1;
 				return 0;
@@ -148,16 +160,14 @@ namespace ca {
 				sqlite3_exec( db, buffer, fieldIdCallback, 0, &error );
 				return queriedId;
 			}
+
+
 			// member variables go here
 			// A callback to show the result of a query. It just prints for test reasons
 
 			void createModelMetadata()
 			{
 				
-				sprintf( buffer, "INSERT INTO CALCIUM_MODEL (CAMODEL_CONTENT, CAMODEL_VERSION) VALUES ('%s', %i)", _model->getName().c_str(), _modelVersion);
-				int retorno = 0;
-				sqlite3_exec( db, buffer, 0, 0, &error );
-
 				co::IComponent* component = _space->getRootObject()->getComponent();
 
 				saveEntity(component);
@@ -169,8 +179,6 @@ namespace ca {
 				std::string compName = component->getFullName();
 				sprintf(buffer, "INSERT INTO ENTITY (ENTITY_NAME, CAMODEL_ID) VALUES ('%s', %i)", compName.c_str(), getCalciumModelId());
 				sqlite3_exec( db, buffer, 0, 0, &error );
-				
-				entityIdMap.insert(pair<std::string, int>(compName, 1));
 
 				co::RefVector<co::IPort> ports;
 				_model->getPorts(component, ports);
@@ -254,8 +262,6 @@ namespace ca {
 				co::RefVector<co::IField> fields;
 				_model->getFields(entityInterface, fields);
 
-				//mark entityInterface as saved
-
 				for(co::RefVector<co::IField>::iterator it = fields.begin(); it != fields.end(); it++) 
 				{
 					co::IField* field =  it->get();
@@ -263,7 +269,6 @@ namespace ca {
 					if(field->getType()->getKind() == co::TK_ARRAY)
 					{
 						co::IType* arrayType = static_cast<co::IArray*>(field->getType())->getElementType();
-						debugStr = arrayType->getFullName();
 						
 						saveEntity(arrayType);
 					}
@@ -281,24 +286,19 @@ namespace ca {
 			void createTables()
 			{
 				
-				sqlite3_open( "space.db", &db );
-				sqlite3_exec( db, "PRAGMA foreign_keys = 1", 0, 0, &error );
-				if( error )
-					puts( error );
-				sqlite3_free( error );
-
 				sqlite3_exec(db, "BEGIN TRANSACTION", 0, 0, 0);
-
-				char buffer[500];
 
 				sprintf( buffer, "CREATE TABLE if not exists [CALCIUM_MODEL] (\
 								  [CAMODEL_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
 								  [CAMODEL_CONTENT] TEXT  NOT NULL,\
-								  [CAMODEL_VERSION] INTEGER  NOT NULL\
+								  [CAMODEL_VERSION] INTEGER  NOT NULL,\
+								  UNIQUE (CAMODEL_CONTENT, CAMODEL_VERSION)\
 								  );" );
 				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
-					puts(error);
+				{
+					sqlite3_exec(db, "ROLLBACK TRANSACTION", 0, 0, &error);
+				}
 				
 
 				sprintf( buffer, "CREATE TABLE if not exists [ENTITY] (\
@@ -310,7 +310,9 @@ namespace ca {
 								 );" );
 				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
-					puts(error);
+				{
+					sqlite3_exec(db, "ROLLBACK TRANSACTION", 0, 0, &error);
+				}
 				
 				sprintf( buffer, "CREATE TABLE if not exists [FIELD] (\
 								  [FIELD_NAME] VARCHAR(128) NOT NULL,\
@@ -322,7 +324,9 @@ namespace ca {
 								  );" );
 				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
-					puts(error);
+				{
+					sqlite3_exec(db, "ROLLBACK TRANSACTION", 0, 0, &error);
+				}
 
 				sprintf( buffer, "CREATE TABLE if not exists [OBJECT](\
 								 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
@@ -332,7 +336,9 @@ namespace ca {
 
 				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
-					puts(error);
+				{
+					sqlite3_exec(db, "ROLLBACK TRANSACTION", 0, 0, &error);
+				}
 
 				sprintf( buffer, "CREATE TABLE if not exists [FIELD_VALUES](\
 								 [FIELD_ID] INTEGER  NOT NULL,\
@@ -345,13 +351,19 @@ namespace ca {
 								 );");
 				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
-					puts(error);
+				{
+					sqlite3_exec(db, "ROLLBACK TRANSACTION", 0, 0, &error);
+				}
 				
+				sprintf( buffer, "INSERT INTO CALCIUM_MODEL (CAMODEL_CONTENT, CAMODEL_VERSION) VALUES ('%s', %i)", _model->getName().c_str(), _modelVersion);
+				sqlite3_exec( db, buffer, 0, 0, &error );
+
 				sqlite3_exec(db, "COMMIT TRANSACTION", 0, 0, 0);
 
 				sqlite3_free( error );
 			}
 	};
+
 	int ca::SpaceSaverSQLite3::queriedId = -1;
 	CORAL_EXPORT_COMPONENT( SpaceSaverSQLite3, SpaceSaverSQLite3 );
 	

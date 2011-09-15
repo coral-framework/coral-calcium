@@ -7,6 +7,8 @@ interface ISpaceSaver
 	ISpace getVersion( in int32 version );
 	ISpace getLatestVersion();	
 	void setup();
+	
+	void setModelVersion( in int32 modelVersion);
 	void setModel( in IModel model );
 	void setSpace( in ISpace space );
 };
