@@ -79,21 +79,21 @@ co::Range<ca::IObjectChanges* const> SpaceChanges::getChangedObjects()
 co::int32 SpaceChanges::findAddedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject*>( _addedObjects ),
+	return co::binarySearch( co::Range<co::IObject* const>( _addedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
 co::int32 SpaceChanges::findRemovedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject*>( _removedObjects ),
+	return co::binarySearch( co::Range<co::IObject* const>( _removedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
 co::int32 SpaceChanges::findChangedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<ca::IObjectChanges*>( _changedObjects ),
+	return co::binarySearch( co::Range<ca::IObjectChanges* const>( _changedObjects ),
 		object, changesKeyCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 

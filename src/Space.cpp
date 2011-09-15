@@ -11,6 +11,7 @@
 #include <ca/ISpaceObserver.h>
 #include <ca/IObjectObserver.h>
 #include <ca/IServiceObserver.h>
+#include <co/Log.h>
 #include <co/Coral.h>
 #include <co/RefPtr.h>
 #include <co/IComponent.h>
@@ -36,8 +37,8 @@ inline void checkObserverRemoved( int numRemoved, Observer* observer )
 		if( observer )
 			typeName = observer->getProvider()->getComponent()->getFullName().c_str();
 
-		co::debug( co::Dbg_Warning, "ca.Space: observer (%s)%p was removed %i times.",
-			typeName, observer, numRemoved );
+		CORAL_LOG(WARNING) << "ca.Space: observer (" << typeName << ')' <<
+			observer << " was removed " << numRemoved << " times.";
 	}
 }
 
