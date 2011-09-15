@@ -8,10 +8,13 @@
 #include <co/IObject.h>
 #include <co/IField.h>
 #include <co/Coral.h>
+#include <co/IArray.h>
 #include <co/IComponent.h>
 #include <co/IPort.h>
 #include <stdio.h>
 #include <string.h>
+#include <map>
+using namespace std;
 
 
 namespace ca {
@@ -21,11 +24,12 @@ namespace ca {
 		public:
 			SpaceSaverSQLite3()
 			{
-
+				_modelVersion = 1;
 			}
 
 			virtual ~SpaceSaverSQLite3()
 			{
+				
 				sqlite3_close( db );
 				// empty destructor
 			}
@@ -42,43 +46,14 @@ namespace ca {
 				char *error;
 				
 				sqlite3_open( "space.db", &db );
-				sqlite3_exec( db, "PRAGMA foreign_keys = 1", callback, 0, &error );
+				sqlite3_exec( db, "PRAGMA foreign_keys = 1", 0, 0, &error );
 				if( error )
 					puts( error );
 
-				create_tables();
+				createTables();
 
 				createModelMetadata();
 
-				co::RefPtr<co::IObject> object;
-				co::RefVector<co::IPort>  ports;
-				co::RefVector<co::IField> fields;
-				char buffer[100];
-
-				object = _space->getRootObject();
-
-				sprintf( buffer, "insert object values (%d)");
-				sqlite3_exec( db, buffer, callback, 0, &error );
-				if( error )
-					puts( error );
-				_model->getPorts( object->getComponent(), ports);
-				for( co::Range<co::IPort*> r( ports ); r; r.popFirst() )
-				{
-					// for each port, adds a row in ports table 
-					const char* name = r.getFirst()->getname().c_str();
-					_model->getFields( r.getFirst()->getType(), fields );
-					//sprintf( buffer, "insert into ports( object_id, name ) values( %d, '%s' )", i, name );
-					sqlite3_exec( db, buffer, callback, 0, &error );
-					if( error )
-						puts( error );
-					for( int j = 0; j < fields.size(); j++)
-					{
-						printf("%s\n", fields[j]->getOwner()->getMembers()[fields[j]->getIndex()]->getName().c_str() );
-						printf("%s\n", fields[j]->getName().c_str() );
-						printf("%s\n", fields[j]->getType()->getName().c_str() );
-					}
-				}				
-					
 				sqlite3_free( error );
 			}
 
@@ -115,61 +90,229 @@ namespace ca {
 			sqlite3* db;
 			co::RefPtr<ca::ISpace> _space;
 			co::RefPtr<ca::IModel> _model;
-			// member variables go here
-			// A callback to show the result of a query. It just prints for test reasons
-			static int callback(void *NotUsed, int argc, char **argv, char **azColName)
+			co::int32 _modelVersion;
+
+			map<std::string, int> entityIdMap;
+			map<std::string, int> fieldIdMap;
+
+			char *error;
+			char buffer[500];
+
+			static int ca::SpaceSaverSQLite3::queriedId;
+
+			static int entityIdCallback(void *NotUsed, int argc, char **argv, char **azColName)
 			{
-				int i;
-				for(i=0; i<argc; i++){
-					printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-				}
-				printf("\n");
+				
+				if(argv)
+					queriedId = argv[0] ? atoi(argv[0]) : -1;
 				return 0;
 			}
 
+			int getEntityId(std::string entityName, int calciumModelId)
+			{
+				sprintf(buffer, "SELECT ENTITY_ID FROM ENTITY WHERE ENTITY_NAME = '%s' AND CAMODEL_ID = %i", entityName.c_str(), calciumModelId);
+
+				queriedId = -1;
+				sqlite3_exec( db, buffer, entityIdCallback, 0, &error );
+				return queriedId;
+			}
+
+			static int calciumModelIdCallback(void *NotUsed, int argc, char **argv, char **azColName)
+			{
+				
+				if(argv)
+					queriedId = argv[0] ? atoi(argv[0]) : -1;
+				return 0;
+			}
+
+			int getCalciumModelId()
+			{
+				sprintf(buffer, "SELECT CAMODEL_ID FROM CALCIUM_MODEL WHERE CAMODEL_CONTENT = '%s' AND CAMODEL_VERSION = %i", _model->getName().c_str(), _modelVersion);
+				queriedId = -1;
+				sqlite3_exec( db, buffer, calciumModelIdCallback, 0, &error );
+				return queriedId;
+			}
+
+			static int fieldIdCallback(void *NotUsed, int argc, char **argv, char **azColName)
+			{
+				
+				if(argv)
+					queriedId = argv[0] ? atoi(argv[0]) : -1;
+				return 0;
+			}
+						
+			int getFieldId(std::string fieldName, int entityId)
+			{
+				sprintf(buffer, "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = '%s' AND ENTITY_ID = %i", fieldName, entityId);
+				queriedId = -1;
+				sqlite3_exec( db, buffer, fieldIdCallback, 0, &error );
+				return queriedId;
+			}
+			// member variables go here
+			// A callback to show the result of a query. It just prints for test reasons
+
 			void createModelMetadata()
 			{
+				
+				sprintf( buffer, "INSERT INTO CALCIUM_MODEL (CAMODEL_CONTENT, CAMODEL_VERSION) VALUES ('%s', %i)", _model->getName().c_str(), _modelVersion);
+				int retorno = 0;
+				sqlite3_exec( db, buffer, 0, 0, &error );
 
+				co::IComponent* component = _space->getRootObject()->getComponent();
+
+				saveEntity(component);
+			}
+
+			void saveComponent(co::IComponent* component)
+			{
+				
+				std::string compName = component->getFullName();
+				sprintf(buffer, "INSERT INTO ENTITY (ENTITY_NAME, CAMODEL_ID) VALUES ('%s', %i)", compName.c_str(), getCalciumModelId());
+				sqlite3_exec( db, buffer, 0, 0, &error );
+				
+				entityIdMap.insert(pair<std::string, int>(compName, 1));
+
+				co::RefVector<co::IPort> ports;
+				_model->getPorts(component, ports);
+				
+				for(co::RefVector<co::IPort>::iterator it = ports.begin(); it != ports.end(); it++) 
+				{
+					(*it).get()->getFacet();
+					
+					savePort(component, (*it).get());
+				}
+
+			}
+			
+			bool entityAlreadyInserted(co::IType* entityInterface)
+			{
+				return (getEntityId(entityInterface->getFullName(), getCalciumModelId()) != -1);
+			}
+
+
+			void savePort(co::IComponent* component, co::IPort* port)
+			{
+				
+				int componentId = getEntityId(component->getFullName(), getCalciumModelId()); // estrutura de dados pra armazenar entities já inseridas
+
+				saveField(port->getName(), componentId, port->getType()->getFullName());
+				
+				saveEntity(port->getType());
+			}
+
+			bool needsToSaveType(co::IType* type)
+			{
+				if(type->getKind() != co::TK_COMPONENT &&
+				   type->getKind() != co::TK_INTERFACE &&
+				   type->getKind() != co::TK_NATIVECLASS)
+				{
+					return false; //primitive type
+				}
+
+				return !entityAlreadyInserted(type);
+			}
+
+			void saveEntity(co::IType* type)
+			{
+				if( !needsToSaveType(type) )
+				{
+					return;
+				}
+
+				if( type->getKind() == co::TK_COMPONENT )
+				{
+					co::IComponent*	component = static_cast<co::IComponent*>(type);
+					saveComponent(component);
+					return;
+				}
+
+				if( type->getKind() == co::TK_INTERFACE )
+				{
+					co::IInterface*	interfaceType = static_cast<co::IInterface*>(type);
+					saveInterface(interfaceType);
+					return;
+				}
 			}
 
 			
 
-			void create_tables()
+			void saveField(std::string fieldName, int entityId, std::string fieldType)
 			{
-				char *error;
+				sprintf(buffer, "INSERT INTO FIELD (FIELD_NAME, ENTITY_ID, FIELD_TYPE) VALUES ('%s', %i, '%s');", fieldName.c_str(), entityId, fieldType.c_str());
+				
+				sqlite3_exec( db, buffer, 0, 0, &error );
+			}
+
+			void saveInterface(co::IInterface* entityInterface)
+			{
+
+				sprintf(buffer, "INSERT INTO ENTITY (ENTITY_NAME, CAMODEL_ID) VALUES ('%s', %i)", entityInterface->getFullName().c_str(), getCalciumModelId());
+				sqlite3_exec( db, buffer, 0, 0, &error );
+
+				int getIdFromSavedEntity = getEntityId(entityInterface->getFullName(), getCalciumModelId());
+
+				co::RefVector<co::IField> fields;
+				_model->getFields(entityInterface, fields);
+
+				//mark entityInterface as saved
+
+				for(co::RefVector<co::IField>::iterator it = fields.begin(); it != fields.end(); it++) 
+				{
+					co::IField* field =  it->get();
+					std::string debugStr = field->getType()->getFullName();
+					if(field->getType()->getKind() == co::TK_ARRAY)
+					{
+						co::IType* arrayType = static_cast<co::IArray*>(field->getType())->getElementType();
+						debugStr = arrayType->getFullName();
+						
+						saveEntity(arrayType);
+					}
+					if(field->getType()->getKind() == co::TK_INTERFACE || field->getType()->getKind() == co::TK_NATIVECLASS)
+					{
+						saveEntity(field->getType());
+					}
+					
+					saveField(field->getName(), getIdFromSavedEntity, field->getType()->getFullName());
+				}
+
+			}
+			
+
+			void createTables()
+			{
 				
 				sqlite3_open( "space.db", &db );
-				sqlite3_exec( db, "PRAGMA foreign_keys = 1", callback, 0, &error );
+				sqlite3_exec( db, "PRAGMA foreign_keys = 1", 0, 0, &error );
 				if( error )
 					puts( error );
 				sqlite3_free( error );
 
-				sqlite3_exec(db, "BEGIN", 0, 0, 0);
+				sqlite3_exec(db, "BEGIN TRANSACTION", 0, 0, 0);
 
 				char buffer[500];
 
-				sprintf( buffer, "CREATE TABLE [CALCIUM_MODEL] if not exists (\
+				sprintf( buffer, "CREATE TABLE if not exists [CALCIUM_MODEL] (\
 								  [CAMODEL_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
 								  [CAMODEL_CONTENT] TEXT  NOT NULL,\
 								  [CAMODEL_VERSION] INTEGER  NOT NULL\
 								  );" );
-				sqlite3_exec( db, buffer, callback, 0, &error );
+				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
 					puts(error);
 				
 
-				sprintf( buffer, "CREATE TABLE [ENTITY] if not exists (\
+				sprintf( buffer, "CREATE TABLE if not exists [ENTITY] (\
 								 [ENTITY_ID] INTEGER  PRIMARY KEY AUTOINCREMENT NOT NULL,\
 								 [ENTITY_NAME] VARCHAR(128)  NOT NULL,\
 								 [CAMODEL_ID] INTEGER  NOT NULL,\
 								 UNIQUE (ENTITY_NAME, CAMODEL_ID),\
 								 FOREIGN KEY (CAMODEL_ID) REFERENCES CALCIUM_MODEL(CAMODEL_ID)\
 								 );" );
-				sqlite3_exec( db, buffer, callback, 0, &error );
+				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
 					puts(error);
 				
-				sprintf( buffer, "CREATE TABLE [FIELD] if not exists (\
+				sprintf( buffer, "CREATE TABLE if not exists [FIELD] (\
 								  [FIELD_NAME] VARCHAR(128) NOT NULL,\
 								  [ENTITY_ID] INTEGER  NOT NULL,\
 								  [FIELD_TYPE] VARCHAR(30)  NULL,\
@@ -177,21 +320,21 @@ namespace ca {
 								  UNIQUE (FIELD_NAME, ENTITY_ID),\
 								  FOREIGN KEY (ENTITY_ID) REFERENCES ENTITY(ENTITY_ID)\
 								  );" );
-				sqlite3_exec( db, buffer, callback, 0, &error );
+				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
 					puts(error);
 
-				sprintf( buffer, "CREATE TABLE [OBJECT] if not exists (\
+				sprintf( buffer, "CREATE TABLE if not exists [OBJECT](\
 								 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
 								 [ENTITY_ID] INTEGER  NULL,\
 								 FOREIGN KEY (ENTITY_ID) REFERENCES ENTITY(ENTITY_ID)\
 								 );");
 
-				sqlite3_exec( db, buffer, callback, 0, &error );
+				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
 					puts(error);
 
-				sprintf( buffer, "CREATE TABLE [FIELD_VALUES] if not exists (\
+				sprintf( buffer, "CREATE TABLE if not exists [FIELD_VALUES](\
 								 [FIELD_ID] INTEGER  NOT NULL,\
 								 [VALUE] TEXT  NULL,\
 								 [FIELD_VALUE_VERSION] INTEGER NOT NULL,\
@@ -200,16 +343,17 @@ namespace ca {
 								 FOREIGN KEY (FIELD_ID) REFERENCES FIELD(FIELD_ID),\
 								 FOREIGN KEY (OBJECT_ID) REFERENCES OBJECT(OBJECT_ID)\
 								 );");
-				sqlite3_exec( db, buffer, callback, 0, &error );
+				sqlite3_exec( db, buffer, 0, 0, &error );
 				if(error)
 					puts(error);
 				
-				sqlite3_exec(db, "COMMIT", 0, 0, 0);
+				sqlite3_exec(db, "COMMIT TRANSACTION", 0, 0, 0);
 
 				sqlite3_free( error );
 			}
 	};
-
+	int ca::SpaceSaverSQLite3::queriedId = -1;
 	CORAL_EXPORT_COMPONENT( SpaceSaverSQLite3, SpaceSaverSQLite3 );
+	
 
 } // namespace ca
