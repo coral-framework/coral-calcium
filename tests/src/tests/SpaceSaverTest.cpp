@@ -22,6 +22,7 @@
 #include <ca/ModelException.h>
 #include <ca/NoSuchObjectException.h>
 #include <cstdio>
+#include <sqlite3.h>
 
 class SpaceSaverTest : public ERMSpace {};
 

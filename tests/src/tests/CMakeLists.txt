@@ -8,13 +8,20 @@ INCLUDE_DIRECTORIES(
 	${GTEST_INCLUDE_DIRS}
 	${ERM_BINARY_DIR}/generated
 	${CMAKE_BINARY_DIR}/src/generated
+	${CMAKE_SOURCE_DIR}/src
 )
 
 # Gather source files in the current directory
 FILE( GLOB _HEADERS *.h )
 FILE( GLOB _SOURCES *.cpp )
 
-ADD_EXECUTABLE( tests EXCLUDE_FROM_ALL ${_HEADERS} ${_SOURCES} ${_GENERATED_FILES} )
+ADD_EXECUTABLE( tests EXCLUDE_FROM_ALL
+	${_HEADERS}
+	${_SOURCES}
+	${_GENERATED_FILES}
+	${CMAKE_SOURCE_DIR}/src/sqlite3.c
+)
+
 ADD_DEPENDENCIES( tests camodels erm )
 
 CORAL_DEFAULT_TARGET_PROPERTIES( tests )

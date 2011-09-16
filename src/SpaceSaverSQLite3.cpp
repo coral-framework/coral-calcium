@@ -113,7 +113,7 @@ namespace ca {
 			char *error;
 			char buffer[500];
 
-			static int ca::SpaceSaverSQLite3::queriedId;
+			static int queriedId;
 
 			static int entityIdCallback(void *NotUsed, int argc, char **argv, char **azColName)
 			{
@@ -155,7 +155,7 @@ namespace ca {
 						
 			int getFieldId(std::string fieldName, int entityId)
 			{
-				sprintf(buffer, "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = '%s' AND ENTITY_ID = %i", fieldName, entityId);
+				sprintf(buffer, "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = '%s' AND ENTITY_ID = %i", fieldName.c_str(), entityId);
 				queriedId = -1;
 				sqlite3_exec( db, buffer, fieldIdCallback, 0, &error );
 				return queriedId;
