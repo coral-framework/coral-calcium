@@ -35,13 +35,6 @@ TEST_F( SpaceSaverTest, testNewFileSetup )
 	
 	startWithExtendedERM();
 
-	spaceObj->getService("universe");
-
-	ca::IUniverse* universe = static_cast<ca::IUniverse*>( spaceObj->getService( "universe" ) );
-	assert( universe );
-
-	ca::IModel* model = static_cast<ca::IModel*>( universe->getProvider()->getService( "model" ) );
-
 	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
 	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 	spaceObj->setService( "universe", universe );
