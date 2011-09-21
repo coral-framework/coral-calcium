@@ -449,6 +449,10 @@ public:
 	// IModel Methods:
 	const std::string& getName();
 	void setName( const std::string& name );
+	
+	co::int32 getVersion();
+	void setVersion(const co::int32 version);
+	
 	bool alreadyContains( co::IType* type );
 	bool contains( co::IType* type );
 	void getFields( co::IRecordType* recordType, co::RefVector<co::IField>& fields );
@@ -482,6 +486,8 @@ private:
 	// --- permanent fields --- //
 
 	std::string _name;
+
+	co::int32 _version;
 
 	// sorted list of types in the object model
 	TypeList _types;

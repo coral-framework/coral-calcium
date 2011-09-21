@@ -1,0 +1,4 @@
+component SQLiteResultSet 
+{
+	provides IResultSet resultSet;
+};

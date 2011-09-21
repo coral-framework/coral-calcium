@@ -1,0 +1,8 @@
+interface IResultSet 
+{
+	
+	bool next();
+	string getValue( in int32 columnIndex );
+	void finalize();
+	
+};

@@ -330,6 +330,16 @@ Model::~Model()
 		_types[i]->destroy();
 }
 
+co::int32 Model::getVersion()
+{
+	return _version;
+}
+
+void Model::setVersion(const co::int32 version)
+{
+	_version = version;
+}
+
 const std::string& Model::getName()
 {
 	return _name;
