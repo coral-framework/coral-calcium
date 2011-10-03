@@ -1,0 +1,4 @@
+component StringSerializer
+{
+	provides IStringSerializer serializer;
+};

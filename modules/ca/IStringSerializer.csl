@@ -1,0 +1,6 @@
+interface IStringSerializer
+{
+	void fromString( in string valueToStr, out any value );
+	
+	void toString( in any value, out string valueToStr );
+};

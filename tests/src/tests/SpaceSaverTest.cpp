@@ -20,6 +20,8 @@
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
 #include <ca/ModelException.h>
+#include <ca/IDBConnection.h>
+#include <ca/IResultSet.h>
 #include <ca/NoSuchObjectException.h>
 #include <cstdio>
 #include <sqlite3.h>
@@ -47,27 +49,33 @@ TEST_F( SpaceSaverTest, testNewFileSetup )
 	co::RefPtr<ca::ISpaceSaver> spaceSav = obj->getService<ca::ISpaceSaver>();
 
 	std::string fileName = "SimpleSpaceSave.db";
+	
+	spaceSav->setSpace( space );
+
 	remove( fileName.c_str() );
 
 	ca::INamed* file = (obj->getService<ca::INamed>());
 	file->setName( fileName );
 	
-	spaceSav->setModel( _model.get() );
-	spaceSav->setModelVersion(modelVersion);
 	spaceSav->setSpace( space );
 
-	EXPECT_NO_THROW(spaceSav->setup());
+	ASSERT_NO_THROW(spaceSav->setup());
+
+	co::RefPtr<co::IObject> dbObj = co::newInstance( "ca.SQLiteDBConnection" );
 	
+	co::RefPtr<ca::INamed> named = dbObj->getService<ca::INamed>();
+	named->setName(fileName);
+
+	co::RefPtr<ca::IDBConnection> conn = dbObj->getService<ca::IDBConnection>();
+
 	FILE* dbFile = 0;
 	EXPECT_NO_THROW(dbFile = fopen(fileName.c_str(), "r"));
 	EXPECT_TRUE(dbFile != 0);
+	fclose(dbFile);
 
-	sqlite3* db; 
-	sqlite3_open( fileName.c_str(), &db );
+	conn->open();
 
-	sqlite3_stmt *statement;
-
-	sqlite3_prepare_v2(db, "SELECT name FROM sqlite_master WHERE type = 'table' and name <> 'sqlite_sequence' ORDER BY name", -1, &statement, 0);
+	co::RefPtr<ca::IResultSet> resultSet = conn->executeQuery("SELECT name FROM sqlite_master WHERE type = 'table' and name <> 'sqlite_sequence' ORDER BY name");
 
 	char* tables[] = { "CALCIUM_MODEL",
 					    "ENTITY",
@@ -77,28 +85,30 @@ TEST_F( SpaceSaverTest, testNewFileSetup )
 					 };
 
 	int i = 0;
-	while (sqlite3_step(statement) == SQLITE_ROW)
+	std::string resultI;
+	while (resultSet->next())
 	{
-		EXPECT_TRUE(strcmp((char*)sqlite3_column_text(statement, 0), tables[i])==0) ;
+		resultI = resultSet->getValue(0);
+		EXPECT_TRUE(strcmp(resultI.c_str(), tables[i])==0);
 		i++;
 	}
 	EXPECT_EQ( i, 5);
 
-	sqlite3_prepare_v2(db, "SELECT * FROM CALCIUM_MODEL", -1, &statement, 0);
+	resultSet = conn->executeQuery("SELECT * FROM CALCIUM_MODEL");
 
-	int cols = sqlite3_column_count(statement);
+	EXPECT_TRUE(resultSet->next());
 
-	sqlite3_step(statement);
-	
-	int caModelId = atoi((char*)sqlite3_column_text(statement, 0));
+	int caModelId = atoi(resultSet->getValue(0).c_str());
 
 	EXPECT_EQ(caModelId, 1);
 
-	//Model name
-	EXPECT_TRUE(strcmp((char*)sqlite3_column_text(statement, 1), _model->getName().c_str()) == 0);
+	////Model name
+	EXPECT_TRUE(strcmp(resultSet->getValue(1).c_str(), _model->getName().c_str()) == 0);
 
-	int caModelVersion = atoi((char*)sqlite3_column_text(statement, 0));
-	EXPECT_EQ(caModelVersion, 1);
+	//Model version implementation pending
+	/*int caModelVersion = atoi(resultSet->getValue(2).c_str());
+	EXPECT_EQ(caModelVersion, 1);*/
 
-	sqlite3_close(db);
+	resultSet->finalize();
+	conn->close();
 }
