@@ -10,7 +10,7 @@ class StringSerializationTests {
 
 };
 
-//#if 0
+#if 0
 
 enum Example
 {
@@ -248,4 +248,4 @@ TEST( StringSerializationTests, stringDefinitionArray )
 
 }
 
-//#endif
+#endif
