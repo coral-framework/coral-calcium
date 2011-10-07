@@ -7,6 +7,8 @@ PROJECT( TESTS )
 INCLUDE_DIRECTORIES(
 	${GTEST_INCLUDE_DIRS}
 	${ERM_BINARY_DIR}/generated
+	${SERIALIZATION_BINARY_DIR}/generated
+	${SERIALIZATION_SOURCE_DIR}
 	${CMAKE_BINARY_DIR}/src/generated
 	${CMAKE_SOURCE_DIR}/src
 )
@@ -22,7 +24,7 @@ ADD_EXECUTABLE( tests EXCLUDE_FROM_ALL
 	${CMAKE_SOURCE_DIR}/src/sqlite3.c
 )
 
-ADD_DEPENDENCIES( tests camodels erm )
+ADD_DEPENDENCIES( tests camodels erm serialization)
 
 CORAL_DEFAULT_TARGET_PROPERTIES( tests )
 

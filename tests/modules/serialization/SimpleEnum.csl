@@ -1,0 +1,6 @@
+enum SimpleEnum
+{
+	One,
+	Two,
+	Three
+};

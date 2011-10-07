@@ -1,0 +1,6 @@
+struct NestedStruct
+{
+	int16 int16Value;
+	serialization.SimpleEnum enumValue;
+	serialization.BasicTypesStruct structValue;
+};

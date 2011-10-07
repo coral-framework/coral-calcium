@@ -1,0 +1,7 @@
+struct BasicTypesStruct
+{
+	int8 byteValue;
+	int32 intValue;
+	string strValue;
+	double doubleValue;
+};

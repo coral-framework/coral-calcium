@@ -1,0 +1,7 @@
+native class NativeClassCoral( <NativeClass.h> serializationNative::NativeClass )
+{
+	int8 byteValue;
+	int32 intValue;
+	string strValue;
+	double doubleValue;
+};
