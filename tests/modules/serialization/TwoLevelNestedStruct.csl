@@ -1,0 +1,6 @@
+struct TwoLevelNestedStruct
+{
+	bool boolean;
+	serialization.NativeClassCoral nativeClass;
+	serialization.NestedStruct nested;
+};

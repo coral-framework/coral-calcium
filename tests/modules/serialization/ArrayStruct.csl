@@ -1,0 +1,6 @@
+struct ArrayStruct
+{
+	int32[] integers;
+	serialization.SimpleEnum[] enums;
+	serialization.BasicTypesStruct[] basicStructs;
+};
