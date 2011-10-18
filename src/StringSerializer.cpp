@@ -7,13 +7,13 @@
 #include <co/IField.h>
 #include <co/IReflector.h>
 #include <ca/IModel.h>
+#include <ca/ModelException.h>
 #include <co/IllegalArgumentException.h>
+#include <ca/MalformedSerializedStringException.h>
 #include <limits>
 using namespace std;
 
 #include "StringSerializer_Base.h"
-
-#define number2str(s,n) sprintf((s), "%.14g", (n))
 
 namespace ca {
 
@@ -35,20 +35,6 @@ namespace ca {
 
 		}
 
-		
-		/**
-			This method only applies for coral primitive types and arrays of primitive types, if the given string does not have type markup
-		*/
-		void fromString( const std::string& valueToStr, co::Any& value )
-		{
-			stringstream valueStream( valueToStr );
-
-			readPrimitiveType( valueStream, value, co::TK_BOOLEAN);
-
-			std::string rest; 
-			valueStream >> rest;
-		}
-
 		void toString( const co::Any& value, std::string& valueToStr )
 		{
 			if( value.getKind() == co::TK_NONE )
@@ -66,10 +52,20 @@ namespace ca {
 			valueToStr.assign(valueStream.str());
 		}
 
+		ca::IModel* getModelService()
+		{
+			return _model;
+		}
+
+		void setModelService(ca::IModel* model)
+		{
+			_model = model;
+		}
+
 	private:
 		ca::IModel* _model;
 
-		std::vector<co::IField*> getFieldsToSerializeForType( co::IClassType* type )
+		std::vector<co::IField*> getFieldsToSerializeForType( co::IRecordType* type )
 		{
 			std::vector<co::IField*> fieldsToSerialize;
 			if( _model == 0 )
@@ -83,8 +79,18 @@ namespace ca {
 			else
 			{
 				co::RefVector<co::IField> refVector;
-				_model->getFields(type, refVector);
-				for(int i = 0; i < type->getFields().getSize(); i++)
+				
+				try 
+				{
+					_model->getFields(type, refVector);
+				}
+				catch ( ca::ModelException e )
+				{
+					std::string msg = e.getMessage();
+					printf( msg.c_str() );
+				}
+
+				for(int i = 0; i < refVector.size(); i++)
 				{
 					fieldsToSerialize.push_back( refVector[i].get() );
 				}
@@ -121,7 +127,10 @@ namespace ca {
 
 			char check;
 			ss >> check;
-			assert( check == '{' );
+			if( check != '{' )
+			{
+				throw ca::MalformedSerializedStringException("'{' expected to start complex type value.");
+			}
 
 			std::vector<co::IField*> fields = getFieldsToSerializeForType(classType);
 			std::string fieldName;
@@ -129,22 +138,55 @@ namespace ca {
 
 			co::IReflector* reflector = type->getReflector();
 			value.createComplexValue(type);
-
+			stringstream msg;
 			for( int i = 0; i < fields.size(); i++ )
 			{
 				fieldName = getLiteralFromStream(ss);
 
-				assert( fieldName == fields[i]->getName() );
+				if( fieldName != fields[i]->getName() )
+				{
+					msg.clear();
+					msg << "Invalid field name '" << fieldName << "' for type " << type->getFullName();
+					throw ca::MalformedSerializedStringException( msg.str() );
+				}
 
 				ss >> check;
-				assert( check == '=' );
+				
+				if( check != '=' )
+				{
+					throw ca::MalformedSerializedStringException(" '=' expected after field name");
+				}
 				
 				fromStream( ss, fields[i]->getType(), fieldValue );
 				
-				reflector->setField(value, fields[i], fieldValue);
-
-				ss >> check;
+				try
+				{
+					reflector->setField(value, fields[i], fieldValue);
+				}
+				catch( co::IllegalArgumentException e)
+				{
+					msg.clear();
+					msg << "Could not desserialize type " << type->getFullName() << " " << e.getMessage();
+					throw ca::MalformedSerializedStringException( msg.str() );
+				}
 				
+				ss >> check;
+				assertNotFail( ss, type->getFullName() );
+				
+				if( ( ( i == fields.size() - 1 ) && (check != '}') ) )
+				{
+					msg.clear();
+					msg << "'}' expected to end type " << type->getFullName();
+					throw ca::MalformedSerializedStringException( msg.str() );
+				}
+
+				if( ( ( i >=0 ) && ( i < fields.size() - 1 ) && (check != ',') ) )
+				{
+					msg.clear();
+					msg << "',' expected to separate fields of type " << type->getFullName();
+					throw ca::MalformedSerializedStringException( msg.str() );
+				}
+
 			}
 		}
 
@@ -152,14 +194,11 @@ namespace ca {
 		T readPrimitive(stringstream& ss, co::TypeKind tk)
 		{
 			int byte;
-			std::string boolStr;
 			T resultT;
 			switch(tk)
 			{
 			case co::TK_BOOLEAN:
-				boolStr = getLiteralFromStream( ss );
-				assert(boolStr == "true" || boolStr == "false");
-				resultT = (T)(boolStr == "true");
+				return (T)readBoolean(ss);
 			break;
 			case co::TK_INT8:
 			case co::TK_UINT8:
@@ -178,9 +217,23 @@ namespace ca {
 			break;
 
 			}
+			assertNotFail( ss, " primitive type." );
 			return resultT;
 		}
 
+		bool readBoolean( stringstream& ss )
+		{
+			std::string boolStr;
+			boolStr = getLiteralFromStream( ss );
+
+			if (boolStr != "true" && boolStr != "false")
+			{
+				stringstream msg;
+				msg << "Invalid boolean value: " << boolStr;
+				throw ca::MalformedSerializedStringException( msg.str() );
+			}
+			return (boolStr == "true");
+		}
 
 		void readArray( std::stringstream &ss, co::Any& value, co::IType* type )
 		{
@@ -188,7 +241,10 @@ namespace ca {
 
 			ss >> brackets;
 
-			assert( brackets == '{' );
+			if( brackets != '{' )
+			{
+				throw ca::MalformedSerializedStringException("'{' expected to start array value.");
+			}
 
 			co::IArray* arrayType = (co::IArray*)type;
 			co::IType* elementType = static_cast<co::IArray*>(type)->getElementType();
@@ -259,10 +315,14 @@ namespace ca {
 				readComplexType( ss, arrayElement, elementType );
 				result.push_back(arrayElement);
 				ss.get(check);
+				assertNotFail( ss, elementType->getFullName() );
 				if( check == '}' )
 				{
 					break;
 				}
+
+				assertNotInvalidArrayChar( check );
+
 			}
 			value.clear();
 			value.createArray(elementType, result.size());
@@ -272,6 +332,24 @@ namespace ca {
 			}
 		}
 
+		void assertNotFail( stringstream& ss, std::string additionalInfo )
+		{
+			if(ss.fail())
+			{
+				stringstream msg;
+				msg << "Unexpected end of string on " << additionalInfo << ".";
+				throw ca::MalformedSerializedStringException(msg.str());
+			}
+		}
+
+		void assertNotInvalidArrayChar( char check )
+		{
+			if( check != ',' )
+			{
+				throw ca::MalformedSerializedStringException("Array format not valid, ',' or '}' expected.");
+			} 
+		}
+
 		void getStringArrayFromStream( std::stringstream& ss, co::Any& value)
 		{
 			vector<std::string> result;
@@ -279,13 +357,15 @@ namespace ca {
 			char check;
 			while(true)
 			{
-				literalTmp = removeQuotes(ss);
+				literalTmp = extractStringValueWithoutQuotes(ss);
 				result.push_back(literalTmp);
 				ss.get(check);
+				assertNotFail(ss, "string array");
 				if( check == '}' )
 				{
 					break;
 				}
+				assertNotInvalidArrayChar( check );
 			}
 			value.clear();
 			value.createArray(co::typeOf<std::string>::get(), result.size());
@@ -306,9 +386,15 @@ namespace ca {
 			{
 				result.push_back(readEnum(ss, enumType));
 				ss.get(check);
+				assertNotFail( ss, "enum array" );
+
 				if( check == '}' )
 				{
 					break;
+				}
+				if( check != ',' )
+				{
+					throw ca::MalformedSerializedStringException("Array format not valid, ',' or '}' expected.");
 				}
 			}
 			value.clear();
@@ -322,7 +408,16 @@ namespace ca {
 		co::int32 readEnum( stringstream& ss, co::IEnum* enumType )
 		{
 			std::string literalTmp = getLiteralFromStream(ss);
-			return enumType->getValueOf(literalTmp);
+			co::int32 enumValue = enumType->getValueOf(literalTmp);
+
+			if( enumValue == -1 )
+			{
+				stringstream msg;
+				msg << literalTmp << " is not a " << enumType->getFullName() << " valid literal.";
+				throw ca::MalformedSerializedStringException( msg.str() );
+			}
+
+			return enumValue;
 		}
 
 		std::string getLiteralFromStream(stringstream& ss)
@@ -333,7 +428,10 @@ namespace ca {
 			ss.get(buffer);
 			result.push_back(buffer);
 
-			assert(isalpha(buffer));
+			if(!isalpha(buffer))
+			{
+				throw ca::MalformedSerializedStringException( "Literal expected, but control char found." );
+			}
 
 			while(true)
 			{
@@ -371,16 +469,19 @@ namespace ca {
 			}
 
 			T result;
+			stringstream errorMsg;
+			errorMsg << elementType->getFullName() << " array";
 			while(true)
 			{
 				result = readPrimitive<T>(ss, elementType->getKind());
 				resultVector.push_back(result);
 				ss.get(check);
+				assertNotFail( ss, errorMsg.str() );
 				if( check == '}' )
 				{
 					break;
 				}
-				assert( check == ',' );
+				assertNotInvalidArrayChar( check );
 			}
 			value.clear();
 			value.createArray(elementType, resultVector.size());
@@ -434,13 +535,13 @@ namespace ca {
 				applyPrimitiveToAny<double>(ss, value, tk);
 			break;
 			case co::TK_STRING:
-				value.createString() = removeQuotes(ss);
+				value.createString() = extractStringValueWithoutQuotes(ss);
 			break;
 
 			}
 		}
 
-		std::string removeQuotes( stringstream& ss )
+		std::string extractStringValueWithoutQuotes( stringstream& ss )
 		{
 			if(ss.peek() == '\'')
 			{
@@ -463,6 +564,9 @@ namespace ca {
 			while(true)
 			{
 				ss.get(readBuffer);
+
+				assertNotFail( ss, "string value" );
+
 				if( readBuffer == '\'' )
 				{
 					break;
@@ -475,7 +579,7 @@ namespace ca {
 		std::string extractLongBracketsString(stringstream& ss)
 		{
 			char readBuffer;
-			char openBrackets[3];
+			char openBrackets[4];
 			std::string result;
 			ss.read(openBrackets, 3);
 
@@ -484,6 +588,9 @@ namespace ca {
 			while(true)
 			{
 				ss.get(readBuffer);
+
+				assertNotFail( ss, "string value" );
+
 				result.push_back(readBuffer);
 				if( readBuffer == ']' )
 				{
@@ -505,27 +612,27 @@ namespace ca {
 
 			if(type == NULL)
 			{
-				getBasicTypeString(value, ss);
+				writeBasicType(value, ss);
 			}
 			else
 			{
 				co::TypeKind kind = value.getKind();
 				if( kind == co::TK_STRUCT || kind == co::TK_NATIVECLASS )
 				{
-					getComplexTypeString( value, ss, type );
+					writeComplexType( value, ss, type );
 				}
 				if( kind == co::TK_ARRAY )
 				{
-					getArrayString( value, ss, type );
+					writeArray( value, ss, type );
 				}
 				if( kind == co::TK_ENUM )
 				{
-					getEnumString( value, ss, type );
+					writeEnum( value, ss, type );
 				}
 			}
 		}
 
-		void getEnumString(const co::Any& value, stringstream& ss, co::IType* type)
+		void writeEnum(const co::Any& value, stringstream& ss, co::IType* type)
 		{
 			co::IEnum* enumType = static_cast<co::IEnum*>(type);
 
@@ -534,10 +641,10 @@ namespace ca {
 			ss << enumType->getIdentifiers()[enumAsint8];
 		}
 
-		void getComplexTypeString(const co::Any& value, stringstream& ss, co::IType* type)
+		void writeComplexType(const co::Any& value, stringstream& ss, co::IType* type)
 		{
-			co::IClassType * classType = static_cast<co::IClassType*>(type);
-			std::vector<co::IField*> fields = getFieldsToSerializeForType( classType );
+			co::IRecordType * recordType = static_cast<co::IRecordType*>(type);
+			std::vector<co::IField*> fields = getFieldsToSerializeForType( recordType );
 			co::IReflector * ref = type->getReflector();
 			co::Any fieldValue;
 			std::string fieldValueStr;
@@ -559,7 +666,7 @@ namespace ca {
 			ss << "}";
 		}
 
-		void getArrayString(const co::Any& value, stringstream& ss, co::IType* type)
+		void writeArray(const co::Any& value, stringstream& ss, co::IType* type)
 		{
 			if( type->getKind() == co::TK_INTERFACE )
 			{
@@ -586,7 +693,7 @@ namespace ca {
 
 		}
 
-		void getBasicTypeString(const co::Any& value, stringstream& ss)
+		void writeBasicType(const co::Any& value, stringstream& ss)
 		{
 			co::TypeKind kind = value.getKind();
 			char strNumber[32];

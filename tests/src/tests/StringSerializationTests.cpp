@@ -5,7 +5,10 @@
 #include <co/Any.h>
 #include <co/IObject.h>
 #include <co/Range.h>
+#include <ca/IModel.h>
+#include <co/IField.h>
 #include <ca/IStringSerializer.h>
+#include <ca/MalformedSerializedStringException.h>
 #include <co/IReflector.h>
 #include <serialization/BasicTypesStruct.h>
 #include <serialization/NestedStruct.h>
@@ -272,7 +275,7 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 	EXPECT_EQ( expected, actual );
 }
 
-TEST( StringSerializationTests, fromAndToDefinitionCompositeTypes )
+TEST( StringSerializationTests, fromAndToTestCompositeTypes )
 {
 
 	co::RefPtr<co::IObject> serializerComp = co::newInstance( "ca.StringSerializer" );	
@@ -659,3 +662,201 @@ TEST( StringSerializationTests, fromStringPrimitiveArrayTest )
 
 }
 
+void compareAnyModelAware(co::Any& expected, co::Any& actual, co::IType* type, ca::IModel* model)
+{
+	co::IRecordType* recordType = static_cast<co::IRecordType*>(type);
+
+	co::RefVector<co::IField> fields;
+	model->getFields( recordType, fields );
+
+	co::IReflector* reflect = recordType->getReflector();
+
+	co::Any fieldValueExpected, fieldValueActual;
+
+	for( int i = 0; i < fields.size(); i++)
+	{
+		reflect->getField(expected, fields[i].get(), fieldValueExpected);
+		reflect->getField(actual, fields[i].get(), fieldValueActual);
+		if( !fieldValueExpected.isReference() )
+		{
+			//array refactoring pending
+			if( fieldValueExpected.getKind() != co::TK_ARRAY ) 
+			{
+				EXPECT_EQ( fieldValueExpected, fieldValueActual );
+			}
+		}
+		else 
+		{
+			if( fieldValueExpected.getKind() == co::TK_STRING )
+			{
+				EXPECT_EQ( fieldValueExpected.get<const std::string&>(), fieldValueActual.get<const std::string&>());
+			}
+			else 
+			{
+				compareAnyModelAware(fieldValueExpected, fieldValueActual, fields[i]->getType(), model);
+			}
+			
+		}
+	}
+}
+
+void testComplexTypeModelAware( co::RefPtr<ca::IStringSerializer> serializer, co::Any& complexAny, co::IType* type, ca::IModel* model )
+{
+	std::string strOutput;
+	co::Any complexResult;
+
+	EXPECT_NO_THROW( serializer->toString( complexAny, strOutput ));
+	EXPECT_NO_THROW( serializer->fromString( strOutput, type, complexResult ));
+
+	compareAnyModelAware( complexAny, complexResult, type, model );
+}
+
+
+TEST( StringSerializationTests, serializationModelAwareTest )
+{
+	co::IObject* object = co::newInstance( "ca.Model" );
+	ca::IModel* model = object->getService<ca::IModel>();
+	model->setName( "serialization" );
+
+	co::RefPtr<co::IObject> serializerComp = co::newInstance("ca.StringSerializer");
+	
+	co::RefPtr<ca::IStringSerializer> serializer = serializerComp->getService<ca::IStringSerializer>();
+	serializerComp->setService( "model", model );
+
+	co::Any value;
+
+	struct serialization::BasicTypesStruct structValue;
+	structValue.intValue = 1;
+	structValue.strValue = "name"; 
+	structValue.doubleValue = 4.56;
+	structValue.byteValue = 123;
+
+	value.set<const serialization::BasicTypesStruct&>(structValue);
+	
+	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::BasicTypesStruct>::get(), model);
+
+	struct serialization::NestedStruct nestedStruct;
+	nestedStruct.int16Value = 1234;
+	nestedStruct.enumValue = serialization::Three;
+	nestedStruct.structValue.intValue = 1;
+	nestedStruct.structValue.strValue = "name"; 
+	nestedStruct.structValue.doubleValue = 4.56;
+	nestedStruct.structValue.byteValue = 123;
+	
+	value.set<const serialization::NestedStruct&>(nestedStruct);
+	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::NestedStruct>::get(), model);
+
+	serialization::NativeClassCoral nativeValue;
+	nativeValue.intValue = 4386;
+	nativeValue.strValue = "nameNative"; 
+	nativeValue.doubleValue = 6.52;
+	nativeValue.byteValue = -64;
+	
+	value.set<const serialization::NativeClassCoral&>(nativeValue);
+	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::NativeClassCoral>::get(), model);
+
+	struct serialization::TwoLevelNestedStruct twoLevelNestedStruct;
+	
+	twoLevelNestedStruct.boolean = true;
+	twoLevelNestedStruct.nativeClass = nativeValue;
+	twoLevelNestedStruct.nested = nestedStruct;
+
+	value.set<const serialization::TwoLevelNestedStruct&>(twoLevelNestedStruct);
+	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::TwoLevelNestedStruct>::get(), model);
+
+	struct serialization::ArrayStruct arrayStruct;
+	arrayStruct.enums.push_back(serialization::One);
+	arrayStruct.enums.push_back(serialization::Two);
+
+	for(int i = 0; i < 5; i++)
+	{
+		arrayStruct.integers.push_back(i*2);
+	}
+
+	arrayStruct.basicStructs.push_back( structValue );
+
+	structValue.byteValue = 67;
+	structValue.doubleValue = 10.43;
+	structValue.intValue = 73246;
+	structValue.strValue = "valueSecondStruct";
+
+	arrayStruct.basicStructs.push_back( structValue );
+	value.set<const serialization::ArrayStruct&>(arrayStruct);
+	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::ArrayStruct>::get(), model);
+
+}
+
+TEST( StringSerializationTests, fromStringExceptions )
+{
+	co::RefPtr<co::IObject> serializerComp = co::newInstance("ca.StringSerializer");
+	
+	co::RefPtr<ca::IStringSerializer> serializer = serializerComp->getService<ca::IStringSerializer>();
+
+	std::string malformed;
+
+	malformed = "trup";
+	co::Any result;
+	co::IType* type = co::typeOf<bool>::get();
+	
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "[=[escapedNotClosed\']";
+
+	type = co::typeOf<std::string>::get();
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "'quotedNotClosed";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "'closed wrong ]=]";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "NotOnEnum";
+	type = co::typeOf<serialization::SimpleEnum>::get();
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{'11','2'";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "'11','2'}";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{'11,'2'";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{'11,2";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{byteValue&123,doubleValue=4.56,intValue=1,strValue='name'}";
+	type = co::typeOf<serialization::BasicTypesStruct>::get();
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{byteValue=123;doubleValue=4.56,intValue=1,strValue='name'}";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{byteValue=123,doubleValue=4.56,intValue=1,strValue='name'";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{doubleValue=4.56,byteValue=123,intValue=1,strValue='name'}";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{,doubleValue=4.56,byteValue=123,intValue=1,strValue='name'}";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "byteValue=123,doubleValue=4.56,intValue=1,strValue='name'}";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "abc";
+	type = co::typeOf<double>::get();
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+	malformed = "{3.5}";
+	EXPECT_THROW( serializer->fromString( malformed, type, result), ca::MalformedSerializedStringException );
+
+}
