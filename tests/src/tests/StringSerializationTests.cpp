@@ -43,6 +43,7 @@ void testComplexType( co::RefPtr<ca::IStringSerializer> serializer, T& complexTy
 	co::Any complexResult;
 
 	EXPECT_NO_THROW(serializer->toString( complexAny, strOutput ));
+	printf(strOutput.c_str());
 	EXPECT_NO_THROW(serializer->fromString( strOutput, co::typeOf<T>::get(), complexResult ));
 	EXPECT_EQ( complexType, complexResult.get<const T&>() );
 }

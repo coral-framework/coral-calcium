@@ -1,6 +1,22 @@
+/*!
+	
+*/
 interface IStringSerializer
 {
-	void fromString( in string valueToStr, in co.IType type, out any value );
+	/*!
+		Restores a string into a value of a given type.
+		\param the input string
+		\param the type of the expected value
+		\param the output value
+		\throw ca.MalformedSerializedStringException if the input string does not correspond the given type, or it contains any syntax error.
+	*/
+	void fromString( in string valueToStr, in co.IType type, out any value ) raises ca.MalformedSerializedStringException;
 	
-	void toString( in any value, out string valueToStr );
+	/*!
+		Serializes an Any value into a string
+		\param value value to be serialized
+		\param output serialized string
+		\throw co.IllegalArgumentException if value kind is TK_NONE. 
+	*/
+	void toString( in any value, out string valueToStr ) raises co.IllegalArgumentException;
 };

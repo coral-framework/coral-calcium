@@ -26,7 +26,15 @@
 #include <cstdio>
 #include <sqlite3.h>
 
+
 class SpaceSaverTest : public ERMSpace {};
+
+inline erm::Multiplicity mult( co::int32 min, co::int32 max )
+{
+	erm::Multiplicity m;
+	m.min = min; m.max = max;
+	return m;
+}
 
 TEST_F( SpaceSaverTest, testNewFileSetup )
 {
@@ -36,6 +44,11 @@ TEST_F( SpaceSaverTest, testNewFileSetup )
 	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 	
 	startWithExtendedERM();
+	_relAB->setMultiplicityB( mult( 1, 2 ) );
+	_relBC->setMultiplicityA( mult( 3, 4 ) );
+	_relBC->setMultiplicityB( mult( 5, 6 ) );
+	_relCA->setMultiplicityA( mult( 7, 8 ) );
+	_relCA->setMultiplicityB( mult( 9, 0 ) );
 
 	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
 	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
@@ -106,8 +119,8 @@ TEST_F( SpaceSaverTest, testNewFileSetup )
 	EXPECT_TRUE(strcmp(resultSet->getValue(1).c_str(), _model->getName().c_str()) == 0);
 
 	//Model version implementation pending
-	/*int caModelVersion = atoi(resultSet->getValue(2).c_str());
-	EXPECT_EQ(caModelVersion, 1);*/
+	int caModelVersion = atoi(resultSet->getValue(2).c_str());
+	EXPECT_EQ(caModelVersion, 1);
 
 	resultSet->finalize();
 	conn->close();
