@@ -101,7 +101,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 	{
 		assert( !ref.service && !ref.object );
 		co::IService* newService;
-		OBJ_BARRIER( newService = source->instance->getService( receptacle.port ) );
+		OBJ_BARRIER( newService = source->instance->getServiceAt( receptacle.port ) );
 		initRef( ref.service, ref.object, newService );
 	}
 
@@ -139,7 +139,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 
 		co::TypeKind kind = any.getKind();
-		bool isPrimitive = ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE || kind == co::TK_ENUM );
+		bool isPrimitive = ( ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE ) || kind == co::TK_ENUM );
 		const void* fromPtr = ( isPrimitive ? &any.getState().data : any.getState().data.ptr );
 		field.getTypeReflector()->copyValue( fromPtr, valuePtr );
 	}
@@ -149,7 +149,7 @@ template<typename T>
 ObjectRecord* UniverseRecord::createObject( T from, co::IObject* instance )
 {
 	// instantiate and register the object
-	ComponentRecord* component = model->getComponent( instance->getComponent() );
+	ComponentRecord* component = model->getComponentRec( instance->getComponent() );
 	ObjectRecord* object = ObjectRecord::create( component, instance );
 	objectMap.insert( ObjectMap::value_type( instance, object ) );
 
@@ -235,7 +235,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
 		co::IService* service;
-		OBJ_BARRIER( service = source->instance->getService( receptacle.port ) );
+		OBJ_BARRIER( service = source->instance->getServiceAt( receptacle.port ) );
 		if( service == ref.service )
 			return; // no change
 

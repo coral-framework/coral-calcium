@@ -147,7 +147,7 @@ void SpaceChanges::revertChanges()
 			co::IObject* object = objects.getFirst()->getObject();
 			for( ; connections; connections.popFirst() )
 			{
-				object->setService( connections.getFirst().receptacle.get(),
+				object->setServiceAt( connections.getFirst().receptacle.get(),
 								    connections.getFirst().previous.get() );
 			}
 			_space->addChange( object );
