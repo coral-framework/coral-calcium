@@ -119,9 +119,10 @@ void revertFieldChanges( ISpace* space, IServiceChanges* changes )
 	for( ; refVecFields; refVecFields.popFirst() )
 	{
 		co::IField* field = refVecFields.getFirst().field.get();
+		co::IType* elemType = static_cast<co::IArray*>( field->getType() )->getElementType();
 		const co::uint32 flags = co::Any::VarIsPointer | co::Any::VarIsPointerConst;
-		value.setArray( co::Any::AK_RefVector, field->getType(), flags,
-			const_cast<void*>( reinterpret_cast<const void*>( &refVecFields.getFirst().previous ) ) );
+		value.setArray( co::Any::AK_RefVector, elemType, flags, const_cast<void*>(
+			reinterpret_cast<const void*>( &refVecFields.getFirst().previous ) ) );
 		field->getOwner()->getReflector()->setField( instance, field, value );
 	}
 
@@ -146,7 +147,7 @@ void SpaceChanges::revertChanges()
 			co::IObject* object = objects.getFirst()->getObject();
 			for( ; connections; connections.popFirst() )
 			{
-				object->setService( connections.getFirst().receptacle.get(),
+				object->setServiceAt( connections.getFirst().receptacle.get(),
 								    connections.getFirst().previous.get() );
 			}
 			_space->addChange( object );

@@ -5,10 +5,11 @@
 
 #include "Universe.h"
 #include "Universe_Base.h"
-#include <co/IllegalStateException.h>
-#include <co/IllegalArgumentException.h>
 #include <ca/ModelException.h>
 #include <ca/UnexpectedException.h>
+#include <co/Log.h>
+#include <co/IllegalStateException.h>
+#include <co/IllegalArgumentException.h>
 #include <sstream>
 
 namespace ca {
@@ -100,7 +101,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 	{
 		assert( !ref.service && !ref.object );
 		co::IService* newService;
-		OBJ_BARRIER( newService = source->instance->getService( receptacle.port ) );
+		OBJ_BARRIER( newService = source->instance->getServiceAt( receptacle.port ) );
 		initRef( ref.service, ref.object, newService );
 	}
 
@@ -138,7 +139,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 
 		co::TypeKind kind = any.getKind();
-		bool isPrimitive = ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE || kind == co::TK_ENUM );
+		bool isPrimitive = ( ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE ) || kind == co::TK_ENUM );
 		const void* fromPtr = ( isPrimitive ? &any.getState().data : any.getState().data.ptr );
 		field.getTypeReflector()->copyValue( fromPtr, valuePtr );
 	}
@@ -148,7 +149,7 @@ template<typename T>
 ObjectRecord* UniverseRecord::createObject( T from, co::IObject* instance )
 {
 	// instantiate and register the object
-	ComponentRecord* component = model->getComponent( instance->getComponent() );
+	ComponentRecord* component = model->getComponentRec( instance->getComponent() );
 	ObjectRecord* object = ObjectRecord::create( component, instance );
 	objectMap.insert( ObjectMap::value_type( instance, object ) );
 
@@ -189,8 +190,9 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	{
 		if( !objectChanges )
 		{
-			co::debug( co::Dbg_Warning, "ca.Universe: addChange() called for (%s)%p without changes.",
-				source->model->type->getFullName().c_str(), source->instance );
+			CORAL_LOG(WARNING) << "ca.Universe: addChange() called for (" <<
+				source->model->type->getFullName() << ')' <<
+				source->instance << " without changes.";
 			return;
 		}
 
@@ -233,7 +235,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	void onReceptacle( PortRecord& receptacle, RefField& ref )
 	{
 		co::IService* service;
-		OBJ_BARRIER( service = source->instance->getService( receptacle.port ) );
+		OBJ_BARRIER( service = source->instance->getServiceAt( receptacle.port ) );
 		if( service == ref.service )
 			return; // no change
 

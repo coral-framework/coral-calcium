@@ -432,14 +432,14 @@ public:
 		return static_cast<RecordRecord*>( rec );
 	}
 
-	inline InterfaceRecord* getInterface( co::IInterface* type )
+	inline InterfaceRecord* getInterfaceRec( co::IInterface* type )
 	{
 		TypeRecord* rec = getTypeOrThrow( type );
 		assert( rec->isInterface() );
 		return static_cast<InterfaceRecord*>( rec );
 	}
 
-	inline ComponentRecord* getComponent( co::IComponent* type )
+	inline ComponentRecord* getComponentRec( co::IComponent* type )
 	{
 		TypeRecord* rec = getTypeOrThrow( type );
 		assert( rec->isComponent() );

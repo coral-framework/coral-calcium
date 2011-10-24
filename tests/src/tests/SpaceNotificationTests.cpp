@@ -4,7 +4,9 @@
  */
 
 #include "ERMSpace.h"
+#include <co/MissingServiceException.h>
 #include <co/IllegalArgumentException.h>
+#include <ca/UnexpectedException.h>
 
 class SpaceNotificationTests : public ERMSpace
 {};
@@ -132,4 +134,83 @@ TEST_F( SpaceNotificationTests, serviceObservers )
 		EXPECT_EQ( expectedServices[i], _serviceChanges[i]->getService() );
 
 	EXPECT_EQ( 2, _objectChanges[0]->getChangedConnections().getSize() );
+}
+
+class ObserverExceptionTests : public ERMSpace
+{
+public:
+	const char* nextException;
+	ObserverExceptionTests() : nextException( NULL ) {;}
+
+	void onSpaceChanged( ca::ISpaceChanges* changes )
+	{
+		if( nextException )
+		{
+			const char* msg = nextException; nextException = NULL;
+			CORAL_THROW( co::MissingServiceException, msg );
+		}
+	}
+
+	void onObjectChanged( ca::IObjectChanges* changes )
+	{
+		if( nextException )
+		{
+			const char* msg = nextException; nextException = NULL;
+			CORAL_THROW( co::MissingServiceException, msg );
+		}
+	}
+
+	void onServiceChanged( ca::IServiceChanges* changes )
+	{
+		if( nextException )
+		{
+			const char* msg = nextException; nextException = NULL;
+			CORAL_THROW( co::MissingServiceException, msg );
+		}
+	}
+};
+
+TEST_F( ObserverExceptionTests, spaceObserver )
+{
+	_space->setRootObject( createSimpleERM() );
+	nextException = "space exception";
+	ASSERT_EXCEPTION2( _space->notifyChanges(),
+		"unexpected co.MissingServiceException raised by space observer (ca.Model)",
+		"space exception" );
+}
+
+TEST_F( ObserverExceptionTests, objectObserver )
+{
+	startWithSimpleERM();
+	_space->removeSpaceObserver( this );
+	_space->addObjectObserver( _entityA->getProvider(), this );
+
+	_entityA->setName( "Entity B" );
+	_space->addChange( _entityA.get() );
+
+	nextException = "object exception";
+
+	ASSERT_EXCEPTION2( _space->notifyChanges(),
+		"unexpected co.MissingServiceException raised by object observer (ca.Model)",
+		"object exception" );
+
+	_space->addSpaceObserver( this );
+}
+
+TEST_F( ObserverExceptionTests, serviceObserver )
+{
+	startWithSimpleERM();
+	_space->removeSpaceObserver( this );
+	_space->addServiceObserver( _entityA.get(), this );
+
+	_entityA->setName( "Entity B" );
+	_space->addChange( _entityA.get() );
+
+	nextException = "service exception";
+
+	ASSERT_EXCEPTION2( _space->notifyChanges(),
+		"unexpected co.MissingServiceException raised by service observer (ca.Model)",
+		"service exception" );
+
+	_space->addSpaceObserver( this );
 }

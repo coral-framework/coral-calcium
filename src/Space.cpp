@@ -11,6 +11,8 @@
 #include <ca/ISpaceObserver.h>
 #include <ca/IObjectObserver.h>
 #include <ca/IServiceObserver.h>
+#include <ca/UnexpectedException.h>
+#include <co/Log.h>
 #include <co/Coral.h>
 #include <co/RefPtr.h>
 #include <co/IComponent.h>
@@ -28,7 +30,7 @@ template<typename Observer>
 inline void checkObserverRemoved( int numRemoved, Observer* observer )
 {
 	if( numRemoved == 0 )
-		throw co::IllegalArgumentException( "no such observer in the list of observers" );
+		throw co::IllegalArgumentException( "no such observer in the list" );
 
 	if( numRemoved > 1 )
 	{
@@ -36,8 +38,8 @@ inline void checkObserverRemoved( int numRemoved, Observer* observer )
 		if( observer )
 			typeName = observer->getProvider()->getComponent()->getFullName().c_str();
 
-		co::debug( co::Dbg_Warning, "ca.Space: observer (%s)%p was removed %i times.",
-			typeName, observer, numRemoved );
+		CORAL_LOG(WARNING) << "ca.Space: observer (" << typeName << ')' <<
+			observer << " was removed " << numRemoved << " times.";
 	}
 }
 
@@ -111,12 +113,33 @@ public:
 		_universe->notifyChanges( _spaceId );
 	}
 
+	void onObserverException( const char* what, co::IService* observer, co::Exception& e )
+	{
+		co::IObject* obj = observer->getProvider();
+		CORAL_THROW( UnexpectedException, "unexpected " << e.getTypeName()
+			<< " raised by " << what << " (" << obj->getComponent()->getFullName()
+			<< ")" << obj << ": " << e.getMessage() );
+	}
+
 	void onSpaceChanged( ca::ISpaceChanges* changes )
 	{
+		// keep track of the current observer for error handling
+		co::IService* currentObserver = NULL;
+
 		// notify all space observers
-		size_t numSpaceObservers = _spaceObservers.size();
-		for( size_t i = 0; i < numSpaceObservers; ++i )
-			_spaceObservers[i]->onSpaceChanged( changes );
+		try
+		{
+			size_t numSpaceObservers = _spaceObservers.size();
+			for( size_t i = 0; i < numSpaceObservers; ++i )
+			{
+				currentObserver = _spaceObservers[i];
+				_spaceObservers[i]->onSpaceChanged( changes );
+			}
+		}
+		catch( co::Exception& e )
+		{
+			onObserverException( "space observer", currentObserver, e );
+		}
 
 		// notify observers registered for specific objects/services in the change set
 		co::Range<ca::IObjectChanges* const> changedObjects = changes->getChangedObjects();
@@ -129,20 +152,40 @@ public:
 				continue;
 
 			// notify object observers
-			ObjectObserverList& ool = it->second.objectObservers;
-			size_t numObjectObservers = ool.size();
-			for( size_t i = 0; i < numObjectObservers; ++i )
-				ool[i]->onObjectChanged( objectChanges );
+			try
+			{
+				ObjectObserverList& ool = it->second.objectObservers;
+				size_t numObjectObservers = ool.size();
+				for( size_t i = 0; i < numObjectObservers; ++i )
+				{
+					currentObserver = ool[i];
+					ool[i]->onObjectChanged( objectChanges );
+				}
+			}
+			catch( co::Exception& e )
+			{
+				onObserverException( "object observer", currentObserver, e );
+			}
 
 			// notify observers registered for specific services
-			co::Range<IServiceChanges* const> changedServices = objectChanges->getChangedServices();
-			for( ; changedServices; changedServices.popFirst() )
+			try
 			{
-				ca::IServiceChanges* serviceChanges = changedServices.getFirst();
-				co::IService* service = serviceChanges->getService();
-				ServiceObserverMapRange range = it->second.serviceObserverMap.equal_range( service );
-				for( ; range.first != range.second; ++range.first )
-					range.first->second->onServiceChanged( serviceChanges );
+				co::Range<IServiceChanges* const> changedServices = objectChanges->getChangedServices();
+				for( ; changedServices; changedServices.popFirst() )
+				{
+					ca::IServiceChanges* serviceChanges = changedServices.getFirst();
+					co::IService* service = serviceChanges->getService();
+					ServiceObserverMapRange range = it->second.serviceObserverMap.equal_range( service );
+					for( ; range.first != range.second; ++range.first )
+					{
+						currentObserver = range.first->second;
+						range.first->second->onServiceChanged( serviceChanges );
+					}
+				}
+			}
+			catch( co::Exception& e )
+			{
+				onObserverException( "service observer", currentObserver, e );
 			}
 		}
 	}

@@ -120,7 +120,7 @@ void InterfaceRecord::finalize()
 	co::uint32 offset = 0;
 
 	// first all Ref and RefVec fields
-	CORAL_STATIC_CHECK( sizeof(RefField) == sizeof(RefVecField), unexpected_size_mismatch );
+	static_assert( sizeof(RefField) == sizeof(RefVecField), "unexpected size mismatch" );
 	for( ; i < firstValue; ++i )
 	{
 		fields[i].offset = offset;
@@ -245,7 +245,7 @@ ObjectRecord* ObjectRecord::create( ComponentRecord* model, co::IObject* instanc
 
 	// initialize the facet refs
 	for( co::uint8 i = 0; i < model->numFacets; ++i )
-		rec->services[i] = instance->getService( model->ports[i].port );
+		rec->services[i] = instance->getServiceAt( model->ports[i].port );
 
 	// initialize all fields
 	ObjectCreationTraverser traverser( rec );
@@ -386,7 +386,7 @@ void Model::getFields( co::IRecordType* recordType, co::RefVector<co::IField>& f
 
 void Model::getPorts( co::IComponent* component, co::RefVector<co::IPort>& ports )
 {
-	ComponentRecord* rec = getComponent( component );
+	ComponentRecord* rec = getComponentRec( component );
 	ports.clear();
 	ports.reserve( rec->numPorts );
 	for( co::uint8 i = 0; i < rec->numPorts; ++i )
@@ -585,7 +585,7 @@ bool Model::loadCaModelFor( co::IType* type )
 	fileName += "CaModel_";
 	fileName += _name;
 	fileName += ".lua";
-	if( !co::findModuleFile( ns->getFullName(), fileName, filePath ) )
+	if( !co::findFile( ns->getFullName(), fileName, filePath ) )
 		return false;
 
 	co::Any args[2];
