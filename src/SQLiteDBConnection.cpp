@@ -61,8 +61,6 @@ namespace ca
 				throw ca::DBException( "Database not connected. Cannot execute command" );
 			}
 
-			sqlite3_stmt *statement;
-
 			int resultCode = sqlite3_prepare_v2( _db, querySQL.c_str(), -1, &statement, 0 );
 
 			if(resultCode != SQLITE_OK)
@@ -124,6 +122,7 @@ namespace ca
 	private:
 		sqlite3* _db;
 		std::string _fileName;
+		sqlite3_stmt *statement;
 
 		bool fileExists(const char * filePath)
 		{
