@@ -20,6 +20,8 @@
 #include <co/IComponent.h>
 #include <co/IPort.h>
 #include <co/IllegalArgumentException.h>
+#include <co/NotSupportedException.h>
+#include <co/IllegalCastException.h>
 #include <stdio.h>
 #include <string.h>
 #include <map>
@@ -104,8 +106,37 @@ namespace ca {
 
 			ca::ISpace* getVersion( co::int32 version )
 			{
+				co::Any result;
+				
+				co::RefPtr<co::IObject> serializerObj = co::newInstance("ca.StringSerializer");
+				_serializer = serializerObj->getService<ca::IStringSerializer>();
+
+				if( _db != 0 )
+				{
+					_db->close();
+				}
+
+				co::RefPtr<co::IObject> db = co::newInstance("ca.SQLiteDBConnection");
+
+				_db = db->getService<ca::IDBConnection>();
+				_db->getProvider()->getService<ca::INamed>()->setName(_fileName);
+
+				_db->open();
+				restoreObject(1);
+
+				co::IObject* object = (co::IObject*)getRef(1);
+				
 				// TODO: implement this method.
-				return NULL;
+				co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
+				ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
+
+				universeObj->setService("model", _model.get());
+				co::IObject* spaceObj = co::newInstance("ca.Space");
+				ca::ISpace* space = spaceObj->getService<ca::ISpace>();
+
+				spaceObj->setService( "universe", universe );
+				space->setRootObject( object );
+				return space;
 			}
 
 			void saveChanges()
@@ -122,6 +153,8 @@ namespace ca {
 
 			map<void*, int> refMap;
 
+			map<int, co::IObject*> idMap;
+
 			std::string _fileName;
 
 			co::RefVector<ca::ISpaceChanges> spaceChanges; 
@@ -129,9 +162,249 @@ namespace ca {
 			char *error;
 			char buffer[500];
 
+			void restoreObject( int id )
+			{
+				stringstream sql;
+
+				sql << "SELECT E.ENTITY_NAME, E.ENTITY_ID FROM OBJECT OBJ, ENTITY E WHERE OBJ.ENTITY_ID = E.ENTITY_ID AND OBJ.OBJECT_ID = " << id << " AND E.CAMODEL_ID = " << getCalciumModelId();
+
+				ca::IResultSet* rs = _db->executeQuery( sql.str() );
+				bool end = rs->next();
+				std::string entity = rs->getValue(0);
+				int entity_id = atoi(rs->getValue(1).c_str());
+				rs->finalize();
+
+				co::IObject* object = co::newInstance(entity);
+				co::RefVector<co::IPort> ports;
+				_model->getPorts( object->getComponent(), ports );
+
+				insertIdMap( id, object );
+
+				co::IPort* port;
+				std::string portName;
+
+				for( int i = 0; i < ports.size(); i++ )
+				{
+					port = ports.at(i).get();
+					portName = port->getName();
+					
+					sql.flush();
+					sql.clear();
+					sql.str("");
+					sql << "SELECT FV.VALUE FROM FIELD F LEFT OUTER JOIN FIELD_VALUES FV ON F.FIELD_ID = FV.FIELD_ID WHERE F.FIELD_NAME = '"
+						<< portName <<"' AND FV.OBJECT_ID = " << id << " AND F.ENTITY_ID = " << entity_id;
+
+					rs = _db->executeQuery( sql.str() );
+
+					if( !rs->next() )
+					{
+						std::string sqlMsg = sql.str();
+						printf( sqlMsg.c_str() );
+					}
+					
+					int idService = atoi( rs->getValue(0).c_str() );
+					rs->finalize();
+
+					if( port->getIsFacet() )
+					{
+
+						co::IService* service = object->getService( port );
+
+						fillServiceValues( idService, service );
+					}
+					else 
+					{
+						co::IObject* refObj = getRef( idService );
+						try
+						{
+							object->setService( port, refObj->getService( getFirstFacet(refObj) ) );
+						}
+						catch( co::IllegalCastException e )
+						{
+							printf( e.getMessage().c_str() );
+						}
+					}
+
+				}
+			}
+
+			co::IPort* getFirstFacet( co::IObject* refObj )
+			{
+				co::RefVector< co::IPort > ports;
+				_model->getPorts( refObj->getComponent(), ports );
+
+				for( int i = 0; i < ports.size(); i++ )
+				{
+					if( ports[i].get()->getIsFacet() )
+					{
+						return ports[i].get();
+					}
+				}
+				return 0;
+			}
+
+			void fillServiceValues( int id, co::IService* service )
+			{
+				stringstream sql;
+				sql << "SELECT F.FIELD_NAME, FV.VALUE FROM " <<
+					"FIELD_VALUES FV LEFT OUTER JOIN OBJECT OBJ ON FV.OBJECT_ID = OBJ.OBJECT_ID "<<
+					"LEFT OUTER JOIN ENTITY E ON OBJ.ENTITY_ID = E.ENTITY_ID " <<
+					"LEFT OUTER JOIN FIELD F ON F.ENTITY_ID = E.ENTITY_ID AND F.FIELD_ID = FV.FIELD_ID " <<
+					"LEFT OUTER JOIN CALCIUM_MODEL CM ON E.CAMODEL_ID = CM.CAMODEL_ID "<<
+					"WHERE CM.CAMODEL_ID = 1 AND FV.FIELD_VALUE_VERSION = 1 " <<
+					"AND OBJ.OBJECT_ID = " << id;
+
+				ca::IResultSet* rs = _db->executeQuery( sql.str() );
+				
+				map<std::string, std::string> mapFieldValue;
+
+				while( rs->next() )
+				{
+					std::string fieldName = rs->getValue(0);
+					std::string fieldValue = rs->getValue(1);
+					mapFieldValue.insert( pair<std::string, std::string>( fieldName, fieldValue ) );
+				}
+				rs->finalize();
+				co::RefVector<co::IField> fields;
+				_model->getFields( service->getInterface(), fields );
+
+				co::IReflector* ref = service->getInterface()->getReflector();
+				std::string fieldName;
+				for( int i = 0; i < fields.size(); i++)
+				{
+					co::IField* field = fields[i].get();
+					fieldName = field->getName();
+					extractFieldValue(service, field, id, mapFieldValue.find(fieldName)->second);
+				}
+
+
+			}
+
+			void extractFieldValue( co::IService* service, co::IField* field, int id, std::string strValue )
+			{
+				co::IType* type = field->getType();
+				
+				co::IReflector* reflector = service->getInterface()->getReflector();
+
+				co::Any serviceAny;
+				serviceAny.setService( service, service->getInterface() );
+
+				if( type->getKind() == co::TK_ARRAY )
+				{
+					co::IArray* arrayType = static_cast<co::IArray*>(type);
+
+					if( arrayType->getElementType()->getKind() == co::TK_INTERFACE )
+					{
+						co::Any refs;
+						_serializer->fromString(strValue, co::typeOfArrayBase<co::int32>::get(), refs);
+
+						std::vector<co::int32> vec = refs.get<const std::vector<co::int32>&>();
+						std::vector<co::IService*> services;
+
+						co::Any* fieldValue = new co::Any();;
+
+						fieldValue->createArray( arrayType->getElementType(), vec.size() );
+
+						co::IObject* ref;
+						for( int i = 0; i < vec.size(); i++ )
+						{
+							ref = getRef( vec[i] );
+							
+							if( ref == 0 )
+							{
+								restoreObject( vec[i] );
+								ref = getRef(vec[i]);
+								co::IPort* port = getFirstFacet(ref);	
+								std::string componentName = ref->getComponent()->getName();
+								co::IService* service = ref->getService(port);
+								try
+								{
+									setArrayComplexTypeElement( *fieldValue, i, co::Any(service) );
+								}
+								catch ( co::NotSupportedException e )
+								{
+									printf(e.getMessage().c_str());
+								}
+								
+							}
+						}
+
+						try
+						{
+							reflector->setField( serviceAny, field, *fieldValue );
+						}
+						catch( co::IllegalCastException e )
+						{
+							
+							printf(e.getMessage().c_str());
+						}
+
+						return;
+					}
+					
+				}
+				if( type->getKind() == co::TK_INTERFACE )
+				{
+					if( strValue != "nil" )
+					{
+						co::Any refId;
+						_serializer->fromString(strValue, co::typeOf<co::int32>::get(), refId);
+						int refIdInt = refId.get<co::int32>();
+						co::IObject* ref = getRef( refIdInt );
+						if( ref == 0 )
+						{
+							restoreObject( refIdInt );
+						}
+						ref = getRef( refIdInt );
+						try 
+						{
+							reflector->setField( service, field, ref->getService( getFirstFacet(ref) ) );
+						}
+						catch (co::IllegalCastException e)
+						{
+							printf( e.getMessage().c_str() );
+						}
+					}
+
+					return;
+				}
+
+				co::Any anyValue;
+
+				_serializer->fromString(strValue, field->getType(), anyValue);
+				try
+				{
+					reflector->setField( serviceAny, field, anyValue );
+				}
+				catch (co::IllegalCastException e)
+				{
+					printf( e.getMessage().c_str() );
+				}
+
+				printf( "%s %s %s\n", service->getInterface()->getFullName().c_str(), field->getName().c_str(), strValue.c_str() );
+
+			}
+
+			void insertIdMap( int id, co::IObject* obj )
+			{
+				idMap.insert( pair<int, co::IObject*>( id, obj ) );
+			}
+
 			void insertRefMap(void* obj, int id)
 			{
 				refMap.insert(pair<void*, int>(obj, id));
+			}
+
+			co::IObject* getRef(int id)
+			{
+				map<int, co::IObject*>::iterator it = idMap.find(id);
+
+				if(it != idMap.end())
+				{
+					return it->second;
+				}
+
+				return 0;
 			}
 
 			int getRefId(void* obj)
@@ -155,7 +428,7 @@ namespace ca {
 				{
 					return atoi(rs->getValue(0).c_str());
 				}
-				
+				rs->finalize();
 				return -1;
 			}
 
@@ -167,6 +440,7 @@ namespace ca {
 				{
 					return atoi(rs->getValue(0).c_str());
 				}
+				rs->finalize();
 				return -1;
 			}
 
@@ -178,6 +452,7 @@ namespace ca {
 				{
 					return atoi(rs->getValue(0).c_str());
 				}
+				rs->finalize();
 				return -1;
 			}
 
@@ -207,7 +482,7 @@ namespace ca {
 				rs->next();
 				int objId = atoi(rs->getValue(0).c_str());
 				insertRefMap(object.get(), objId);
-				
+				rs->finalize();
 				co::RefVector<co::IPort> ports;
 				_model->getPorts(component, ports);
 
@@ -227,7 +502,13 @@ namespace ca {
 						insertValue << "INSERT INTO FIELD_VALUES (FIELD_ID, OBJECT_ID, FIELD_VALUE_VERSION, VALUE) VALUES (" << fieldId
 							<< ", " << objId << ", " << 1 << ", '" << getRefId( service ) << "')";
 						
-						//sprintf(buffer, "INSERT INTO FIELD_VALUES (FIELD_ID, OBJECT_ID, FIELD_VALUE_VERSION, VALUE) VALUES (%i, %i, %i, '%s')", fieldId, objId, 1,  );
+						_db->execute(insertValue.str().c_str());
+					}
+					else
+					{
+						stringstream insertValue;
+						insertValue << "INSERT INTO FIELD_VALUES (FIELD_ID, OBJECT_ID, FIELD_VALUE_VERSION, VALUE) VALUES (" << fieldId
+							<< ", " << objId << ", " << 1 << ", '" << getRefId( service->getProvider() ) << "')";
 						_db->execute(insertValue.str().c_str());
 					}
 					
@@ -258,7 +539,7 @@ namespace ca {
 				
 				objId = atoi(rs->getValue(0).c_str());
 				insertRefMap(obj.get(), objId);
-
+				rs->finalize();
 				co::RefVector<co::IField> fields;
 				_model->getFields(type, fields);
 				
@@ -293,7 +574,7 @@ namespace ca {
 						{
 							co::Range<co::IService* const> services = fieldValue.get<co::Range<co::IService* const>>();
 							
-														vector<co::int32> refs;
+							vector<co::int32> refs;
 							while(!services.isEmpty())
 							{
 								co::IService* const serv = services.getFirst();
@@ -337,11 +618,6 @@ namespace ca {
 						fieldValueStr = getValueAsString(fieldValue);
 					}
 
-					//if(field->getType()->getKind() == co::TK_INTERFACE || field->getType()->getKind() == co::TK_NATIVECLASS)
-					//{
-					//	saveObject(serv->getProvider());
-					//}
-					
 					sprintf(buffer, "INSERT INTO FIELD_VALUES (FIELD_ID, OBJECT_ID, FIELD_VALUE_VERSION, VALUE) VALUES (%i, %i, %i, '%s')", fieldId, objId, 1, fieldValueStr.c_str());
 					_db->execute(buffer);
 
@@ -537,6 +813,87 @@ namespace ca {
 				}
 
 			}
+
+			co::uint32 getArraySize( const co::Any& array )
+			{
+				assert( array.getKind() == co::TK_ARRAY );
+
+				const co::Any::State& s = array.getState();
+				if( s.arrayKind == co::Any::State::AK_Range )
+					return s.arraySize;
+
+				co::Any::PseudoVector& pv = *reinterpret_cast<co::Any::PseudoVector*>( s.data.ptr );
+				return static_cast<co::uint32>( pv.size() ) / array.getType()->getReflector()->getSize();
+			}
+
+			co::uint8* getArrayPtr( const co::Any& array )
+			{
+				assert( array.getKind() == co::TK_ARRAY );
+
+				const co::Any::State& s = array.getState();
+				if( s.arrayKind == co::Any::State::AK_Range )
+					return reinterpret_cast<co::uint8*>( s.data.ptr );
+
+				co::Any::PseudoVector& pv = *reinterpret_cast<co::Any::PseudoVector*>( s.data.ptr );
+				return &pv[0];
+			}
+
+			void getArrayElement( const co::Any& array, co::uint32 index, co::Any& element )
+			{
+				co::IType* elementType = array.getType();
+				co::uint32 elementSize = elementType->getReflector()->getSize();
+
+				co::TypeKind ek = elementType->getKind();
+				bool isPrimitive = ( ( ek >= co::TK_BOOLEAN && ek <= co::TK_DOUBLE ) || ek == co::TK_ENUM );
+				co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
+
+				void* ptr = getArrayPtr( array ) + elementSize * index;
+
+				element.setVariable( elementType, flags, ptr );
+			}
+
+			template< typename T>
+			void setArrayElement( const co::Any& array, co::uint32 index, T element )
+			{
+				co::IType* elementType = array.getType();
+				co::uint32 elementSize = elementType->getReflector()->getSize();
+
+				co::uint8* p = getArrayPtr(array);
+
+				co::TypeKind ek = elementType->getKind();
+				bool isPrimitive = ( ( ek >= co::TK_BOOLEAN && ek <= co::TK_DOUBLE ) || ek == co::TK_ENUM );
+				co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
+
+				void* ptr = getArrayPtr( array ) + elementSize * index;
+			
+				T* elementTypePointer = reinterpret_cast<T*>(ptr);
+				*elementTypePointer = element;
+			}
+
+			void setArrayComplexTypeElement( const co::Any& array, co::uint32 index, co::Any& element )
+			{
+				co::IType* elementType = array.getType();
+				co::IReflector* reflector = elementType->getReflector();
+				co::uint32 elementSize = reflector->getSize();
+
+				co::uint8* p = getArrayPtr(array);
+
+				co::TypeKind ek = elementType->getKind();
+				bool isPrimitive = ( ( ek >= co::TK_BOOLEAN && ek <= co::TK_DOUBLE ) || ek == co::TK_ENUM );
+				co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
+
+				void* ptr = getArrayPtr( array ) + elementSize * index;
+				if( !element.isPointer())
+				{
+					reflector->copyValue( element.getState().data.ptr, ptr );
+				}
+				else
+				{
+					ptr = element.getState().data.service;
+				}
+
+			}
+
 	};
 
 	CORAL_EXPORT_COMPONENT( SpaceSaverSQLite3, SpaceSaverSQLite3 );
