@@ -56,7 +56,7 @@ void testArrayToAndFromString(co::RefPtr<ca::IStringSerializer>& serializer, T* 
 
 	input.setArray( co::Any::AK_Range, co::typeOf<T>::get(), 0, staticArray, size );
 	EXPECT_NO_THROW(serializer->toString( input, strOutput ));
-	EXPECT_NO_THROW(serializer->fromString( strOutput, co::typeOfArrayBase<T>::get(), result ));
+	EXPECT_NO_THROW(serializer->fromString( strOutput, co::typeOf<std::vector<T>>::get(), result ));
 	compareArray<T>(staticArray, result.get<std::vector<T>&>(), size);
 }
 
@@ -644,7 +644,7 @@ TEST( StringSerializationTests, fromStringPrimitiveArrayTest )
 	input.set<const std::vector<co::int32>&>(empty);
 
 	EXPECT_NO_THROW(serializer->toString( input, strOutput ));
-	EXPECT_NO_THROW(serializer->fromString( strOutput, co::typeOfArrayBase<co::int32>::get(), result ));
+	EXPECT_NO_THROW(serializer->fromString( strOutput, co::typeOf<std::vector<co::int32>>::get(), result ));
 	EXPECT_EQ(0, result.get<const std::vector<co::int32>&>().size());
 
 	struct serialization::BasicTypesStruct arrayStruct[2];

@@ -208,7 +208,7 @@ namespace ca {
 					if( port->getIsFacet() )
 					{
 
-						co::IService* service = object->getService( port );
+						co::IService* service = object->getServiceAt( port );
 
 						fillServiceValues( idService, service );
 					}
@@ -217,7 +217,7 @@ namespace ca {
 						co::IObject* refObj = getRef( idService );
 						try
 						{
-							object->setService( port, refObj->getService( getFirstFacet(refObj) ) );
+							object->setServiceAt( port, refObj->getServiceAt( getFirstFacet(refObj) ) );
 						}
 						catch( co::IllegalCastException e )
 						{
@@ -296,7 +296,7 @@ namespace ca {
 					if( arrayType->getElementType()->getKind() == co::TK_INTERFACE )
 					{
 						co::Any refs;
-						_serializer->fromString(strValue, co::typeOfArrayBase<co::int32>::get(), refs);
+						_serializer->fromString(strValue, co::typeOf<std::vector<co::int32>>::get(), refs);
 
 						std::vector<co::int32> vec = refs.get<const std::vector<co::int32>&>();
 						std::vector<co::IService*> services;
@@ -316,7 +316,7 @@ namespace ca {
 								ref = getRef(vec[i]);
 								co::IPort* port = getFirstFacet(ref);	
 								std::string componentName = ref->getComponent()->getName();
-								co::IService* service = ref->getService(port);
+								co::IService* service = ref->getServiceAt(port);
 								try
 								{
 									setArrayComplexTypeElement( *fieldValue, i, co::Any(service) );
@@ -358,7 +358,7 @@ namespace ca {
 						ref = getRef( refIdInt );
 						try 
 						{
-							reflector->setField( service, field, ref->getService( getFirstFacet(ref) ) );
+							reflector->setField( service, field, ref->getServiceAt( getFirstFacet(ref) ) );
 						}
 						catch (co::IllegalCastException e)
 						{
@@ -491,7 +491,7 @@ namespace ca {
 				for(co::RefVector<co::IPort>::iterator it = ports.begin(); it != ports.end(); it++) 
 				{
 					co::IPort* port = (*it).get();
-					co::IService* service = object->getService(port);
+					co::IService* service = object->getServiceAt(port);
 
 					fieldId = getFieldId( port->getName(), entityId );
 
