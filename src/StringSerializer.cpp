@@ -14,6 +14,7 @@
 using namespace std;
 
 #include "StringSerializer_Base.h"
+#include "AnyArrayUtil.h"
 
 namespace ca {
 
@@ -307,6 +308,7 @@ namespace ca {
 		void getComplexTypeArrayFromStream( stringstream& ss, co::IType* elementType, co::Any& value )
 		{
 			std::vector<co::Any> result;
+			AnyArrayUtil arrayUtil;
 			std::string literalTmp;
 			char check;
 			co::Any arrayElement;
@@ -328,7 +330,7 @@ namespace ca {
 			value.createArray(elementType, result.size());
 			for( int i = 0; i < result.size(); i++ )
 			{
-				setArrayComplexTypeElement(value, i, result[i]);
+				arrayUtil.setArrayComplexTypeElement(value, i, result[i]);
 			}
 		}
 
@@ -354,6 +356,9 @@ namespace ca {
 		{
 			vector<std::string> result;
 			std::string literalTmp;
+
+			AnyArrayUtil arrayUtil;
+
 			char check;
 			while(true)
 			{
@@ -372,7 +377,7 @@ namespace ca {
 			
 			for( int i = 0; i < result.size(); i++ )
 			{
-				setArrayElement<std::string>(value, i, result[i]);
+				arrayUtil.setArrayElement<std::string>(value, i, result[i]);
 			}
 		}
 
@@ -380,6 +385,9 @@ namespace ca {
 		{
 			std::vector<co::int32> result;
 			std::string literalTmp;
+
+			AnyArrayUtil arrayUtil;
+
 			co::IEnum* enumType = static_cast<co::IEnum*>(type);
 			char check;
 			while(true)
@@ -401,7 +409,7 @@ namespace ca {
 			value.createArray(type, result.size());
 			for( int i = 0; i < result.size(); i++ )
 			{
-				setArrayElement<co::int32>(value, i, result[i]);
+				arrayUtil.setArrayElement<co::int32>(value, i, result[i]);
 			}
 		}
 
@@ -460,6 +468,9 @@ namespace ca {
 		{
 			char check = ss.peek();
 			std::vector<T> resultVector;
+
+			AnyArrayUtil arrayUtil;
+
 			if( check == '}' )
 			{
 				//emptyArray;
@@ -487,7 +498,7 @@ namespace ca {
 			value.createArray(elementType, resultVector.size());
 			for( co::uint32 i = 0; i < resultVector.size(); i++)
 			{
-				setArrayElement<T>(value, i, resultVector[i]);
+				arrayUtil.setArrayElement<T>(value, i, resultVector[i]);
 			}
 		}
 
@@ -668,6 +679,7 @@ namespace ca {
 
 		void writeArray(const co::Any& value, stringstream& ss, co::IType* type)
 		{
+			AnyArrayUtil arrayUtil;
 			if( type->getKind() == co::TK_INTERFACE )
 			{
 				throw co::IllegalArgumentException("Pointer serialization not supported");
@@ -675,12 +687,12 @@ namespace ca {
 
 			ss << "{";
 
-			int size = getArraySize(value);
+			int size = arrayUtil.getArraySize(value);
 			co::Any arrayElement;
 
 			for( int i = 0; i < size; i++ )
 			{
-				 getArrayElement(value, i, arrayElement);
+				 arrayUtil.getArrayElement(value, i, arrayElement);
 				 toStream(arrayElement, ss);
 				 
 				 if( i < size-1)
@@ -755,80 +767,6 @@ namespace ca {
 			break;
 
 			}
-		}
-
-		co::uint32 getArraySize( const co::Any& array )
-		{
-			assert( array.getKind() == co::TK_ARRAY );
-
-			const co::Any::State& s = array.getState();
-			if( s.arrayKind == co::Any::State::AK_Range )
-				return s.arraySize;
-
-			co::Any::PseudoVector& pv = *reinterpret_cast<co::Any::PseudoVector*>( s.data.ptr );
-			return static_cast<co::uint32>( pv.size() ) / array.getType()->getReflector()->getSize();
-		}
-
-		co::uint8* getArrayPtr( const co::Any& array )
-		{
-			assert( array.getKind() == co::TK_ARRAY );
-
-			const co::Any::State& s = array.getState();
-			if( s.arrayKind == co::Any::State::AK_Range )
-				return reinterpret_cast<co::uint8*>( s.data.ptr );
-
-			co::Any::PseudoVector& pv = *reinterpret_cast<co::Any::PseudoVector*>( s.data.ptr );
-			return &pv[0];
-		}
-
-		void getArrayElement( const co::Any& array, co::uint32 index, co::Any& element )
-		{
-			co::IType* elementType = array.getType();
-			co::uint32 elementSize = elementType->getReflector()->getSize();
-
-			co::TypeKind ek = elementType->getKind();
-			bool isPrimitive = ( ( ek >= co::TK_BOOLEAN && ek <= co::TK_DOUBLE ) || ek == co::TK_ENUM );
-			co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
-
-			void* ptr = getArrayPtr( array ) + elementSize * index;
-
-			element.setVariable( elementType, flags, ptr );
-		}
-
-		template< typename T>
-		void setArrayElement( const co::Any& array, co::uint32 index, T element )
-		{
-			co::IType* elementType = array.getType();
-			co::uint32 elementSize = elementType->getReflector()->getSize();
-
-			co::uint8* p = getArrayPtr(array);
-
-			co::TypeKind ek = elementType->getKind();
-			bool isPrimitive = ( ( ek >= co::TK_BOOLEAN && ek <= co::TK_DOUBLE ) || ek == co::TK_ENUM );
-			co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
-
-			void* ptr = getArrayPtr( array ) + elementSize * index;
-			
-			T* elementTypePointer = reinterpret_cast<T*>(ptr);
-			*elementTypePointer = element;
-		}
-
-		void setArrayComplexTypeElement( const co::Any& array, co::uint32 index, co::Any& element )
-		{
-			co::IType* elementType = array.getType();
-			co::IReflector* reflector = elementType->getReflector();
-			co::uint32 elementSize = reflector->getSize();
-
-			co::uint8* p = getArrayPtr(array);
-
-			co::TypeKind ek = elementType->getKind();
-			bool isPrimitive = ( ( ek >= co::TK_BOOLEAN && ek <= co::TK_DOUBLE ) || ek == co::TK_ENUM );
-			co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
-
-			void* ptr = getArrayPtr( array ) + elementSize * index;
-			
-			reflector->copyValue( element.getState().data.ptr, ptr );
-
 		}
 
 		bool mustBeEscaped( const std::string& str )

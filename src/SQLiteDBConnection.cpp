@@ -104,7 +104,8 @@ namespace ca
 			{
 				_db = 0;
 			}
-			else {
+			else 
+			{
 				throw ca::DBException("Could not close database. Check for not finalized IResultSets");
 			}
 		}
