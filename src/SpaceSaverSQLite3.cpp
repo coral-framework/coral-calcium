@@ -78,7 +78,6 @@ namespace ca {
 				{
 					throw co::IllegalStateException( "Could not create database file" );
 				}
-				
 
 				createTables();
 
@@ -250,14 +249,7 @@ namespace ca {
 					co::IReflector* reflector = field->getOwner()->getReflector();
 					co::Any fieldValue;
 
-					try{
-						reflector->getField(obj.get(), field, fieldValue);
-					}
-					catch(co::IllegalArgumentException e)
-					{
-						std::string error = e.getMessage();
-						error.c_str();
-					}
+					reflector->getField(obj.get(), field, fieldValue);
 
 					std::string q = field->getType()->getFullName();
 					int i = field->getKind();
