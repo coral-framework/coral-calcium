@@ -171,5 +171,10 @@ class SpaceSaverSQLQueries
 		return ss.str();
 	}
 
+	static std::string selectLastInsertedObject()
+	{
+		return "SELECT MAX(OBJECT_ID) FROM OBJECT";
+	}
+
 };
 #endif

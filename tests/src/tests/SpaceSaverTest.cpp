@@ -26,6 +26,7 @@
 #include <ca/IDBConnection.h>
 #include <ca/IResultSet.h>
 #include <ca/NoSuchObjectException.h>
+#include <ca/InvalidSpaceFileException.h>
 #include <cstdio>
 #include <sqlite3.h>
 
@@ -38,6 +39,47 @@ inline erm::Multiplicity mult( co::int32 min, co::int32 max )
 	erm::Multiplicity m;
 	m.min = min; m.max = max;
 	return m;
+}
+
+TEST_F( SpaceSaverTest, exceptionsTest )
+{
+	co::RefPtr<co::IObject> spaceSaverObj = co::newInstance( "ca.SpaceSaverSQLite3" );
+	co::RefPtr<ca::ISpaceSaver> spaceSaver = spaceSaverObj->getService<ca::ISpaceSaver>();
+
+	std::string fileName = "SimpleSpaceSave.db";
+	
+	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //filename not set
+
+	remove( fileName.c_str() );
+
+	ca::INamed* file = spaceSaverObj->getService<ca::INamed>();
+	file->setName( fileName );
+
+	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //space not set
+	
+	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalStateException ); //space not set
+
+	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
+	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
+
+	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
+	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
+	startWithExtendedERM();
+	spaceObj->setService( "universe", universe );
+
+	universeObj->setService("model", _model.get());
+	
+	space->setRootObject(_erm->getProvider());
+
+	remove( fileName.c_str() );
+	sqlite3* hndl;
+	sqlite3_open( fileName.c_str(), &hndl );
+	sqlite3_close( hndl );
+
+	spaceSaver->setSpace( space );
+
+	EXPECT_THROW( spaceSaver->getVersion(1), ca::InvalidSpaceFileException ); //empty database
+
 }
 
 TEST_F( SpaceSaverTest, testNewFileSetup )
