@@ -15,8 +15,8 @@ FILE( GLOB _SOURCES *.cpp )
 ADD_LIBRARY( serialization MODULE ${_HEADERS} ${_SOURCES} ${_GENERATED_FILES} )
 ADD_DEPENDENCIES( serialization ca )
 
-CORAL_DEFAULT_TARGET_PROPERTIES( serialization )
-CORAL_MODULE_TARGET_PROPERTIES( serialization )
+CORAL_TARGET( serialization )
+CORAL_MODULE_TARGET( "serialization" serialization )
 
 SET_TARGET_PROPERTIES( erm PROPERTIES
 	PROJECT_LABEL "Module Serialization"
