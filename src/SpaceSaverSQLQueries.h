@@ -138,10 +138,10 @@ class SpaceSaverSQLQueries
 		return ss.str();
 	}
 
-	static std::string selectEntityFromObject( int objId, int caModelId )
+	static std::string selectEntityFromObject( int objId )
 	{
 		stringstream ss;
-		ss << "SELECT E.ENTITY_NAME, E.ENTITY_ID FROM OBJECT OBJ, ENTITY E WHERE OBJ.ENTITY_ID = E.ENTITY_ID AND OBJ.OBJECT_ID = " << objId << " AND E.CAMODEL_ID = " << caModelId;
+		ss << "SELECT E.ENTITY_NAME, E.ENTITY_ID FROM OBJECT OBJ, ENTITY E WHERE OBJ.ENTITY_ID = E.ENTITY_ID AND OBJ.OBJECT_ID = " << objId;
 
 		return ss.str();
 	}

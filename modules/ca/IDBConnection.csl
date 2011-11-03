@@ -4,6 +4,8 @@ interface IDBConnection
 	void open() raises DBException;
 	void createDatabase() raises DBException;
 	void close() raises DBException;
+	
+	bool isConnected();
 
 	void execute( in string insertOrUpdateSQL ) raises DBException;
 	IResultSet executeQuery( in string querySQL ) raises DBException;

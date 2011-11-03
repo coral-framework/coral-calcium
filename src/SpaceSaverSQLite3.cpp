@@ -9,6 +9,10 @@
 #include <ca/IStringSerializer.h>
 #include <ca/MalformedSerializedStringException.h>
 #include <ca/InvalidSpaceFileException.h>
+#include <ca/FieldValueBean.h>
+#include <ca/EntityBean.h>
+
+#include <ca/ISpaceFile.h>
 
 #include "sqlite3.h"
 #include <co/RefVector.h>
@@ -50,7 +54,6 @@ namespace ca {
 
 			virtual ~SpaceSaverSQLite3()
 			{
-				closeDBConnection();
 			}
 
 			// ------ ca.ISpaceObserver Methods ------ //
@@ -67,23 +70,13 @@ namespace ca {
 					throw co::IllegalStateException("space unset, could not setup");
 				}
 				
+				_spaceFile->initialize();
 				co::RefPtr<co::IObject> serializerObj = co::newInstance("ca.StringSerializer");
 				_serializer = serializerObj->getService<ca::IStringSerializer>();
 
-				try
-				{
-					getDBConnection()->createDatabase();
-				}
-				catch( DBException e )
-				{
-					throw co::IllegalStateException( "Could not create database file" );
-				}
-
-				createTables();
-
 				saveObject(_space->getRootObject());
 
-				closeDBConnection();
+				_spaceFile->finalize();
 
 			}
 
@@ -101,16 +94,6 @@ namespace ca {
 				assert(_model);
 
 				_modelVersion = 1;//_model->getVersion();
-			}
-
-			void setName(const std::string& name)
-			{
-				_fileName = name;
-			}
-
-			const std::string& getName()
-			{
-				return _fileName;
 			}
 
 			// ------ ca.ISpaceSaver Methods ------ //
@@ -131,12 +114,8 @@ namespace ca {
 				co::RefPtr<co::IObject> serializerObj = co::newInstance("ca.StringSerializer");
 				_serializer = serializerObj->getService<ca::IStringSerializer>();
 
-				if( _db.get() )
-				{
-					closeDBConnection();
-				}
+				_spaceFile->initialize();
 
-				getDBConnection()->open();
 				restoreObject(1);
 
 				co::IObject* object = (co::IObject*)getRef(1);
@@ -144,15 +123,14 @@ namespace ca {
 				co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
 				ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 
-				universeObj->setService("model", _model.get());
-				co::IObject* spaceObj = co::newInstance("ca.Space");
+				universeObj->setService( "model", _model.get() );
+				co::IObject* spaceObj = co::newInstance( "ca.Space" );
 				ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 
 				spaceObj->setService( "universe", universe );
 				space->setRootObject( object );
 
-				closeDBConnection();
-
+				_spaceFile->finalize();
 				return space;
 			}
 
@@ -160,41 +138,31 @@ namespace ca {
 			{
 				// TODO: implement this method.
 			}
+		protected:
+			ca::ISpaceFile* getSpaceFileService()
+			{
+				return _spaceFile.get();
+			}
 
+			void setSpaceFileService( ca::ISpaceFile* spaceFile )
+			{
+				assert( spaceFile );
+				_spaceFile = spaceFile;
+			}
 		private:
 
 			co::RefPtr<ca::ISpace> _space;
 			co::RefPtr<ca::IModel> _model;
-			co::RefPtr<ca::IDBConnection> _db;
 			co::int32 _modelVersion;
 			co::RefPtr<ca::IStringSerializer> _serializer;
+
+			co::RefPtr<ca::ISpaceFile> _spaceFile;
 
 			map<void*, int> refMap;
 
 			map<int, co::IObject*> idMap;
 
-			std::string _fileName;
-
 			co::RefVector<ca::ISpaceChanges> spaceChanges; 
-
-			// aux functions
-			co::RefPtr<ca::IDBConnection> getDBConnection()
-			{
-				if(!_db)
-				{
-					co::RefPtr<co::IObject> db = co::newInstance("ca.SQLiteDBConnection");
-
-					_db = db->getService<ca::IDBConnection>();
-					_db->getProvider()->getService<ca::INamed>()->setName(_fileName);
-				}
-				return _db;
-			}
-
-			void closeDBConnection()
-			{
-				getDBConnection()->close();
-				_db = NULL;
-			}
 
 			//save functions
 
@@ -205,7 +173,7 @@ namespace ca {
 
 			void savePort(co::IComponent* component, co::IPort* port)
 			{
-				int componentId = getEntityId(component->getFullName(), getCalciumModelId()); // estrutura de dados pra armazenar entities já inseridas
+				int componentId = _spaceFile->getEntityIdByName(component->getFullName(), getCalciumModelId()); // estrutura de dados pra armazenar entities já inseridas
 
 				saveField(port->getName(), componentId, port->getType()->getFullName());
 				
@@ -226,15 +194,10 @@ namespace ca {
 
 				std::string typeFullName = type->getFullName();
 
-				int entityId = getEntityId(typeFullName, getCalciumModelId());
+				int entityId = _spaceFile->getEntityIdByName( typeFullName, getCalciumModelId() );
+				objId = _spaceFile->insertObject( entityId );
 
-				executeOrThrow( SpaceSaverSQLQueries::insertObject( entityId ) );
-
-				co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectLastInsertedObject() );
-				rs->next();
-				objId = atoi(rs->getValue(0).c_str());
 				insertRefMap(obj.get(), objId);
-				rs->finalize();
 
 				co::RefVector<co::IField> fields;
 				_model->getFields(type, fields);
@@ -244,7 +207,7 @@ namespace ca {
 					co::IField* field =  it->get();
 					std::string fieldName = field->getName();
 					
-					int fieldId = getFieldId(fieldName, entityId);
+					int fieldId = _spaceFile->getFieldIdByName(fieldName, entityId);
 					
 					co::IReflector* reflector = field->getOwner()->getReflector();
 					co::Any fieldValue;
@@ -306,7 +269,7 @@ namespace ca {
 						fieldValueStr = getValueAsString(fieldValue);
 					}
 
-					executeOrThrow( SpaceSaverSQLQueries::insertFieldValue( fieldId, objId, 1, fieldValueStr ) );
+					_spaceFile->insertFieldValue( fieldId, objId, 1, fieldValueStr );
 
 				}
 			}
@@ -333,16 +296,15 @@ namespace ca {
 				}
 			}
 
-			void saveField(std::string fieldName, int entityId, std::string fieldType)
+			void saveField(const std::string& fieldName, int entityId, std::string fieldType)
 			{
-				executeOrThrow( SpaceSaverSQLQueries::insertField( fieldName, entityId, fieldType ) );
+				_spaceFile->insertField( fieldName, fieldType, entityId );
 			}
 
 			void saveInterface(co::IInterface* entityInterface)
 			{
-				executeOrThrow( SpaceSaverSQLQueries::insertEntity( entityInterface->getFullName(), getCalciumModelId() ) );
 
-				int getIdFromSavedEntity = getEntityId(entityInterface->getFullName(), getCalciumModelId());
+				int getIdFromSavedEntity = _spaceFile->insertEntity( entityInterface->getFullName(), getCalciumModelId() );
 
 				co::RefVector<co::IField> fields;
 				_model->getFields(entityInterface, fields);
@@ -379,17 +341,12 @@ namespace ca {
 				co::IComponent* component = object->getComponent();
 				saveEntity(component);
 
-				int entityId = getEntityId(component->getFullName(), getCalciumModelId());
+				int entityId = _spaceFile->getEntityIdByName(component->getFullName(), getCalciumModelId());
 
-				executeOrThrow( SpaceSaverSQLQueries::insertObject( entityId )  );
-			
-				co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectLastInsertedObject() );
-				rs->next();
+				int objId = _spaceFile->insertObject( entityId );
 
-				int objId = atoi(rs->getValue(0).c_str());
 				insertRefMap(object.get(), objId);
-				rs->finalize();
-				
+
 				co::RefVector<co::IPort> ports;
 				_model->getPorts(component, ports);
 
@@ -400,19 +357,22 @@ namespace ca {
 					co::IPort* port = (*it).get();
 					co::IService* service = object->getServiceAt(port);
 
-					fieldId = getFieldId( port->getName(), entityId );
+					fieldId = _spaceFile->getFieldIdByName( port->getName(), entityId );
 
+					std::string refStr;
 					if(port->getIsFacet())
 					{
 						saveService(service, port);
 						stringstream insertValue;
+						
+						_serializer->toString( getRefId( service ), refStr);
 												
-						executeOrThrow( SpaceSaverSQLQueries::insertRefFieldValue( fieldId, objId, 1, getRefId( service ) ) );
 					}
 					else
 					{
-						executeOrThrow( SpaceSaverSQLQueries::insertRefFieldValue( fieldId, objId, 1, getRefId(service->getProvider() ) ) );
+						_serializer->toString( getRefId( service->getProvider() ), refStr);
 					}
+					_spaceFile->insertFieldValue( fieldId, objId, 1, refStr );
 					
 				}
 
@@ -421,7 +381,8 @@ namespace ca {
 			void saveComponent(co::IComponent* component)
 			{
 				std::string compName = component->getFullName();
-				executeOrThrow( SpaceSaverSQLQueries::insertEntity( compName, getCalciumModelId() ) );
+
+				_spaceFile->insertEntity( compName, getCalciumModelId() );
 
 				co::Range<co::IPort* const> ports = component->getPorts();
 
@@ -433,7 +394,7 @@ namespace ca {
 			
 			bool entityAlreadyInserted(co::IType* entityInterface)
 			{
-				return ( getEntityId(entityInterface->getFullName(), getCalciumModelId()) != -1 );
+				return ( _spaceFile->getEntityIdByName(entityInterface->getFullName(), getCalciumModelId()) != -1 );
 			}
 
 
@@ -485,14 +446,13 @@ namespace ca {
 
 			void restoreObject( int id )
 			{
-				co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectEntityFromObject( id, getCalciumModelId() ) );
-				
-				bool end = rs->next();
-				std::string entity = rs->getValue(0);
-				int entity_id = atoi(rs->getValue(1).c_str());
-				rs->finalize();
+				ca::EntityBean bean = _spaceFile->getEntityOfObject( id );
 
-				co::IObject* object = co::newInstance(entity);
+				std::string entity = bean.fullName;
+				int entity_id = bean.id;
+
+				co::IObject* object = co::newInstance( entity );
+				
 				co::RefVector<co::IPort> ports;
 				_model->getPorts( object->getComponent(), ports );
 
@@ -501,23 +461,24 @@ namespace ca {
 				co::IPort* port;
 				std::string portName;
 
+				std::vector<ca::FieldValueBean> fieldValues;
+				_spaceFile->getFieldValues( id, 1, fieldValues );
+				
+				map<std::string, std::string> mapFieldValue;
+
+				for( int i = 0; i < fieldValues.size(); i++ )
+				{
+					ca::FieldValueBean bean = fieldValues[i];
+					mapFieldValue.insert( pair<std::string, std::string>( bean.fieldName, bean.fieldValue ) );
+				}
+
+
 				for( int i = 0; i < ports.size(); i++ )
 				{
 					port = ports.at(i).get();
 					portName = port->getName();
 					
-					rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectFieldValue( portName, id, entity_id ) );
-
-					if( !rs->next() )
-					{
-						stringstream ss;
-						ss << "Could not restore object, expected value for port " << portName << "on entity " << entity << " not found ";
-						closeDBConnection();
-						throw ca::InvalidSpaceFileException( ss.str() );
-					}
-					
-					int idService = atoi( rs->getValue(0).c_str() );
-					rs->finalize();
+					int idService = atoi( mapFieldValue.find(portName)->second.c_str() );
 
 					if( port->getIsFacet() )
 					{
@@ -536,7 +497,6 @@ namespace ca {
 						{
 							stringstream ss;
 							ss << "Could not restore object, invalid value type for port " << portName << "on entity " << entity;
-							closeDBConnection();
 							throw ca::InvalidSpaceFileException( ss.str() );
 						}
 					}
@@ -561,20 +521,19 @@ namespace ca {
 
 			void fillServiceValues( int id, co::IService* service )
 			{
-				SpaceSaverSQLQueries::selectFieldValues( id, 1, 1 );
-				stringstream sql;
-				
-				co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectFieldValues( id, 1, 1 ) );
-				
+			
+				std::vector<ca::FieldValueBean> fieldValues;
+
+				_spaceFile->getFieldValues( id, 1, fieldValues );
+
 				map<std::string, std::string> mapFieldValue;
 
-				while( rs->next() )
+				for( int i = 0; i < fieldValues.size(); i++ )
 				{
-					std::string fieldName = rs->getValue(0);
-					std::string fieldValue = rs->getValue(1);
-					mapFieldValue.insert( pair<std::string, std::string>( fieldName, fieldValue ) );
+					ca::FieldValueBean bean = fieldValues[i];
+					mapFieldValue.insert( pair<std::string, std::string>( bean.fieldName, bean.fieldValue ) );
 				}
-				rs->finalize();
+
 				co::RefVector<co::IField> fields;
 				_model->getFields( service->getInterface(), fields );
 
@@ -632,7 +591,6 @@ namespace ca {
 					{
 						stringstream ss;
 						ss << "Invalid field value for field " << field->getName();
-						closeDBConnection();
 						throw ca::InvalidSpaceFileException( ss.str() );
 					}
 					
@@ -650,7 +608,6 @@ namespace ca {
 				{
 					stringstream ss;
 					ss << "Invalid field value type for field " << field->getName() << "; type expected: " << field->getType()->getFullName();
-					closeDBConnection();
 					throw ca::InvalidSpaceFileException( ss.str() );
 				}
 
@@ -692,71 +649,10 @@ namespace ca {
 
 			}
 
-			int getEntityId(std::string entityName, int calciumModelId)
-			{
-				co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectEntityIdByName( entityName, calciumModelId ) );
-				if(rs->next())
-				{
-					const char* entityIdStr = rs->getValue(0).c_str();
-					rs->finalize();
-					return atoi( entityIdStr );
-				}
-					
-				return -1;
-			}
-
-			co::RefPtr<ca::IResultSet> executeQueryOrThrow( std::string sql )
-			{
-				try
-				{
-					co::RefPtr<ca::IResultSet> rs = _db->executeQuery( sql );
-					return rs;
-				}
-				catch ( ca::DBException e )
-				{
-					closeDBConnection();
-					throw ca::InvalidSpaceFileException("Unexpected database query exception");
-				}		
-				
-			}
-
-			void executeOrThrow( std::string sql )
-			{
-				try
-				{
-					_db->execute( sql );
-					
-				}
-				catch ( ca::DBException e )
-				{
-					closeDBConnection();
-					throw ca::InvalidSpaceFileException("Unexpected database query exception");
-				}	
-			}
-
 			int getCalciumModelId()
 			{
-				std::string modelName = _model->getName();
-				co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectCalciumModel( modelName, _modelVersion ) );
-				if(rs->next())
-				{
-					return atoi(rs->getValue(0).c_str());
-				}
-				rs->finalize();
-				return -1;
+				return 1;
 			}
-
-			int getFieldId(std::string fieldName, int entityId)
-			{
-				co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectFieldIdByName( fieldName, entityId ) );
-				if(rs->next())
-				{
-					return atoi(rs->getValue(0).c_str());
-				}
-				rs->finalize();
-				return -1;
-			}
-
 
 			std::string getValueAsString(co::Any& value)
 			{
@@ -772,39 +668,6 @@ namespace ca {
 
 				return result;
 			}
-
-			void createTables()
-			{
-				
-				try{
-					_db->execute("BEGIN TRANSACTION");
-
-					_db->execute("PRAGMA foreign_keys = 1");
-
-					_db->execute( SpaceSaverSQLQueries::createTableCalciumModel() );
-
-					_db->execute( SpaceSaverSQLQueries::createTableEntity() );
-				
-					_db->execute( SpaceSaverSQLQueries::createTableField() );
-
-					_db->execute( SpaceSaverSQLQueries::createTableObject() );
-					
-					_db->execute( SpaceSaverSQLQueries::createTableFieldValues() );
-				
-					std::string modelName = _model->getName();
-					_db->execute( SpaceSaverSQLQueries::insertCalciumModel( modelName, _modelVersion ));
-
-					_db->execute("COMMIT TRANSACTION");
-				}
-				catch(ca::DBException e)
-				{
-					_db->execute("ROLLBACK TRANSACTION");
-					throw e;
-				}
-
-			}
-
-
 
 	};
 

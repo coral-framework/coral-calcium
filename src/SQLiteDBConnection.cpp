@@ -120,6 +120,11 @@ namespace ca
 			_fileName = name;
 		}
 
+		bool isConnected()
+		{
+			return _db != NULL;
+		}
+
 	private:
 		sqlite3* _db;
 		std::string _fileName;
