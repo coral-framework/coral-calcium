@@ -1,0 +1,5 @@
+component DBSpaceFile
+{
+	provides ISpaceFile spaceFile;
+	receives IDBConnection connection;
+};
