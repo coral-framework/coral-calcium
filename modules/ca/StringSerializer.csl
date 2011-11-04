@@ -1,5 +1,0 @@
-component StringSerializer
-{
-	receives IModel model;
-	provides IStringSerializer serializer;
-};
