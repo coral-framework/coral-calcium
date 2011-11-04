@@ -2,6 +2,8 @@
 #define _ANY_ARRAY_UTIL_
 
 
+#include <co/IReflector.h>
+
 /*--------------------------------------------------------------------
 
 Any with values of kind TK_ARRAY help functions. Must be removed after

@@ -6,7 +6,6 @@
 #include <ca/IDBConnection.h>
 #include <ca/IResultSet.h>
 #include <ca/DBException.h>
-#include <ca/IStringSerializer.h>
 #include <ca/MalformedSerializedStringException.h>
 #include <ca/InvalidSpaceFileException.h>
 #include <ca/FieldValueBean.h>
@@ -36,6 +35,7 @@
 #include <vector>
 #include <sstream>
 
+#include "StringSerializer.h"
 #include "SpaceSaverSQLQueries.h"
 #include "AnyArrayUtil.h"
 
@@ -71,8 +71,6 @@ namespace ca {
 				}
 				
 				_spaceFile->initialize();
-				co::RefPtr<co::IObject> serializerObj = co::newInstance("ca.StringSerializer");
-				_serializer = serializerObj->getService<ca::IStringSerializer>();
 
 				saveObject(_space->getRootObject());
 
@@ -110,9 +108,6 @@ namespace ca {
 				{
 					throw co::IllegalStateException("space was not set, model definition missing, can't restore a space");
 				}
-
-				co::RefPtr<co::IObject> serializerObj = co::newInstance("ca.StringSerializer");
-				_serializer = serializerObj->getService<ca::IStringSerializer>();
 
 				_spaceFile->initialize();
 
@@ -154,7 +149,7 @@ namespace ca {
 			co::RefPtr<ca::ISpace> _space;
 			co::RefPtr<ca::IModel> _model;
 			co::int32 _modelVersion;
-			co::RefPtr<ca::IStringSerializer> _serializer;
+			StringSerializer _serializer;
 
 			co::RefPtr<ca::ISpaceFile> _spaceFile;
 
@@ -260,7 +255,7 @@ namespace ca {
 						else
 						{
 							saveObject(service->getProvider());
-							_serializer->toString( getRefId(service->getProvider()), fieldValueStr );
+							_serializer.toString( getRefId(service->getProvider()), fieldValueStr );
 						}
 						
 					}
@@ -365,12 +360,12 @@ namespace ca {
 						saveService(service, port);
 						stringstream insertValue;
 						
-						_serializer->toString( getRefId( service ), refStr);
+						_serializer.toString( getRefId( service ), refStr);
 												
 					}
 					else
 					{
-						_serializer->toString( getRefId( service->getProvider() ), refStr);
+						_serializer.toString( getRefId( service->getProvider() ), refStr);
 					}
 					_spaceFile->insertFieldValue( fieldId, objId, 1, refStr );
 					
@@ -521,7 +516,7 @@ namespace ca {
 
 			void fillServiceValues( int id, co::IService* service )
 			{
-			
+		
 				std::vector<ca::FieldValueBean> fieldValues;
 
 				_spaceFile->getFieldValues( id, 1, fieldValues );
@@ -572,7 +567,7 @@ namespace ca {
 					if( strValue != "nil" )
 					{
 						co::Any refId;
-						_serializer->fromString( strValue, co::typeOf<co::int32>::get(), refId );
+						_serializer.fromString( strValue, co::typeOf<co::int32>::get(), refId );
 						int refIdInt = refId.get<co::int32>();
 						co::IObject* ref = getRef( refIdInt );
 
@@ -585,7 +580,7 @@ namespace ca {
 				{
 					try
 					{
-						_serializer->fromString(strValue, field->getType(), fieldValue);
+						_serializer.fromString(strValue, field->getType(), fieldValue);
 					}
 					catch( ca::MalformedSerializedStringException e )
 					{
@@ -618,7 +613,7 @@ namespace ca {
 				assert( arrayType->getElementType()->getKind() == co::TK_INTERFACE );
 
 				co::Any refs;
-				_serializer->fromString(strValue, co::typeOf<std::vector<co::int32>>::get(), refs);
+				_serializer.fromString(strValue, co::typeOf<std::vector<co::int32>>::get(), refs);
 
 				std::vector<co::int32> vec = refs.get<const std::vector<co::int32>&>();
 				co::RefVector<co::IService> services;
@@ -658,7 +653,7 @@ namespace ca {
 			{
 				
 				std::string result;
-				_serializer->toString(value, result);
+				_serializer.toString(value, result);
 
 				if( value.getKind() == co::TK_STRING && result[0] == '\'' )
 				{
