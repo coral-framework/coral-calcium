@@ -1,5 +1,0 @@
-component SQLiteDBConnection
-{
-	provides IDBConnection connection;
-	provides INamed fileName;
-};

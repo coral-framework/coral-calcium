@@ -23,6 +23,8 @@ ADD_EXECUTABLE( tests EXCLUDE_FROM_ALL
 	${_GENERATED_FILES}
 	${CMAKE_SOURCE_DIR}/src/sqlite3.c
 	${CMAKE_SOURCE_DIR}/src/StringSerializer.cpp	
+	${CMAKE_SOURCE_DIR}/src/SQLiteDBConnection.cpp
+	${CMAKE_SOURCE_DIR}/src/SQLiteResultSet.cpp
 )
 
 ADD_DEPENDENCIES( tests camodels erm serialization)

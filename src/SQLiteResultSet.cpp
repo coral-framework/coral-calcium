@@ -37,10 +37,15 @@ namespace ca
 	{
 		if( _stmt )
 		{
-			sqlite3_finalize(_stmt);
+			int error = sqlite3_finalize(_stmt);
+
+			if( error != SQLITE_OK )
+			{
+				throw ca::DBException("Could not finalize ResultSet");
+			}
+
 		}
 		_stmt = 0;
 	}
 
-	CORAL_EXPORT_COMPONENT(SQLiteResultSet, SQLiteResultSet);
 };

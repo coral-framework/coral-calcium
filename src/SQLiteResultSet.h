@@ -1,5 +1,5 @@
-#include "SQLiteResultSet_Base.h"
 #include "sqlite3.h"
+#include "IResultSet.h"
 #include <co/Coral.h>
 
 #ifndef _CA_SQLITERESULTSET_H_
@@ -7,7 +7,7 @@
 
 namespace ca
 {
-	class SQLiteResultSet : public SQLiteResultSet_Base
+	class SQLiteResultSet : public IResultSet
 	{
 	public:
 		SQLiteResultSet(){}
@@ -17,19 +17,19 @@ namespace ca
 			finalize();
 		}
 
-		bool next();
+		virtual bool next();
 		
-		const std::string& getValue( co::int32 columnIndex);
+		virtual const std::string& getValue( co::int32 columnIndex);
 
-		void setStatement(sqlite3_stmt* stmt);
+		virtual void finalize();
 
-		void finalize();
+		virtual void setStatement(sqlite3_stmt* stmt);
 		
 	private:
 		sqlite3_stmt* _stmt;
 		std::string _value;
 	};
 
-};
+}
 
 #endif

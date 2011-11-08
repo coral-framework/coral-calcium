@@ -54,6 +54,10 @@ namespace ca {
 
 			virtual ~SpaceSaverSQLite3()
 			{
+				if(_spaceFile.isValid())
+				{
+					_spaceFile->finalize();
+				}
 			}
 
 			// ------ ca.ISpaceObserver Methods ------ //
@@ -70,10 +74,22 @@ namespace ca {
 					throw co::IllegalStateException("space unset, could not setup");
 				}
 				
+				if( !_spaceFile.isValid() )
+				{
+					throw co::IllegalStateException("space file was not set, could not setup");
+				}
+
 				_spaceFile->initialize();
 
-				saveObject(_space->getRootObject());
-
+				try
+				{
+					saveObject(_space->getRootObject());
+				}
+				catch(...)
+				{
+					_spaceFile->finalize();
+				}
+				
 				_spaceFile->finalize();
 
 			}
@@ -109,24 +125,37 @@ namespace ca {
 					throw co::IllegalStateException("space was not set, model definition missing, can't restore a space");
 				}
 
+				if( !_spaceFile.isValid() )
+				{
+					throw co::IllegalStateException("space file was not set, can't restore a space");
+				}
+
 				_spaceFile->initialize();
 
-				restoreObject(1);
+				try
+				{
+					restoreObject(1);
 
-				co::IObject* object = (co::IObject*)getRef(1);
+					co::IObject* object = (co::IObject*)getRef(1);
 				
-				co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
-				ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
+					co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
+					ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 
-				universeObj->setService( "model", _model.get() );
-				co::IObject* spaceObj = co::newInstance( "ca.Space" );
-				ca::ISpace* space = spaceObj->getService<ca::ISpace>();
+					universeObj->setService( "model", _model.get() );
+					co::IObject* spaceObj = co::newInstance( "ca.Space" );
+					ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 
-				spaceObj->setService( "universe", universe );
-				space->setRootObject( object );
-
-				_spaceFile->finalize();
-				return space;
+					spaceObj->setService( "universe", universe );
+					space->setRootObject( object );
+					_spaceFile->finalize();
+					return space;
+				}
+				catch(ca::InvalidSpaceFileException e)
+				{
+					_spaceFile->finalize();
+					throw e;
+				}
+				
 			}
 
 			void saveChanges()

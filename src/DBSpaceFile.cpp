@@ -4,14 +4,17 @@
 #include <co/RefPtr.h>
 #include <co/Range.h>
 
-#include <ca/IDBConnection.h>
 #include <ca/InvalidSpaceFileException.h>
-#include <ca/DBException.h>
-#include <ca/IResultSet.h>
+
 
 #include <ca/FieldValueBean.h>
 #include <ca/EntityBean.h>
 
+#include <ca/DBException.h>
+
+#include "SQLiteDBConnection.h"
+#include "IResultSet.h"
+#include "SQLiteResultSet.h"
 
 #include <string>
 using namespace std;
@@ -25,33 +28,45 @@ namespace ca {
 		{
 		}
 
+		virtual ~DBSpaceFile()
+		{
+			finalize();
+		}
+
 		void initialize()
 		{
+			
+			assert( !_fileName.empty() );
+			_db.setFileName( _fileName );
+			
 			try
 			{
-				if( !_db->isConnected() )
-				{
-					_db->open();
-				}
-				createTables();
-				insertModel();
+				_db.createDatabase();
 			}
 			catch( ca::DBException e )
 			{
-				std::string msg = e.getMessage();
-				msg.c_str();
+				try
+				{
+					_db.open();
+				}
+				catch( ca::DBException e )
+				{
+					throw e;
+				}
 			}
+			createTables();
+			insertModel();
 		}
 
 		void finalize()
 		{
 			try
 			{
-				_db->close();
+				_db.close();
 			}
 			catch( ca::DBException e )
 			{
-				//throw something
+				throw e;
 			}
 		}
 
@@ -71,13 +86,15 @@ namespace ca {
 		{
 			executeOrThrow( SpaceSaverSQLQueries::insertObject( entityId ) );
 
-			co::RefPtr<IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectLastInsertedObject() );
+			IResultSet* rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectLastInsertedObject() );
 			if(!rs->next())
 			{
 				throw ca::InvalidSpaceFileException();
 			}
-
-			return atoi(rs->getValue(0).c_str());
+			std::string resultValue (rs->getValue(0));
+			rs->finalize();
+			delete rs;
+			return atoi(resultValue.c_str());
 		}
 
 		co::int32 insertFieldValue( co::int32 fieldId, co::int32 objId, co::int32 fieldValueVersion, const string& fieldValue )
@@ -88,31 +105,44 @@ namespace ca {
 	
 		const ca::EntityBean& getEntityOfObject( co::int32 objectId )
 		{
-			co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectEntityFromObject( objectId ) );
+			ca::IResultSet* rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectEntityFromObject( objectId ) );
 				
 			if(rs->next())
 			{
-				_entityBean.fullName = rs->getValue(0);
-				_entityBean.id = atoi(rs->getValue(1).c_str());
+				std::string fullName (rs->getValue(0));
+				_entityBean.fullName = fullName;
+				std::string idStr (rs->getValue(1));
+				_entityBean.id = atoi(idStr.c_str());
 				rs->finalize();
+				delete rs;
 				return _entityBean;
 			}
-			rs->finalize();
-			return ca::EntityBean();
+			else
+			{
+				rs->finalize();
+				delete rs;
+				stringstream ss;
+				ss << "Not such object, id=" << objectId;
+				throw InvalidSpaceFileException(ss.str());
+			}
 			
+
+		
 		}
 		
 		co::int32 getFieldIdByName( const string& fieldName, co::int32 entityId )
 		{
-			co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectFieldIdByName( fieldName, entityId ) );
+			ca::IResultSet* rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectFieldIdByName( fieldName, entityId ) );
 			
 			int result = -1;
 
 			if(rs->next())
 			{
-				result = atoi( rs->getValue(0).c_str() );
+				std::string idStr(rs->getValue(0));
+				result = atoi( idStr.c_str() );
 			}
 			rs->finalize();
+			delete rs;
 
 			return result;
 		}
@@ -121,88 +151,96 @@ namespace ca {
 		{
 			values.clear();
 
-			co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectFieldValues( objectId, 1, fieldValueVersion ) );
+			ca::IResultSet* rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectFieldValues( objectId, 1, fieldValueVersion ) );
 				
 			while( rs->next() )
 			{
 				ca::FieldValueBean bean;
-				bean.fieldName = rs->getValue(0);
-				bean.fieldValue = rs->getValue(1);
+				std::string fieldName(rs->getValue(0));
+				bean.fieldName = fieldName;
+				std::string fieldValue(rs->getValue(1));
+				bean.fieldValue = fieldValue;
 				values.push_back( bean );
 			}
 			rs->finalize();
+			delete rs;
 		}
 
 		co::int32 getEntityIdByName(const std::string& entityName, co::int32 calciumModelId)
 		{
-			co::RefPtr<ca::IResultSet> rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectEntityIdByName( entityName, calciumModelId ) );
+			ca::IResultSet* rs = executeQueryOrThrow( SpaceSaverSQLQueries::selectEntityIdByName( entityName, calciumModelId ) );
 			if(rs->next())
 			{
-				const char* entityIdStr = rs->getValue(0).c_str();
+				std::string entityIdStr(rs->getValue(0));
 				rs->finalize();
-				return atoi( entityIdStr );
+				delete rs;
+				return atoi( entityIdStr.c_str() );
 			}
-			rs->finalize();	
+			rs->finalize();
+			delete rs;
 			return -1;
 		}
 
-		ca::IDBConnection* getConnectionService() 
+		const std::string& getName() 
 		{
-			return _db;
+			return _fileName;
 		}
 
 	//! Set the service at receptacle 'connection', of type ca.IDBConnection.
-		void setConnectionService( ca::IDBConnection* connection )
+		void setName( const std::string& fileName )
 		{
-			assert( connection );
-			_db = connection;
+			_fileName = fileName;
 		}
+
 	private:
 
-		ca::IDBConnection* _db;
+		std::string _fileName;
+		ca::SQLiteDBConnection _db;
 		ca::EntityBean _entityBean;
 
 		void createTables()
 		{
 			try{
-				_db->execute("BEGIN TRANSACTION");
+				_db.execute("BEGIN TRANSACTION");
 
-				_db->execute("PRAGMA foreign_keys = 1");
+				_db.execute("PRAGMA foreign_keys = 1");
 
-				_db->execute( SpaceSaverSQLQueries::createTableCalciumModel() );
+				_db.execute( SpaceSaverSQLQueries::createTableCalciumModel() );
 
-				_db->execute( SpaceSaverSQLQueries::createTableEntity() );
+				_db.execute( SpaceSaverSQLQueries::createTableEntity() );
 				
-				_db->execute( SpaceSaverSQLQueries::createTableField() );
+				_db.execute( SpaceSaverSQLQueries::createTableField() );
 
-				_db->execute( SpaceSaverSQLQueries::createTableObject() );
+				_db.execute( SpaceSaverSQLQueries::createTableObject() );
 					
-				_db->execute( SpaceSaverSQLQueries::createTableFieldValues() );
+				_db.execute( SpaceSaverSQLQueries::createTableFieldValues() );
 				
-				_db->execute("COMMIT TRANSACTION");
+				_db.execute("COMMIT TRANSACTION");
 			}
 			catch(ca::DBException e)
 			{
-				_db->execute("ROLLBACK TRANSACTION");
+				_db.execute("ROLLBACK TRANSACTION");
 				throw e;
 			}
 		}
 
 		void insertModel()
 		{
-			co::RefPtr<ca::IResultSet> rs = _db->executeQuery( "SELECT CAMODEL_ID, CAMODEL_CONTENT FROM CALCIUM_MODEL" );
+			ca::IResultSet* rs = _db.executeQuery( "SELECT CAMODEL_ID, CAMODEL_CONTENT FROM CALCIUM_MODEL" );
 			
 			if( !rs->next() )
 			{
-				_db->execute( SpaceSaverSQLQueries::insertCalciumModel( string("dummy"), 1 ) );
+				_db.execute( SpaceSaverSQLQueries::insertCalciumModel( string("dummy"), 1 ) );
 			}
+
+			delete rs;
 		}
 
-		co::RefPtr<ca::IResultSet> executeQueryOrThrow( std::string sql )
+		ca::IResultSet* executeQueryOrThrow( std::string sql )
 		{
 			try
 			{
-				co::RefPtr<ca::IResultSet> rs = _db->executeQuery( sql );
+				ca::IResultSet* rs = _db.executeQuery( sql );
 				return rs;
 			}
 			catch ( ca::DBException e )
@@ -216,7 +254,7 @@ namespace ca {
 		{
 			try
 			{
-				_db->execute( sql );
+				_db.execute( sql );
 					
 			}
 			catch ( ca::DBException e )

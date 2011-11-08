@@ -23,13 +23,14 @@
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
 #include <ca/ModelException.h>
-#include <ca/IDBConnection.h>
 #include <ca/IResultSet.h>
 #include <ca/NoSuchObjectException.h>
 #include <ca/InvalidSpaceFileException.h>
 #include <ca/ISpaceFile.h>
 #include <cstdio>
 #include <sqlite3.h>
+
+#include "SQLiteDBConnection.h"
 
 
 class SpaceSaverTest : public ERMSpace {};
@@ -49,13 +50,11 @@ TEST_F( SpaceSaverTest, exceptionsTest )
 
 	std::string fileName = "SimpleSpaceSave.db";
 	
-	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //filename not set
+	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //spaceFile and space not set
+
+	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalStateException ); //spaceFile and space not set
 
 	remove( fileName.c_str() );
-
-	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //space not set
-	
-	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalStateException ); //space not set
 
 	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
 	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
@@ -69,14 +68,23 @@ TEST_F( SpaceSaverTest, exceptionsTest )
 	
 	space->setRootObject(_erm->getProvider());
 
+	spaceSaver->setSpace( space );
+
+	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //spaceFile not set
+	
+	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalStateException ); //spaceFile not set
+
+	co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.DBSpaceFile" );
+	spaceFileObj->getService<ca::INamed>()->setName( fileName );
+
+	spaceSaverObj->setService( "spaceFile", spaceFileObj->getService<ca::ISpaceFile>() );
+
 	remove( fileName.c_str() );
 	sqlite3* hndl;
 	sqlite3_open( fileName.c_str(), &hndl );
 	sqlite3_close( hndl );
 
-	spaceSaver->setSpace( space );
-
-	//EXPECT_THROW( spaceSaver->getVersion(1), ca::InvalidSpaceFileException ); //empty database
+	EXPECT_THROW( spaceSaver->getVersion(1), ca::InvalidSpaceFileException ); //empty database
 
 }
 
@@ -110,18 +118,11 @@ TEST_F( SpaceSaverTest, testNewFileSetup )
 	co::RefPtr<ca::ISpaceSaver> spaceSav = obj->getService<ca::ISpaceSaver>();
 
 	spaceSav->setSpace( space );
-
-	co::RefPtr<co::IObject> dbObj = co::newInstance( "ca.SQLiteDBConnection" );
-	dbObj->getService<ca::INamed>()->setName( fileName );
-
+	
 	co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.DBSpaceFile" );
-	ca::IDBConnection* conn = dbObj->getService<ca::IDBConnection>();
-	spaceFileObj->setService( "connection", conn);
+	spaceFileObj->getService<ca::INamed>()->setName( fileName );
 
 	obj->setService( "spaceFile", spaceFileObj->getService<ca::ISpaceFile>() );
-
-	conn->createDatabase();
-	conn->close();
 
 	spaceSav->setSpace( space );
 
