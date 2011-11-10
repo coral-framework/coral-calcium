@@ -1,0 +1,6 @@
+struct StoredField
+{
+	int32 fieldId;
+	string fieldName;
+	int32 typeId;
+};

@@ -1,0 +1,5 @@
+component DBSpaceStore
+{
+	provides ISpaceStore store;
+	provides INamed name;
+};

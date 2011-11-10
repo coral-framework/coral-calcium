@@ -1,0 +1,6 @@
+struct StoredType
+{
+	int32 typeId;
+	string typeName;
+	StoredField[] fields;
+};
