@@ -4,7 +4,7 @@
 #include "IResultSet.h"
 
 #include "sqlite3.h"
-#include <ca/DBException.h>
+#include "DBException.h"
 
 
 namespace ca

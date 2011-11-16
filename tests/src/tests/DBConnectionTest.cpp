@@ -4,7 +4,7 @@
 #include "IDBConnection.h"
 #include "SQLiteDBConnection.h"
 #include "SQLiteResultSet.h"
-#include <ca/DBException.h>
+#include "DBException.h"
 #include <co/Coral.h>
 #include <gtest/gtest.h>
 #include <cstdio>

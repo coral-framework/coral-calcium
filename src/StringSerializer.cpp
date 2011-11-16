@@ -10,8 +10,8 @@
 #include <co/IReflector.h>
 #include <ca/IModel.h>
 #include <ca/ModelException.h>
+#include <ca/FormatException.h>
 #include <co/IllegalArgumentException.h>
-#include <ca/MalformedSerializedStringException.h>
 #include <limits>
 using namespace std;
 
@@ -118,7 +118,7 @@ namespace ca {
 		ss >> check;
 		if( check != '{' )
 		{
-			throw ca::MalformedSerializedStringException("'{' expected to start complex type value.");
+			throw ca::FormatException("'{' expected to start complex type value.");
 		}
 
 		std::vector<co::IField*> fields = getFieldsToSerializeForType(classType);
@@ -136,14 +136,14 @@ namespace ca {
 			{
 				msg.clear();
 				msg << "Invalid field name '" << fieldName << "' for type " << type->getFullName();
-				throw ca::MalformedSerializedStringException( msg.str() );
+				throw ca::FormatException( msg.str() );
 			}
 
 			ss >> check;
 				
 			if( check != '=' )
 			{
-				throw ca::MalformedSerializedStringException(" '=' expected after field name");
+				throw ca::FormatException(" '=' expected after field name");
 			}
 				
 			fromStream( ss, fields[i]->getType(), fieldValue );
@@ -156,7 +156,7 @@ namespace ca {
 			{
 				msg.clear();
 				msg << "Could not desserialize type " << type->getFullName() << " " << e.getMessage();
-				throw ca::MalformedSerializedStringException( msg.str() );
+				throw ca::FormatException( msg.str() );
 			}
 				
 			ss >> check;
@@ -166,14 +166,14 @@ namespace ca {
 			{
 				msg.clear();
 				msg << "'}' expected to end type " << type->getFullName();
-				throw ca::MalformedSerializedStringException( msg.str() );
+				throw ca::FormatException( msg.str() );
 			}
 
 			if( ( ( i >=0 ) && ( i < fields.size() - 1 ) && (check != ',') ) )
 			{
 				msg.clear();
 				msg << "',' expected to separate fields of type " << type->getFullName();
-				throw ca::MalformedSerializedStringException( msg.str() );
+				throw ca::FormatException( msg.str() );
 			}
 
 		}
@@ -219,7 +219,7 @@ namespace ca {
 		{
 			stringstream msg;
 			msg << "Invalid boolean value: " << boolStr;
-			throw ca::MalformedSerializedStringException( msg.str() );
+			throw ca::FormatException( msg.str() );
 		}
 		return (boolStr == "true");
 	}
@@ -232,7 +232,7 @@ namespace ca {
 
 		if( brackets != '{' )
 		{
-			throw ca::MalformedSerializedStringException("'{' expected to start array value.");
+			throw ca::FormatException("'{' expected to start array value.");
 		}
 
 		co::IArray* arrayType = (co::IArray*)type;
@@ -328,7 +328,7 @@ namespace ca {
 		{
 			stringstream msg;
 			msg << "Unexpected end of string on " << additionalInfo << ".";
-			throw ca::MalformedSerializedStringException(msg.str());
+			throw ca::FormatException(msg.str());
 		}
 	}
 
@@ -336,7 +336,7 @@ namespace ca {
 	{
 		if( check != ',' )
 		{
-			throw ca::MalformedSerializedStringException("Array format not valid, ',' or '}' expected.");
+			throw ca::FormatException("Array format not valid, ',' or '}' expected.");
 		} 
 	}
 
@@ -390,7 +390,7 @@ namespace ca {
 			}
 			if( check != ',' )
 			{
-				throw ca::MalformedSerializedStringException("Array format not valid, ',' or '}' expected.");
+				throw ca::FormatException("Array format not valid, ',' or '}' expected.");
 			}
 		}
 		value.clear();
@@ -410,7 +410,7 @@ namespace ca {
 		{
 			stringstream msg;
 			msg << literalTmp << " is not a " << enumType->getFullName() << " valid literal.";
-			throw ca::MalformedSerializedStringException( msg.str() );
+			throw ca::FormatException( msg.str() );
 		}
 
 		return enumValue;
@@ -426,7 +426,7 @@ namespace ca {
 
 		if(!isalpha(buffer))
 		{
-			throw ca::MalformedSerializedStringException( "Literal expected, but control char found." );
+			throw ca::FormatException( "Literal expected, but control char found." );
 		}
 
 		while(true)

@@ -1,7 +1,7 @@
 #include "SQLiteResultSet.h"
 #include "sqlite3.h"
 #include <co/Coral.h>
-#include <ca/DBException.h>
+#include "DBException.h"
 #include <string>
 using namespace std;
 

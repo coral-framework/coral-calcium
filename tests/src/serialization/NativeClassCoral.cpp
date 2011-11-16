@@ -1,45 +1,46 @@
+#include "NativeClass.h"
 #include "NativeClassCoral_Adapter.h"
 #include <string>
 using namespace std;
 
 namespace serialization {
 
-int NativeClassCoral_Adapter::getIntValue( serializationNative::NativeClass& nativeClass )
+int NativeClassCoral_Adapter::getIntValue( serialization::NativeClassCoral& nativeClass )
 {
 	return nativeClass.intValue;
 }
 
-double NativeClassCoral_Adapter::getDoubleValue( serializationNative::NativeClass& nativeClass )
+double NativeClassCoral_Adapter::getDoubleValue( serialization::NativeClassCoral& nativeClass )
 {
 	return nativeClass.doubleValue;
 }
 
-const std::string& NativeClassCoral_Adapter::getStrValue( serializationNative::NativeClass& nativeClass )
+const std::string& NativeClassCoral_Adapter::getStrValue( serialization::NativeClassCoral& nativeClass )
 {
 	return nativeClass.strValue;
 }
 
-char NativeClassCoral_Adapter::getByteValue( serializationNative::NativeClass& nativeClass )
+char NativeClassCoral_Adapter::getByteValue( serialization::NativeClassCoral& nativeClass )
 {
 	return nativeClass.byteValue;
 }
 
-void NativeClassCoral_Adapter::setByteValue(serializationNative::NativeClass& nativeClass, co::int8 byte)
+void NativeClassCoral_Adapter::setByteValue(serialization::NativeClassCoral& nativeClass, co::int8 byte)
 {
 	nativeClass.byteValue = (char)byte;
 }
 
-void NativeClassCoral_Adapter::setDoubleValue(serializationNative::NativeClass& nativeClass, double doubleValue)
+void NativeClassCoral_Adapter::setDoubleValue(serialization::NativeClassCoral& nativeClass, double doubleValue)
 {
 	nativeClass.doubleValue = doubleValue;
 }
 
-void NativeClassCoral_Adapter::setIntValue(serializationNative::NativeClass& nativeClass, co::int32 intValue)
+void NativeClassCoral_Adapter::setIntValue(serialization::NativeClassCoral& nativeClass, co::int32 intValue)
 {
 	nativeClass.intValue = (int)intValue;
 }
 
-void NativeClassCoral_Adapter::setStrValue(serializationNative::NativeClass& nativeClass, const std::string& strValue)
+void NativeClassCoral_Adapter::setStrValue(serialization::NativeClassCoral& nativeClass, const std::string& strValue)
 {
 	nativeClass.strValue = strValue;
 }

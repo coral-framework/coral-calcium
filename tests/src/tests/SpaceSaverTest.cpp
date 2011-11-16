@@ -23,7 +23,7 @@
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
 #include <ca/ModelException.h>
-#include <ca/IResultSet.h>
+#include "IResultSet.h"
 #include <ca/NoSuchObjectException.h>
 #include <ca/InvalidSpaceFileException.h>
 #include <ca/ISpaceFile.h>

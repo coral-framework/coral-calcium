@@ -1,3 +1,6 @@
+#ifndef _NATIVE_CLASS_SERIALIZATION_
+#define _NATIVE_CLASS_SERIALIZATION_
+
 #include <string>
 using namespace std;
 
@@ -20,3 +23,4 @@ namespace serializationNative {
 	};
 }
 
+#endif

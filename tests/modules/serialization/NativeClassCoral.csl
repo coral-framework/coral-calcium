@@ -1,5 +1,12 @@
-native class NativeClassCoral( <NativeClass.h> serializationNative::NativeClass )
+native class NativeClassCoral
 {
+	<c++
+	#include "NativeClass.h"
+	
+	namespace serialization{
+		typedef serializationNative::NativeClass NativeClassCoral;
+	}
+	c++>
 	int8 byteValue;
 	int32 intValue;
 	string strValue;

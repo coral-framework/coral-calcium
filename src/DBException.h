@@ -10,33 +10,29 @@
 #ifndef _CA_DBEXCEPTION_H_
 #define _CA_DBEXCEPTION_H_
 
-#include <co/TypeTraits.h>
-#include <co/Exception.h>
+#include <exception>
+
+using namespace std;
 
 // ca.DBException Mapping:
 namespace ca {
 
-class DBException : public co::Exception
+class DBException : public std::exception
 {
 public:
 	DBException()
 	{;}
 
 	DBException( const std::string& message )
-		: co::Exception( message )
+		: std::exception( message.c_str() )
 	{;}
 
 	virtual ~DBException() throw()
 	{;}
 
-	inline const char* getTypeName() const { return "ca.DBException"; }
 };
 
 } // namespace ca
 
-namespace co {
-template<> struct kindOf<ca::DBException> : public kindOfBase<TK_EXCEPTION> {};
-template<> struct nameOf<ca::DBException> { static const char* get() { return "ca.DBException"; } };
-} // namespace co
 
 #endif // _CA_DBEXCEPTION_H_

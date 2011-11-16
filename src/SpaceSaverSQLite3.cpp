@@ -3,11 +3,11 @@
 #include <ca/IUniverse.h>
 #include <ca/ISpace.h>
 #include <ca/IModel.h>
-#include <ca/IDBConnection.h>
-#include <ca/IResultSet.h>
-#include <ca/DBException.h>
-#include <ca/MalformedSerializedStringException.h>
+#include "IDBConnection.h"
+#include "IResultSet.h"
+#include "DBException.h"
 #include <ca/InvalidSpaceFileException.h>
+#include <ca/FormatException.h>
 #include <ca/FieldValueBean.h>
 #include <ca/EntityBean.h>
 
@@ -611,11 +611,11 @@ namespace ca {
 					{
 						_serializer.fromString(strValue, field->getType(), fieldValue);
 					}
-					catch( ca::MalformedSerializedStringException e )
+					catch( ca::FormatException e )
 					{
 						stringstream ss;
 						ss << "Invalid field value for field " << field->getName();
-						throw ca::InvalidSpaceFileException( ss.str() );
+						throw ca::FormatException( ss.str() );
 					}
 					
 				}

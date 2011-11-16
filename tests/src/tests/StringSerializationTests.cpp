@@ -7,8 +7,8 @@
 #include <co/Range.h>
 #include <ca/IModel.h>
 #include <co/IField.h>
-#include <ca/MalformedSerializedStringException.h>
 #include <co/IReflector.h>
+#include <ca/FormatException.h>
 #include <serialization/BasicTypesStruct.h>
 #include <serialization/NestedStruct.h>
 #include <serialization/SimpleEnum.h>
@@ -783,65 +783,65 @@ TEST( StringSerializationTests, fromStringExceptions )
 	co::Any result;
 	co::IType* type = co::typeOf<bool>::get();
 	
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "[=[escapedNotClosed\']";
 
 	type = co::typeOf<std::string>::get();
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "'quotedNotClosed";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "'closed wrong ]=]";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "NotOnEnum";
 	type = co::typeOf<serialization::SimpleEnum>::get();
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{'11','2'";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "'11','2'}";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{'11,'2'";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{'11,2";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{byteValue&123,doubleValue=4.56,intValue=1,strValue='name'}";
 	type = co::typeOf<serialization::BasicTypesStruct>::get();
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{byteValue=123;doubleValue=4.56,intValue=1,strValue='name'}";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{byteValue=123,doubleValue=4.56,intValue=1,strValue='name'";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{doubleValue=4.56,byteValue=123,intValue=1,strValue='name'}";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{,doubleValue=4.56,byteValue=123,intValue=1,strValue='name'}";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "byteValue=123,doubleValue=4.56,intValue=1,strValue='name'}";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "abc";
 	type = co::typeOf<double>::get();
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 	malformed = "{3.5}";
-	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::MalformedSerializedStringException );
+	EXPECT_THROW( serializer.fromString( malformed, type, result), ca::FormatException );
 
 }

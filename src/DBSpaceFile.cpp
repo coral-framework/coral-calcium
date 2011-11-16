@@ -10,7 +10,7 @@
 #include <ca/FieldValueBean.h>
 #include <ca/EntityBean.h>
 
-#include <ca/DBException.h>
+#include "DBException.h"
 
 #include "SQLiteDBConnection.h"
 #include "IResultSet.h"
