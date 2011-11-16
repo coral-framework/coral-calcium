@@ -11,7 +11,7 @@
 #include <ca/StoredType.h>
 #include <ca/StoredField.h>
 
-#include <ca/DBException.h>
+#include "DBException.h"
 
 #include "SQLiteDBConnection.h"
 #include "IResultSet.h"
@@ -191,7 +191,6 @@ namespace ca {
 			return _fileName;
 		}
 
-	//! Set the service at receptacle 'connection', of type ca.IDBConnection.
 		void setName( const std::string& fileName )
 		{
 			_fileName = fileName;
