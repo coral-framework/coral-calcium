@@ -3,13 +3,13 @@
 
 #include <co/RefPtr.h>
 #include <co/Range.h>
-
-#include <ca/InvalidSpaceFileException.h>
-
+#include <co/IllegalArgumentException.h>
 
 #include <ca/StoredFieldValue.h>
 #include <ca/StoredType.h>
 #include <ca/StoredField.h>
+
+#include <ca/IOException.h>
 
 #include "DBException.h"
 
@@ -52,7 +52,7 @@ namespace ca {
 				}
 				catch( ca::DBException e )
 				{
-					throw e;
+					throw ca::IOException( e.what() );
 				}
 			}
 			createTables();
@@ -66,11 +66,11 @@ namespace ca {
 			}
 			catch( ca::DBException e )
 			{
-				throw e;
+				throw ca::IOException( e.what() );
 			}
 		}
 
-		co::int32 getOrAddType( const string& typeName, co::int32 version ) 
+		co::uint32 getOrAddType( const string& typeName, co::uint32 version ) 
 		{
 			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectTypeIdByName(typeName, version) );
 			if( !rs->next() )
@@ -78,38 +78,41 @@ namespace ca {
 				rs->finalize();
 				delete rs;
 				
-				executeOrThrow( DBSpaceStoreQueries::insertType(typeName, version) );
-				rs = executeQueryOrThrow( DBSpaceStoreQueries::selectTypeIdByName(typeName, version) );
+				executeOrThrow( DBSpaceStoreQueries::insertType( typeName, version ) );
+				rs = executeQueryOrThrow( DBSpaceStoreQueries::selectTypeIdByName( typeName, version ) );
+				rs->next();
 			}
 
 			int id = atoi( rs->getValue(0).c_str() );
+			rs->finalize();
+			delete rs;
 			return id;
 
 		}
 		
-		co::int32 addField( co::int32 typeId, const string& fieldName, co::int32 fieldTypeId )
+		co::uint32 addField( co::uint32 typeId, const string& fieldName, co::uint32 fieldTypeId )
 		{
 			executeOrThrow( DBSpaceStoreQueries::insertField( typeId, fieldName, fieldTypeId ) );
 
 			return getFieldIdByName(fieldName, typeId);
 		}
 	
-		co::int32 addObject( co::int32 typeId )
+		co::uint32 addObject( co::uint32 typeId )
 		{
 			executeOrThrow( DBSpaceStoreQueries::insertObject( typeId ) );
 
 			IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectLastInsertedObject() );
 			if(!rs->next())
 			{
-				throw ca::InvalidSpaceFileException();
+				throw ca::IOException("Failed to add object");
 			}
-			std::string resultValue (rs->getValue(0));
+			co::uint32 resultId = atoi( rs->getValue(0).c_str() );
 			rs->finalize();
 			delete rs;
-			return atoi(resultValue.c_str());
+			return resultId;
 		}
 
-		void addValues( co::int32 objId, co::int32 revision, co::Range<const ca::StoredFieldValue> values )
+		void addValues( co::uint32 objId, co::uint32 revision, co::Range<const ca::StoredFieldValue> values )
 		{
 			for( int i = 0; i < values.getSize(); i++ )
 			{
@@ -117,14 +120,13 @@ namespace ca {
 			}
 		}
 	
-		co::int32 getObjectType( co::int32 objectId )
+		co::uint32 getObjectType( co::uint32 objectId )
 		{
 			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectEntityFromObject( objectId ) );
 				
 			if(rs->next())
 			{
-				std::string idStr (rs->getValue(1));
-				int id = atoi(idStr.c_str());
+				int id = atoi(rs->getValue(0).c_str());
 				rs->finalize();
 				delete rs;
 				return id;
@@ -135,14 +137,12 @@ namespace ca {
 				delete rs;
 				stringstream ss;
 				ss << "Not such object, id=" << objectId;
-				throw InvalidSpaceFileException(ss.str());
+				throw IOException(ss.str());
 			}
-			
-
-		
+					
 		}
 		
-		void getValues( co::int32 objectId, co::int32 revision, std::vector<ca::StoredFieldValue>& values )
+		void getValues( co::uint32 objectId, co::uint32 revision, std::vector<ca::StoredFieldValue>& values )
 		{
 			values.clear();
 
@@ -151,35 +151,33 @@ namespace ca {
 			while( rs->next() )
 			{
 				ca::StoredFieldValue sfv;
-				sfv.fieldId = atoi( rs->getValue(0).c_str() );//fieldName;
-				std::string fieldValue(rs->getValue(1));
-				sfv.value = fieldValue;
+				sfv.fieldId = atoi( rs->getValue( 0 ).c_str() );//fieldName;
+				sfv.value = rs->getValue( 1 );
 				values.push_back( sfv );
 			}
 			rs->finalize();
 			delete rs;
 		}
 
-		void getStoredType( co::int32 typeId, ca::StoredType& storedType )
+		void getStoredType( co::uint32 typeId, ca::StoredType& storedType )
 		{
 			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectTypeById( typeId ) );
 			bool first = true;
-			while(rs->next())
+			while( rs->next() )
 			{
 				if( first )
 				{
 					storedType.fields.clear();
 					storedType.typeId = typeId;
-					storedType.typeName = std::string(rs->getValue(1));
+					storedType.typeName = std::string( rs->getValue( 1 ) );
 					first = false;
 				}
+
 				StoredField sf;
-				sf.fieldId = atoi( rs->getValue(2).c_str() );
-
-				std::string fieldName( rs->getValue(3) );
-				sf.fieldName = fieldName;
-
-				sf.typeId = atoi( rs->getValue(4).c_str() );
+				sf.fieldId = atoi( rs->getValue( 2 ).c_str() );
+				sf.fieldName = rs->getValue( 3 );
+				sf.typeId = atoi( rs->getValue( 4 ).c_str() );
+				
 				storedType.fields.push_back( sf );
 			}
 			rs->finalize();
@@ -196,21 +194,21 @@ namespace ca {
 			_fileName = fileName;
 		}
 
-		co::int32 getCurrentRevision()
+		co::uint32 getCurrentRevision()
 		{
 			return _currentRevision;
 		}
 
-		void setCurrentRevision( co::int32 currentRevision )
+		void setCurrentRevision( co::uint32 currentRevision )
 		{
-			if( currentRevision > _latestRevision )
+			if( currentRevision > _latestRevision || currentRevision == 0 )
 			{
-				//throw something
+				throw co::IllegalArgumentException( "invalid revision" );
 			}
 			_currentRevision = currentRevision;
 		}
 		
-		co::int32 getLatestRevision()
+		co::uint32 getLatestRevision()
 		{
 			return _currentRevision;
 		}
@@ -219,19 +217,18 @@ namespace ca {
 
 		std::string _fileName;
 		ca::SQLiteDBConnection _db;
-		co::int32 _currentRevision;
-		co::int32 _latestRevision;
+		co::uint32 _currentRevision;
+		co::uint32 _latestRevision;
 		
-		co::int32 getFieldIdByName( const string& fieldName, co::int32 entityId )
+		co::uint32 getFieldIdByName( const string& fieldName, co::uint32 entityId )
 		{
 			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectFieldIdByName( fieldName, entityId ) );
 			
 			int result = -1;
 
-			if(rs->next())
+			if( rs->next() )
 			{
-				std::string idStr(rs->getValue(0));
-				result = atoi( idStr.c_str() );
+				result = atoi( rs->getValue(0).c_str() );
 			}
 			rs->finalize();
 			delete rs;
@@ -260,7 +257,7 @@ namespace ca {
 			catch(ca::DBException e)
 			{
 				_db.execute("ROLLBACK TRANSACTION");
-				throw e;
+				throw ca::IOException( e.what() );
 			}
 		}
 
@@ -273,7 +270,7 @@ namespace ca {
 			}
 			catch ( ca::DBException e )
 			{
-				throw ca::InvalidSpaceFileException("Unexpected database query exception");
+				throw ca::IOException( "Unexpected database query exception" );
 			}		
 				
 		}
@@ -287,7 +284,7 @@ namespace ca {
 			}
 			catch ( ca::DBException e )
 			{
-				throw ca::InvalidSpaceFileException("Unexpected database query exception");
+				throw ca::IOException( "Unexpected database query exception" );
 			}	
 		}
 

@@ -1,20 +1,20 @@
 interface ISpaceStore
 {
-	int32 currentRevision;
-	readonly int32 latestRevision;
+	uint32 currentRevision;
+	readonly uint32 latestRevision;
 	
 	void open() raises ca.IOException;
 	void close() raises ca.IOException;
 
-	int32 getOrAddType( in string typeName, in int32 version ) raises ca.IOException;
-	int32 addField( in int32 typeId, in string fieldName, in int32 fieldTypeId ) raises ca.IOException;
+	uint32 getOrAddType( in string typeName, in uint32 version ) raises ca.IOException;
+	uint32 addField( in uint32 typeId, in string fieldName, in uint32 fieldTypeId ) raises ca.IOException;
 	
-	int32 addObject( in int32 typeId ) raises ca.IOException;
-	void addValues( in int32 objectId, in int32 revision, in StoredFieldValue[] values ) raises ca.IOException;
+	uint32 addObject( in uint32 typeId ) raises ca.IOException;
+	void addValues( in uint32 objectId, in uint32 revision, in StoredFieldValue[] values ) raises ca.IOException;
 	
-	int32 getObjectType( in int32 objectId ) raises ca.IOException;
+	uint32 getObjectType( in uint32 objectId ) raises ca.IOException;
 	
-	void getStoredType( in int32 typeId, out StoredType storedType ) raises ca.IOException;
-	void getValues( in int32 objectId, in int32 revision, out ca.StoredFieldValue[] values ) raises ca.IOException;
+	void getStoredType( in uint32 typeId, out StoredType storedType ) raises ca.IOException;
+	void getValues( in uint32 objectId, in uint32 revision, out ca.StoredFieldValue[] values ) raises ca.IOException;
 	
 };

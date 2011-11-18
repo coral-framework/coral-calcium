@@ -47,7 +47,7 @@ class DBSpaceStoreQueries
 			LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_ID, VALUE FROM FIELD_VALUE " << revisionStr << " GROUP BY OBJECT_ID, FIELD_ID ) FV\
 			ON FV.OBJECT_ID = OBJ.OBJECT_ID AND F.FIELD_ID = FV.FIELD_ID\
 			WHERE OBJ.OBJECT_ID = " << objectId <<
-			"GROUP BY FV.FIELD_ID, FV.OBJECT_ID\
+			" GROUP BY FV.FIELD_ID, FV.OBJECT_ID \
 			ORDER BY OBJ.OBJECT_ID";
 
 		return sql.str();
@@ -101,7 +101,7 @@ class DBSpaceStoreQueries
 	static std::string insertField(int typeId, std::string fieldName, int fieldTypeId)
 	{
 		stringstream ss;
-		ss << "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ('" << typeId << "', " << fieldName << ", '" << fieldTypeId << "');";
+		ss << "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ('" << typeId << "', '" << fieldName << "', " << fieldTypeId << ");";
 				
 		return ss.str();
 	}

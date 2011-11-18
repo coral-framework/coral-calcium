@@ -1,0 +1,7 @@
+// Provides an persistence interface to Space
+component PersistentSpace
+{
+	provides ISpaceObserver spaceObserver;
+	provides ISpaceSaver spaceSaver;
+	receives ISpaceStore spaceStore;
+};

@@ -22,15 +22,27 @@ namespace ca
 		return true;
 	}
 	
-	const std::string& SQLiteResultSet::getValue( co::int32 columnIndex)
+	const std::string SQLiteResultSet::getValue( co::uint32 columnIndex)
 	{
-		_value = (char*)sqlite3_column_text(_stmt, columnIndex);
-		return _value;
+		if( columnIndex >= _columnCount )
+		{
+			throw ca::DBException("invalid column index on getValue");
+		}
+		const unsigned char* value = sqlite3_column_text(_stmt, columnIndex);
+		
+		if( value == NULL )
+		{
+			throw ca::DBException("ResultSet not pointing to a valid row. Check if next was called");
+		}
+		std::string str((char*)value);
+		return str;
 	}
 
 	void SQLiteResultSet::setStatement(sqlite3_stmt* stmt)
 	{ 
+		assert(stmt);
 		_stmt = stmt; 
+		_columnCount = sqlite3_column_count(stmt);
 	}
 
 	void SQLiteResultSet::finalize()

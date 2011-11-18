@@ -100,6 +100,7 @@ namespace ca
 		}
 		else 
 		{
+			const char* msg = sqlite3_errmsg(_db);
 			throw ca::DBException("Could not close database. Check for not finalized IResultSets");
 		}
 	}
