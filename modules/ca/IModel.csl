@@ -27,9 +27,6 @@ interface IModel
 {
 	// Name of this model. Must be set once, before using the service.
 	string name;
-	
-	// Version number of this model, must be updated after each model change.
-	int32 version;
 
 	//---------- Querying the Model ----------//
 
