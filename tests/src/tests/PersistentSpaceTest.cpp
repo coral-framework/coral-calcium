@@ -84,7 +84,7 @@ TEST_F( PersistentSpaceTest, exceptionsTest )
 	sqlite3_open( fileName.c_str(), &hndl );
 	sqlite3_close( hndl );
 
-	EXPECT_THROW( spaceSaver->getVersion(1), ca::IOException ); //empty database
+	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalArgumentException ); //empty database
 
 }
 

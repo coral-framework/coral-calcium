@@ -55,7 +55,17 @@ namespace ca {
 					throw ca::IOException( e.what() );
 				}
 			}
-			createTables();
+
+			try
+			{
+				createTables();
+				fillLatestRevision();
+			}
+			catch( ca::DBException e )
+			{
+				throw ca::IOException( e.what() );
+			}
+
 		}
 
 		void close()
@@ -72,17 +82,22 @@ namespace ca {
 
 		void beginChanges()
 		{
-		
+			_latestRevision++;
+			_currentRevision = _latestRevision;
 		}
 
 		void endChanges()
 		{
-		
+			if( _latestRevision == 1 )
+			{
+				_rootObjectId = 1;
+			}
+			executeOrThrow( DBSpaceStoreQueries::insertNewRevision( _rootObjectId, _currentRevision ) );
 		}
 
-		co::uint32 updateObjectTypeVersion( co::uint32 objectId, co::uint32 typeId )
+		co::uint32 getRootObject()
 		{
-			return 0;
+			return _rootObjectId;
 		}
 
 		co::uint32 getOrAddType( const string& typeName, co::uint32 version ) 
@@ -127,11 +142,11 @@ namespace ca {
 			return resultId;
 		}
 
-		void addValues( co::uint32 objId, co::uint32 revision, co::Range<const ca::StoredFieldValue> values )
+		void addValues( co::uint32 objId, co::Range<const ca::StoredFieldValue> values )
 		{
 			for( int i = 0; i < values.getSize(); i++ )
 			{
-				executeOrThrow( DBSpaceStoreQueries::insertFieldValue( values[i].fieldId, objId, revision, values[i].value ) );
+				executeOrThrow( DBSpaceStoreQueries::insertFieldValue( values[i].fieldId, objId, _currentRevision, values[i].value ) );
 			}
 		}
 	
@@ -157,11 +172,11 @@ namespace ca {
 					
 		}
 		
-		void getValues( co::uint32 objectId, co::uint32 revision, std::vector<ca::StoredFieldValue>& values )
+		void getValues( co::uint32 objectId, std::vector<ca::StoredFieldValue>& values )
 		{
 			values.clear();
 
-			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectFieldValues( objectId, revision ) );
+			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectFieldValues( objectId, _currentRevision ) );
 				
 			while( rs->next() )
 			{
@@ -220,12 +235,21 @@ namespace ca {
 			{
 				throw co::IllegalArgumentException( "invalid revision" );
 			}
+
+			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectObjectIdForRevision( currentRevision ));
+			if( rs->next() )
+			{
+				_rootObjectId = atoi( rs->getValue(0).c_str() );
+				rs->finalize();
+				delete rs;
+			}
+
 			_currentRevision = currentRevision;
 		}
 		
 		co::uint32 getLatestRevision()
 		{
-			return _currentRevision;
+			return _latestRevision;
 		}
 
 	private:
@@ -234,6 +258,7 @@ namespace ca {
 		ca::SQLiteDBConnection _db;
 		co::uint32 _currentRevision;
 		co::uint32 _latestRevision;
+		co::uint32 _rootObjectId;
 		
 		co::uint32 getFieldIdByName( const string& fieldName, co::uint32 entityId )
 		{
@@ -265,6 +290,8 @@ namespace ca {
 				_db.execute( DBSpaceStoreQueries::createTableObject() );
 					
 				_db.execute( DBSpaceStoreQueries::createTableFieldValues() );
+
+				_db.execute( DBSpaceStoreQueries::createTableSpace() );
 				
 				_db.execute("COMMIT TRANSACTION");
 			}
@@ -273,6 +300,25 @@ namespace ca {
 				_db.execute("ROLLBACK TRANSACTION");
 				throw ca::IOException( e.what() );
 			}
+		}
+
+		void fillLatestRevision()
+		{
+			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectLatestRevision() );
+			
+			if( rs->next() )
+			{
+				_latestRevision = atoi( rs->getValue(0).c_str() );
+				_rootObjectId = atoi( rs->getValue(1).c_str() );
+			}
+			else
+			{
+				_latestRevision = 0;
+			}
+			rs->finalize();
+			delete rs;
+			_currentRevision = _latestRevision;
+
 		}
 
 		ca::IResultSet* executeQueryOrThrow( std::string sql )

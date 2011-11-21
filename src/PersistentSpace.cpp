@@ -86,7 +86,9 @@ namespace ca {
 
 				try
 				{
+					_spaceStore->beginChanges();
 					saveObject(_space->getRootObject());
+					_spaceStore->endChanges();
 				}
 				catch(...)
 				{
@@ -134,10 +136,12 @@ namespace ca {
 				}
 
 				_spaceStore->open();
+				_spaceStore->setCurrentRevision( version );
 
 				try
 				{
-					restoreObject(1);
+					co::uint32 rootObject = _spaceStore->getRootObject();
+					restoreObject( rootObject );
 
 					co::IObject* object = (co::IObject*)getRef(1);
 				
@@ -312,7 +316,7 @@ namespace ca {
 					i++;
 
 				}
-				_spaceStore->addValues( objId, 1, values );
+				_spaceStore->addValues( objId, values );
 			}
 
 			bool needsToSaveType( co::IType* type )
@@ -433,7 +437,7 @@ namespace ca {
 					values.push_back( value );
 					
 				}
-				_spaceStore->addValues( objId, 1, values );
+				_spaceStore->addValues( objId, values );
 
 			}
 
@@ -517,7 +521,7 @@ namespace ca {
 				std::string portName;
 
 				std::vector<ca::StoredFieldValue> fieldValues;
-				_spaceStore->getValues( id, 1, fieldValues );
+				_spaceStore->getValues( id, fieldValues );
 				
 				map<int, std::string> mapFieldValue;
 				map<std::string, int> mapFieldIdName;
@@ -586,7 +590,7 @@ namespace ca {
 		
 				std::vector<ca::StoredFieldValue> fieldValues;
 
-				_spaceStore->getValues( id, getCalciumModelId(), fieldValues );
+				_spaceStore->getValues( id, fieldValues );
 
 				ca::StoredType type;
 				int typeId = _spaceStore->getOrAddType( service->getInterface()->getFullName(), getCalciumModelId() );

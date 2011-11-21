@@ -9,7 +9,7 @@ class DBSpaceStoreQueries
 
 	public:
 	
-		static std::string selectTypeIdByName( std::string typeName, int version )
+	static std::string selectTypeIdByName( std::string typeName, int version )
 	{
 		std::stringstream ss;
 		ss << "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = '" << typeName << "'  AND TYPE_VERSION = " << version;
@@ -98,6 +98,16 @@ class DBSpaceStoreQueries
 				);";
 	}
 
+	static std::string createTableSpace()
+	{
+		return "CREATE TABLE if not exists [SPACE] (\
+			[ROOT_OBJECT_ID] INTEGER NOT NULL,\
+			[REVISION] INTEGER  NOT NULL,\
+			UNIQUE( ROOT_OBJECT_ID ),\
+			FOREIGN KEY (ROOT_OBJECT_ID) REFERENCES OBJECT(OBJECT_ID));";
+
+	}
+
 	static std::string insertField(int typeId, std::string fieldName, int fieldTypeId)
 	{
 		stringstream ss;
@@ -147,9 +157,39 @@ class DBSpaceStoreQueries
 
 		return ss.str();
 	}
+	
 	static std::string selectLastInsertedObject()
 	{
 		return "SELECT MAX(OBJECT_ID) FROM OBJECT";
+	}
+
+	static std::string selectLatestRevision()
+	{
+		return "SELECT MAX(REVISION), ROOT_OBJECT_ID FROM SPACE GROUP BY ROOT_OBJECT_ID";
+	}
+
+	static std::string selectObjectIdForRevision( co::uint32 revision )
+	{
+		stringstream ss;
+
+		ss << "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION >= " << revision << " ORDER BY REVISION LIMIT 1";
+		return ss.str();
+	}
+
+	static std::string insertNewRevision( co::uint32 rootObjectId, co::uint32 revision )
+	{
+		stringstream ss;
+
+		ss << "INSERT INTO SPACE VALUES (" << rootObjectId << ", " << revision << " )";
+		return ss.str();
+	}
+
+	static std::string updateRevision( co::uint32 rootObjectId, co::uint32 revision )
+	{
+		stringstream ss;
+
+		ss << "UPDATE SPACE SET REVISION = " << revision << " WHERE ROOT_OBJECT_ID = " << rootObjectId;
+		return ss.str();
 	}
 
 };
