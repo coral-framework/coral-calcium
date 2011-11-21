@@ -6,6 +6,15 @@ interface ISpaceStore
 	void open() raises ca.IOException;
 	void close() raises ca.IOException;
 
+	void beginChanges();
+	void endChanges();
+	//discardChanges() would be necessary?
+	
+	//generate and returns a new object id updating its type. 
+	//throws an exception if the current objectId's typeId is not an earlier version of the value passed to the typeId parameter.
+	//maybe it should try to apply conversion rules when available.
+	uint32 updateObjectTypeVersion( in uint32 objectId, in uint32 typeId ); 
+	
 	uint32 getOrAddType( in string typeName, in uint32 version ) raises ca.IOException;
 	uint32 addField( in uint32 typeId, in string fieldName, in uint32 fieldTypeId ) raises ca.IOException;
 	
@@ -14,7 +23,7 @@ interface ISpaceStore
 	
 	uint32 getObjectType( in uint32 objectId ) raises ca.IOException;
 	
-	void getStoredType( in uint32 typeId, out StoredType storedType ) raises ca.IOException;
+	void getType( in uint32 typeId, out StoredType storedType ) raises ca.IOException;
 	void getValues( in uint32 objectId, in uint32 revision, out ca.StoredFieldValue[] values ) raises ca.IOException;
 	
 };

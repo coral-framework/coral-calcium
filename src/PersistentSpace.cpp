@@ -235,7 +235,7 @@ namespace ca {
 				
 				ca::StoredType storedType;
 
-				_spaceStore->getStoredType( entityId, storedType );
+				_spaceStore->getType( entityId, storedType );
 				int i = 0;
 				std::vector<ca::StoredFieldValue> values;
 				std::string fieldValueStr;
@@ -402,7 +402,7 @@ namespace ca {
 				co::RefVector<co::IPort> ports;
 				_model->getPorts(component, ports);
 
-				_spaceStore->getStoredType( entityId, storedType );
+				_spaceStore->getType( entityId, storedType );
 
 				int fieldId;
 				std::vector<ca::StoredFieldValue> values;
@@ -502,7 +502,7 @@ namespace ca {
 
 				ca::StoredType type;
 
-				_spaceStore->getStoredType( typeId, type );
+				_spaceStore->getType( typeId, type );
 
 				std::string entity = type.typeName;
 				
@@ -590,7 +590,7 @@ namespace ca {
 
 				ca::StoredType type;
 				int typeId = _spaceStore->getOrAddType( service->getInterface()->getFullName(), getCalciumModelId() );
-				_spaceStore->getStoredType( typeId, type );
+				_spaceStore->getType( typeId, type );
 
 				map<int, std::string> mapFieldValue;
 				map<std::string, int> mapFieldIdName;

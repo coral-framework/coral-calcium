@@ -70,6 +70,21 @@ namespace ca {
 			}
 		}
 
+		void beginChanges()
+		{
+		
+		}
+
+		void endChanges()
+		{
+		
+		}
+
+		co::uint32 updateObjectTypeVersion( co::uint32 objectId, co::uint32 typeId )
+		{
+			return 0;
+		}
+
 		co::uint32 getOrAddType( const string& typeName, co::uint32 version ) 
 		{
 			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectTypeIdByName(typeName, version) );
@@ -159,7 +174,7 @@ namespace ca {
 			delete rs;
 		}
 
-		void getStoredType( co::uint32 typeId, ca::StoredType& storedType )
+		void getType( co::uint32 typeId, ca::StoredType& storedType )
 		{
 			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectTypeById( typeId ) );
 			bool first = true;
@@ -242,7 +257,6 @@ namespace ca {
 				_db.execute("BEGIN TRANSACTION");
 
 				_db.execute("PRAGMA foreign_keys = 1");
-
 
 				_db.execute( DBSpaceStoreQueries::createTableType() );
 				
