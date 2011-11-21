@@ -17,7 +17,7 @@ local coRaise = co.raise
 local coTypeOf = co.typeOf
 local coType = co.Type
 
-local printVar = require "printVar"
+local printVar = require "lua.printVar"
 
 --------------------------------------------------------------------------------
 -- Calcium Model Wrappers
