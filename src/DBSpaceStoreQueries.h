@@ -103,7 +103,8 @@ class DBSpaceStoreQueries
 		return "CREATE TABLE if not exists [SPACE] (\
 			[ROOT_OBJECT_ID] INTEGER NOT NULL,\
 			[REVISION] INTEGER  NOT NULL,\
-			UNIQUE( ROOT_OBJECT_ID ),\
+			[TIME] TEXT NOT NULL,\
+			UNIQUE( REVISION ),\
 			FOREIGN KEY (ROOT_OBJECT_ID) REFERENCES OBJECT(OBJECT_ID));";
 
 	}
@@ -180,15 +181,7 @@ class DBSpaceStoreQueries
 	{
 		stringstream ss;
 
-		ss << "INSERT INTO SPACE VALUES (" << rootObjectId << ", " << revision << " )";
-		return ss.str();
-	}
-
-	static std::string updateRevision( co::uint32 rootObjectId, co::uint32 revision )
-	{
-		stringstream ss;
-
-		ss << "UPDATE SPACE SET REVISION = " << revision << " WHERE ROOT_OBJECT_ID = " << rootObjectId;
+		ss << "INSERT INTO SPACE VALUES (" << rootObjectId << ", " << revision << ", datetime('now') )";
 		return ss.str();
 	}
 

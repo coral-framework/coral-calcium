@@ -1,0 +1,12 @@
+interface ISpacePersister
+{
+	//restored ISpace (or first inserted), that should be observed for changes. It is up to the user commit these changes or not.
+	readonly ca.ISpace space;
+
+	void initialize( in co.IObject rootObject );
+	
+	void restore();
+	void restoreRevision( in uint32 revision );
+	
+	void save();
+};

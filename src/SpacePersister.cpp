@@ -1,61 +1,46 @@
-#include "SpaceSaverSQLite3_Base.h"
+#include "SpacePersister_Base.h"
 #include <ca/ISpaceChanges.h>
 #include <ca/IUniverse.h>
 #include <ca/ISpace.h>
-#include <ca/IModel.h>
 #include <ca/InvalidSpaceFileException.h>
 #include <ca/FormatException.h>
 
 #include <ca/ISpaceStore.h>
 
-#include "sqlite3.h"
 #include <co/RefVector.h>
-#include <co/IReflector.h>
 #include <co/RefPtr.h>
 #include <co/IObject.h>
 #include <co/IField.h>
-#include <co/Coral.h>
 #include <co/IArray.h>
 #include <co/Any.h>
-#include <co/IComponent.h>
-#include <co/IPort.h>
-#include <co/IllegalArgumentException.h>
 #include <co/NotSupportedException.h>
-#include <co/IllegalCastException.h>
 #include <co/IllegalArgumentException.h>
+#include <co/IllegalCastException.h>
 #include <co/IllegalStateException.h>
-#include <stdio.h>
-#include <string.h>
+
+#include <co/Log.h>
+
 #include <map>
-#include <vector>
-#include <sstream>
+using namespace std;
 
 #include <ca/StoredType.h>
 #include <ca/StoredFieldValue.h>
 #include <ca/StoredField.h>
 
 #include "StringSerializer.h"
-#include "SpaceSaverSQLQueries.h"
-#include "AnyArrayUtil.h"
-#include "IDBConnection.h"
-#include "IResultSet.h"
-#include "DBException.h"
-#include "PersistentSpace_Base.h"
-
-using namespace std;
-
+#include "SpacePersisterCache.h"
 
 namespace ca {
 
-	class PersistentSpace : public PersistentSpace_Base
+	class SpacePersister : public SpacePersister_Base
 	{
 		public:
-			PersistentSpace()
+			SpacePersister()
 			{
 				
 			}
 
-			virtual ~PersistentSpace()
+			virtual ~SpacePersister()
 			{
 				if(_spaceStore.isValid())
 				{
@@ -67,16 +52,12 @@ namespace ca {
 
 			void onSpaceChanged( ca::ISpaceChanges* changes )
 			{
-				spaceChanges.push_back( changes );
+				_spaceChanges.push_back( changes );
 			}
 
-			void setup()
+			void initialize( co::IObject* rootObject )
 			{
-				if( !_space )
-				{
-					throw co::IllegalStateException("space unset, could not setup");
-				}
-				
+		
 				if( !_spaceStore.isValid() )
 				{
 					throw co::IllegalStateException("space file was not set, could not setup");
@@ -87,7 +68,7 @@ namespace ca {
 				try
 				{
 					_spaceStore->beginChanges();
-					saveObject(_space->getRootObject());
+					saveObject( rootObject );
 					_spaceStore->endChanges();
 				}
 				catch(...)
@@ -99,63 +80,53 @@ namespace ca {
 
 			}
 
-			void setSpace( ca::ISpace* space )
+			ca::ISpace* getSpace()
 			{
-				if( space == NULL )
-				{
-					throw co::IllegalArgumentException( "space can't be NULL" );
-				}
-				_space = space;
-				ca::IUniverse* universe = static_cast<ca::IUniverse*>(_space->getProvider()->getService("universe"));
-				
-				assert(universe);
-				_model = static_cast<ca::IModel*>( universe->getProvider()->getService("model"));
-				assert(_model);
-
-				_modelVersion = 1;//_model->getVersion();
+				return _space.get();
 			}
 
 			// ------ ca.ISpaceSaver Methods ------ //
 
-			ca::ISpace* getLatestVersion()
+			void restore()
 			{
-				// TODO: implement this method.
-				return NULL;
-			}
-
-			ca::ISpace* getVersion( co::int32 version )
-			{
-				if( !_space )
-				{
-					throw co::IllegalStateException("space was not set, model definition missing, can't restore a space");
-				}
-
 				if( !_spaceStore.isValid() )
 				{
-					throw co::IllegalStateException("space file was not set, can't restore a space");
+					throw co::IllegalStateException("space store was not set, can't restore a space");
+				}
+				restoreRevision( _spaceStore->getLatestRevision() );
+			}
+
+			void restoreRevision( co::uint32 revision )
+			{
+				if( !_spaceStore.isValid() )
+				{
+					throw co::IllegalStateException("space store was not set, can't restore a space");
 				}
 
 				_spaceStore->open();
-				_spaceStore->setCurrentRevision( version );
+
+				if( _spaceStore->getLatestRevision() == 0 )
+				{
+					_spaceStore->close();
+					throw co::IllegalArgumentException("empty space store");
+				}
 
 				try
 				{
-					co::uint32 rootObject = _spaceStore->getRootObject();
-					restoreObject( rootObject );
+					_cache.clear();
+					co::uint32 rootObject = _spaceStore->getRootObject( revision );
+					restoreObject( rootObject, revision );
 
-					co::IObject* object = (co::IObject*)getRef(1);
+					co::IObject* object = (co::IObject*)_cache.getObject( rootObject );
 				
-					co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
-					ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
-
-					universeObj->setService( "model", _model.get() );
 					co::IObject* spaceObj = co::newInstance( "ca.Space" );
 					ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 
-					spaceObj->setService( "universe", universe );
+					spaceObj->setService( "universe", _universe.get() );
 					space->setRootObject( object );
 					_spaceStore->close();
-					return space;
+					
+					_space = space;
 				}
 				catch(ca::InvalidSpaceFileException e)
 				{
@@ -165,61 +136,69 @@ namespace ca {
 				
 			}
 
-			void saveChanges()
+			void save()
 			{
-				// TODO: implement this method.
+				co::RefPtr<ca::ISpaceChanges> current;
+				for( int i = 0; i < _spaceChanges.size(); i++ )
+				{
+					current = _spaceChanges[ i ];
+				}
 			}
 		protected:
-			ca::ISpaceStore* getSpaceStoreService()
+			ca::ISpaceStore* getStoreService()
 			{
 				return _spaceStore.get();
 			}
 
-			void setSpaceStoreService( ca::ISpaceStore* spaceStore )
+			void setStoreService( ca::ISpaceStore* spaceStore )
 			{
 				assert( spaceStore );
 				_spaceStore = spaceStore;
 			}
+
+			ca::IUniverse* getUniverseService()
+			{
+				return _universe.get();
+			}
+
+			void setUniverseService( ca::IUniverse* universe )
+			{
+				assert( universe );
+				_universe = universe;
+				_model = (ca::IModel*)_universe->getProvider()->getService( "model" );
+			}
 		private:
 
 			co::RefPtr<ca::ISpace> _space;
-			co::RefPtr<ca::IModel> _model;
-			co::int32 _modelVersion;
+			ca::IModel* _model;
+
 			StringSerializer _serializer;
 
+			co::RefPtr<ca::IUniverse> _universe;
 			co::RefPtr<ca::ISpaceStore> _spaceStore;
 
-			map<void*, int> refMap;
+			SpacePersisterCache _cache;
 
-			map<int, co::IObject*> idMap;
+			co::RefVector<ca::ISpaceChanges> _spaceChanges;
 
-			map<std::string, int> _insertedTypeCache;
-
-			co::RefVector<ca::ISpaceChanges> spaceChanges; 
+			void observe()
+			{
+				_space->addSpaceObserver( this );
+			}
 
 			//save functions
 
-			void insertRefMap(void* obj, int id)
-			{
-				refMap.insert(pair<void*, int>(obj, id));
-			}
-
-			void insertTypeCache(std::string type, int id)
-			{
-				_insertedTypeCache.insert(pair<std::string, int>(type, id));
-			}
-
 			void savePort(int componentId, co::IPort* port)
 			{
-				int typeId = _spaceStore->getOrAddType( port->getType()->getFullName(), 1 );
+				int typeId = _spaceStore->getOrAddType( port->getType()->getFullName(), getCalciumModelId() );
 				
-				saveField(port->getName(), componentId, typeId);
+				saveField(port, componentId, typeId);
 			}
 
 			void saveService(co::RefPtr<co::IService> obj, co::IPort* port)
 			{
-				int objId = getRefId(obj.get());
-				if(objId != -1)
+				int objId = _cache.getObjectId(obj.get());
+				if(objId != 0)
 				{
 					return;
 				}
@@ -229,40 +208,38 @@ namespace ca {
 
 				std::string typeFullName = type->getFullName();
 
-				int entityId = _spaceStore->getOrAddType( typeFullName, getCalciumModelId() );
+				int entityId = _cache.getTypeId( obj->getInterface() );
+
 				objId = _spaceStore->addObject( entityId );
+				_cache.insertObjectCache(obj.get(), objId);
 
-				insertRefMap(obj.get(), objId);
-
-				co::RefVector<co::IField> fields;
-				_model->getFields(type, fields);
-				
-				ca::StoredType storedType;
-
-				_spaceStore->getType( entityId, storedType );
-				int i = 0;
+				co::Range<co::IField* const> fields = type->getFields();
+								
+				int j = 0;
 				std::vector<ca::StoredFieldValue> values;
 				std::string fieldValueStr;
-				for(co::RefVector<co::IField>::iterator it = fields.begin(); it != fields.end(); it++) 
+
+				for( int i = 0; i < fields.getSize(); i++ ) 
 				{
-					co::IField* field =  it->get();
-					std::string fieldName = field->getName();
+					co::IField* field =  fields[i];
 					
-					int fieldId = storedType.fields[i].fieldId;
-					int fieldTypeId = storedType.fields[i].typeId;
+					int fieldId = _cache.getMemberId( field );
+					if( fieldId == 0 )
+					{
+						continue;
+					}
+					int fieldTypeId = _cache.getTypeId( field->getType() );
 					
 					co::IReflector* reflector = field->getOwner()->getReflector();
 					co::Any fieldValue;
 
 					reflector->getField(obj.get(), field, fieldValue);
 
-					std::string q = field->getType()->getFullName();
-					
 					co::TypeKind tk = fieldValue.getKind();
 
 					if(tk == co::TK_ARRAY)
 					{
-						co::IType* arrayType = static_cast<co::IArray*>(field->getType())->getElementType();
+						co::IType* arrayType = static_cast<co::IArray*>( field->getType() )->getElementType();
 												
 						if(arrayType->getKind() == co::TK_INTERFACE)
 						{
@@ -272,10 +249,9 @@ namespace ca {
 							while(!services.isEmpty())
 							{
 								co::IService* const serv = services.getFirst();
-								std::string strInt = serv->getInterface()->getFullName();
 								saveObject(serv->getProvider());
 								
-								int refId = getRefId(serv->getProvider());
+								int refId = _cache.getObjectId(serv->getProvider());
 								
 								refs.push_back(refId);
 								services.popFirst();
@@ -300,8 +276,8 @@ namespace ca {
 						}
 						else
 						{
-							saveObject(service->getProvider());
-							_serializer.toString( getRefId(service->getProvider()), fieldValueStr );
+							saveObject( service->getProvider() );
+							_serializer.toString( _cache.getObjectId(service->getProvider()), fieldValueStr );
 						}
 						
 					}
@@ -309,56 +285,59 @@ namespace ca {
 					{
 						fieldValueStr = getValueAsString(fieldValue);
 					}
+
 					ca::StoredFieldValue value;
 					value.fieldId = fieldId;
 					value.value = fieldValueStr;
 					values.push_back( value );
-					i++;
-
 				}
 				_spaceStore->addValues( objId, values );
 			}
 
 			bool needsToSaveType( co::IType* type )
 			{
-				return ( getInsertedTypeId(type->getFullName()) == -1 );
+				return ( _cache.getTypeId( type ) == 0 );
 			}
 
-			void saveEntity(co::IType* type)
+			void saveEntity( co::IType* type )
 			{
 				if( !needsToSaveType(type) )
 				{
 					return;
 				}
 
-				if( type->getKind() == co::TK_COMPONENT )
+				co::TypeKind tk = type->getKind();
+
+				if( tk == co::TK_COMPONENT )
 				{
-					co::IComponent*	component = static_cast<co::IComponent*>(type);
-					saveComponent(component);
+					co::IComponent*	component = static_cast<co::IComponent*>( type );
+					saveComponent( component );
 					return;
 				}
 
-				if( type->getKind() == co::TK_INTERFACE )
+				if( tk == co::TK_INTERFACE )
 				{
 					co::IInterface*	interfaceType = static_cast<co::IInterface*>(type);
-					saveInterface(interfaceType);
+					saveInterface( interfaceType );
 					return;
 				}
-
+					
 				int typeId = _spaceStore->getOrAddType( type->getFullName(), getCalciumModelId() );
-				insertTypeCache( type->getFullName(), typeId );
+				_cache.insertTypeCache( type, typeId );
 			}
 
-			void saveField(const std::string& fieldName, int entityId, int fieldTypeId)
+			void saveField(co::IMember* member, int entityId, int fieldTypeId)
 			{
-				_spaceStore->addField( entityId, fieldName, fieldTypeId );
+				int fieldId = _spaceStore->addField( entityId, member->getName(), fieldTypeId );
+				_cache.insertMemberCache( member, fieldId );
+
 			}
 
 			void saveInterface(co::IInterface* entityInterface)
 			{
 
 				int getIdFromSavedEntity = _spaceStore->getOrAddType( entityInterface->getFullName(), getCalciumModelId() );
-				insertTypeCache( entityInterface->getFullName(), getIdFromSavedEntity );
+				_cache.insertTypeCache( entityInterface, getIdFromSavedEntity );
 
 				co::RefVector<co::IField> fields;
 				_model->getFields(entityInterface, fields);
@@ -367,69 +346,64 @@ namespace ca {
 				{
 					co::IField* field =  it->get();
 					
-					std::string typeFullName = field->getType()->getFullName();
+					int fieldTypeId = _cache.getTypeId( field->getType() );
 
-					if(field->getType()->getKind() == co::TK_ARRAY)
+					if( fieldTypeId == 0 )
 					{
-						co::IType* arrayType = static_cast<co::IArray*>(field->getType())->getElementType();
-						
-						saveEntity(arrayType);
+						saveEntity( field->getType() );
+						fieldTypeId = _cache.getTypeId( field->getType() );
 					}
-					if(field->getType()->getKind() == co::TK_INTERFACE || field->getType()->getKind() == co::TK_NATIVECLASS)
-					{
-						saveEntity(field->getType());
-					}
-					int fieldTypeId = _spaceStore->getOrAddType( typeFullName, getCalciumModelId() );
-					saveField(field->getName(), getIdFromSavedEntity, fieldTypeId);
+					
+					saveField(field, getIdFromSavedEntity, fieldTypeId);
+
 				}
 
 			}
 
 			void saveObject(co::RefPtr<co::IObject> object)
 			{
-				if(getRefId(object.get()) != -1)
+				if(_cache.getObjectId(object.get()) != 0)
 				{
 					return;
 				}
 
 				co::IComponent* component = object->getComponent();
+
+				std::string name = component->getFullName();
 				saveEntity(component);
 
-				int entityId = _spaceStore->getOrAddType(component->getFullName(), getCalciumModelId());
-
-				ca::StoredType storedType;
-				
+				int entityId = _cache.getTypeId( component );
 				int objId = _spaceStore->addObject( entityId );
 
-				insertRefMap(object.get(), objId);
+				_cache.insertObjectCache(object.get(), objId);
 
-				co::RefVector<co::IPort> ports;
-				_model->getPorts(component, ports);
-
-				_spaceStore->getType( entityId, storedType );
+				co::Range<co::IPort* const> ports = component->getPorts();
 
 				int fieldId;
 				std::vector<ca::StoredFieldValue> values;
-				for( int i = 0; i < ports.size(); i++ )
+				for( int i = 0; i < ports.getSize(); i++ )
 				{
-					co::IPort* port = (ports[i]).get();
+					co::IPort* port = (ports[i]);
+					fieldId = _cache.getMemberId( port );
+					
+					if( fieldId == 0 )
+					{
+						continue;
+					}
+					
 					co::IService* service = object->getServiceAt(port);
-
-					assert( storedType.fields[i].fieldName == port->getName() );
-
-					fieldId = storedType.fields[i].fieldId;
-
+					
 					std::string refStr;
 					if(port->getIsFacet())
 					{
 						saveService(service, port);
 						stringstream insertValue;
 						
-						_serializer.toString( getRefId( service ), refStr);
+						_serializer.toString( _cache.getObjectId( service ), refStr);
 					}
 					else
 					{
-						_serializer.toString( getRefId( service->getProvider() ), refStr);
+						_serializer.toString( _cache.getObjectId( service->getProvider() ), refStr);
 					}
 					ca::StoredFieldValue value;
 					value.fieldId = fieldId;
@@ -444,93 +418,37 @@ namespace ca {
 			void saveComponent(co::IComponent* component)
 			{
 				int componentId = _spaceStore->getOrAddType( component->getFullName(), getCalciumModelId() );
-				insertTypeCache( component->getFullName(), componentId );
-				co::Range<co::IPort* const> ports = component->getPorts();
+				_cache.insertTypeCache( component, componentId );
 
-				for( int i = 0; i < ports.getSize(); i++ )
+				co::RefVector< co::IPort > ports;
+				_model->getPorts( component, ports );
+
+				for( int i = 0; i < ports.size(); i++ )
 				{
-					savePort( componentId, ports[i] );
+					savePort( componentId, ports[i].get() );
 				}
-			}
-
-			int getInsertedTypeId( std::string typeFullName )
-			{
-				map<std::string,int>::iterator it = _insertedTypeCache.find( typeFullName );
-
-				if(it != _insertedTypeCache.end())
-				{
-					return it->second;
-				}
-
-				return -1;
-			}
-
-			int getRefId(void* obj)
-			{
-				map<void*,int>::iterator it = refMap.find(obj);
-
-				if(it != refMap.end())
-				{
-					return it->second;
-				}
-
-				return -1;
 			}
 
 			//restore functions
 
-			co::IObject* getRef( int id )
-			{
-				map<int, co::IObject*>::iterator it = idMap.find(id);
-
-				if(it != idMap.end())
-				{
-					return it->second;
-				}
-				else 
-				{
-					restoreObject( id );
-					return getRef( id );
-
-				}
-			}
-
-			void insertIdMap( int id, co::IObject* obj )
-			{
-				idMap.insert( pair<int, co::IObject*>( id, obj ) );
-			}
-
-			void restoreObject( int id )
+			void restoreObject( int id, int revision )
 			{
 				int typeId = _spaceStore->getObjectType( id );
 
-				ca::StoredType type;
+				co::IType* type = getType( typeId );
 
-				_spaceStore->getType( typeId, type );
-
-				std::string entity = type.typeName;
+				std::string entity = type->getFullName();
 				
 				co::IObject* object = co::newInstance( entity );
 				
-				co::RefVector<co::IPort> ports;
-				_model->getPorts( object->getComponent(), ports );
+				co::Range<co::IPort* const> ports = object->getComponent()->getPorts();
 
-				insertIdMap( id, object );
-
-				co::IPort* port;
-				std::string portName;
+				_cache.insertObjectCache( object, id );
 
 				std::vector<ca::StoredFieldValue> fieldValues;
-				_spaceStore->getValues( id, fieldValues );
+				_spaceStore->getValues( id, revision, fieldValues );
 				
 				map<int, std::string> mapFieldValue;
-				map<std::string, int> mapFieldIdName;
-				
-				for( int i = 0; i < type.fields.size(); i++ )
-				{
-					ca::StoredField field = type.fields[i];
-					mapFieldIdName.insert( pair<std::string, int>( field.fieldName, field.fieldId ) );
-				}
 
 				for( int i = 0; i < fieldValues.size(); i++ )
 				{
@@ -538,23 +456,31 @@ namespace ca {
 					mapFieldValue.insert( pair<int, std::string>( fieldValue.fieldId, fieldValue.value ) );
 				}
 
-
-				for( int i = 0; i < ports.size(); i++ )
+				co::IPort* port;
+				for( int i = 0; i < ports.getSize(); i++ )
 				{
-					port = ports.at(i).get();
-					portName = port->getName();
+					port = ports[i];
 					
-					int fieldId = mapFieldIdName.find(portName)->second;
+					int fieldId = _cache.getMemberId( port );
+					if( fieldId == 0 )
+					{
+						continue;
+					}
+
 					int idService = atoi( mapFieldValue.find(fieldId)->second.c_str() );
 
 					if( port->getIsFacet() )
 					{
 						co::IService* service = object->getServiceAt( port );
-						fillServiceValues( idService, service );
+						fillServiceValues( idService, service, revision );
 					}
 					else 
 					{
-						co::IObject* refObj = getRef( idService );
+						co::IObject* refObj = (co::IObject*)getObject( idService, revision );
+						if( refObj == NULL )
+						{
+							throw co::IllegalStateException();
+						}
 						try
 						{
 							object->setServiceAt( port, refObj->getServiceAt( getFirstFacet(refObj, port->getType()) ) );
@@ -562,7 +488,7 @@ namespace ca {
 						catch( co::IllegalCastException e )
 						{
 							stringstream ss;
-							ss << "Could not restore object, invalid value type for port " << portName << "on entity " << entity;
+							ss << "Could not restore object, invalid value type for port " << port->getName() << "on entity " << entity;
 							throw ca::InvalidSpaceFileException( ss.str() );
 						}
 					}
@@ -585,25 +511,16 @@ namespace ca {
 				return NULL;
 			}
 
-			void fillServiceValues( int id, co::IService* service )
+			void fillServiceValues( int id, co::IService* service, int revision )
 			{
 		
 				std::vector<ca::StoredFieldValue> fieldValues;
 
-				_spaceStore->getValues( id, fieldValues );
-
-				ca::StoredType type;
 				int typeId = _spaceStore->getOrAddType( service->getInterface()->getFullName(), getCalciumModelId() );
-				_spaceStore->getType( typeId, type );
+				co::IService* type = (co::IService*)getType( typeId );
 
+				_spaceStore->getValues( id, revision, fieldValues );
 				map<int, std::string> mapFieldValue;
-				map<std::string, int> mapFieldIdName;
-				
-				for( int i = 0; i < type.fields.size(); i++ )
-				{
-					ca::StoredField field = type.fields[i];
-					mapFieldIdName.insert( pair<std::string, int>( field.fieldName, field.fieldId ) );
-				}
 
 				for( int i = 0; i < fieldValues.size(); i++ )
 				{
@@ -611,16 +528,18 @@ namespace ca {
 					mapFieldValue.insert( pair<int, std::string>( fieldValue.fieldId, fieldValue.value ) );
 				}
 
-				co::RefVector<co::IField> fields;
-				_model->getFields( service->getInterface(), fields );
-
+				co::Range<co::IField* const> fields = service->getInterface()->getFields();
+				
 				co::IReflector* ref = service->getInterface()->getReflector();
-				std::string fieldName;
-				for( int i = 0; i < fields.size(); i++)
+				for( int i = 0; i < fields.getSize(); i++)
 				{
-					co::IField* field = fields[i].get();
-					fieldName = field->getName();
-					int fieldId = mapFieldIdName.find(fieldName)->second;
+					co::IField* field = fields[i];
+					int fieldId = _cache.getMemberId( field );
+					if( fieldId == 0 )
+					{
+						continue;
+					}
+
 					fillFieldValue(service, field, id, mapFieldValue.find(fieldId)->second);
 				}
 			}
@@ -651,11 +570,15 @@ namespace ca {
 					{
 						co::Any refId;
 						_serializer.fromString( strValue, co::typeOf<co::int32>::get(), refId );
+						
 						int refIdInt = refId.get<co::int32>();
-						co::IObject* ref = getRef( refIdInt );
+						co::IObject* ref = (co::IObject*)getObject( refIdInt, 1 );
+						if( ref == NULL )
+						{
+							throw co::IllegalStateException();
+						}
 
 						fieldValue.set(ref->getServiceAt( getFirstFacet(ref, field->getType()) ));
-
 					}
 
 				}
@@ -706,8 +629,11 @@ namespace ca {
 				co::IObject* ref;
 				for( int i = 0; i < vec.size(); i++ )
 				{
-					ref = getRef( vec[i] );
-							
+					ref = (co::IObject*)getObject( vec[i], 1 );
+					if( ref == NULL )
+					{
+						throw co::IllegalStateException();
+					}
 					co::IPort* port = getFirstFacet(ref, arrayType->getElementType());	
 					co::IService* service = ref->getServiceAt(port);
 								
@@ -747,9 +673,60 @@ namespace ca {
 				return result;
 			}
 
+			co::IObject* getObject( co::uint32 objectId, co::uint32 revision )
+			{
+				co::IObject* object = (co::IObject*) _cache.getObject( objectId );
+				
+				if( object == NULL )
+				{
+					restoreObject( objectId, revision );
+					co::IService* service = _cache.getObject( objectId );
+					if(service == NULL)
+					{
+						throw co::IllegalStateException();
+					}
+					object = (co::IObject*)service;
+				}
+				return object;
+			}
+
+			co::IType* getType( co::uint32 id )
+			{
+				co::IType* resultType = _cache.getType( id );
+
+				if( resultType == NULL )
+				{
+					StoredType storedType;
+					_spaceStore->getType( id, storedType );
+
+					resultType = co::getType( storedType.typeName );
+
+					_cache.insertTypeCache( resultType, id );
+					
+					if( resultType->getKind() == co::TK_COMPONENT || resultType->getKind() == co::TK_INTERFACE )
+					{
+						co::ICompositeType* compositeType = (co::ICompositeType*)resultType;
+						
+						std::string storedFieldName;
+						for( int i = 0; i < storedType.fields.size(); i++ )
+						{
+							storedFieldName = storedType.fields[i].fieldName;
+							co::IMember* member = compositeType->getMember( storedFieldName );
+							assert( member != NULL );
+							_cache.insertMemberCache( member, storedType.fields[i].fieldId );
+							
+						} 
+					}
+
+				}
+
+				return resultType;
+
+			}
+
 	};
 
-	CORAL_EXPORT_COMPONENT( PersistentSpace, PersistentSpace );
+	CORAL_EXPORT_COMPONENT( SpacePersister, SpacePersister );
 	
 
 } // namespace ca

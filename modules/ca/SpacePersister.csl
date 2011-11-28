@@ -1,0 +1,7 @@
+component SpacePersister
+{
+	provides ISpaceObserver spaceObserver;
+	provides ISpacePersister persister;
+	receives ISpaceStore store; 
+	receives IUniverse universe;
+};

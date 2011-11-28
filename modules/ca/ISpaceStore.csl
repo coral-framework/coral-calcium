@@ -1,6 +1,5 @@
 interface ISpaceStore
 {
-	uint32 currentRevision;
 	readonly uint32 latestRevision;
 	
 	void open() raises ca.IOException;
@@ -10,7 +9,7 @@ interface ISpaceStore
 	void endChanges();
 	
 	//returns the root object's id for the current revision
-	uint32 getRootObject();
+	uint32 getRootObject( in uint32 revision );
 	
 	uint32 getOrAddType( in string typeName, in uint32 version ) raises ca.IOException;
 	uint32 addField( in uint32 typeId, in string fieldName, in uint32 fieldTypeId ) raises ca.IOException;
@@ -21,6 +20,6 @@ interface ISpaceStore
 	uint32 getObjectType( in uint32 objectId ) raises ca.IOException;
 	
 	void getType( in uint32 typeId, out StoredType storedType ) raises ca.IOException;
-	void getValues( in uint32 objectId, out ca.StoredFieldValue[] values ) raises ca.IOException;
+	void getValues( in uint32 objectId, in uint32 revision, out ca.StoredFieldValue[] values ) raises ca.IOException;
 	
 };

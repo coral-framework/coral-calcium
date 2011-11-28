@@ -44,7 +44,7 @@ namespace ca {
 			{
 				_db.createDatabase();
 			}
-			catch( ca::DBException e )
+			catch( ca::DBException& e )
 			{
 				try
 				{
@@ -84,20 +84,22 @@ namespace ca {
 		{
 			_latestRevision++;
 			_currentRevision = _latestRevision;
+
+			if( _currentRevision == 1 )
+			{
+				_firstObject = true;
+			}
+
 		}
 
 		void endChanges()
 		{
-			if( _latestRevision == 1 )
-			{
-				_rootObjectId = 1;
-			}
 			executeOrThrow( DBSpaceStoreQueries::insertNewRevision( _rootObjectId, _currentRevision ) );
 		}
 
-		co::uint32 getRootObject()
+		co::uint32 getRootObject( co::uint32 revision )
 		{
-			return _rootObjectId;
+			return getRootObjectForRevision( revision );
 		}
 
 		co::uint32 getOrAddType( const string& typeName, co::uint32 version ) 
@@ -129,6 +131,7 @@ namespace ca {
 	
 		co::uint32 addObject( co::uint32 typeId )
 		{
+
 			executeOrThrow( DBSpaceStoreQueries::insertObject( typeId ) );
 
 			IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectLastInsertedObject() );
@@ -139,6 +142,12 @@ namespace ca {
 			co::uint32 resultId = atoi( rs->getValue(0).c_str() );
 			rs->finalize();
 			delete rs;
+
+			if( _firstObject )
+			{
+				_rootObjectId = resultId;
+				_firstObject = false;
+			}
 			return resultId;
 		}
 
@@ -172,11 +181,11 @@ namespace ca {
 					
 		}
 		
-		void getValues( co::uint32 objectId, std::vector<ca::StoredFieldValue>& values )
+		void getValues( co::uint32 objectId, co::uint32 revision, std::vector<ca::StoredFieldValue>& values )
 		{
 			values.clear();
 
-			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectFieldValues( objectId, _currentRevision ) );
+			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectFieldValues( objectId, revision ) );
 				
 			while( rs->next() )
 			{
@@ -236,13 +245,8 @@ namespace ca {
 				throw co::IllegalArgumentException( "invalid revision" );
 			}
 
-			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectObjectIdForRevision( currentRevision ));
-			if( rs->next() )
-			{
-				_rootObjectId = atoi( rs->getValue(0).c_str() );
-				rs->finalize();
-				delete rs;
-			}
+			_rootObjectId = getRootObjectForRevision( currentRevision );
+			
 
 			_currentRevision = currentRevision;
 		}
@@ -259,7 +263,21 @@ namespace ca {
 		co::uint32 _currentRevision;
 		co::uint32 _latestRevision;
 		co::uint32 _rootObjectId;
+		bool _firstObject;
 		
+		co::uint32 getRootObjectForRevision( co::uint32 revision )
+		{
+			co::uint32 rootObject = 0;
+			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectObjectIdForRevision( revision ));
+			if( rs->next() )
+			{
+				rootObject = atoi( rs->getValue(0).c_str() );
+				rs->finalize();
+				delete rs;
+			}
+			return rootObject;
+		}
+
 		co::uint32 getFieldIdByName( const string& fieldName, co::uint32 entityId )
 		{
 			ca::IResultSet* rs = executeQueryOrThrow( DBSpaceStoreQueries::selectFieldIdByName( fieldName, entityId ) );

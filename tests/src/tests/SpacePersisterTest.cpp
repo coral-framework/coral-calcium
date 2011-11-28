@@ -8,7 +8,7 @@
 
 #include <co/Coral.h>
 #include <co/IObject.h>
-#include <ca/ISpaceSaver.h>
+#include <ca/ISpacePersister.h>
 #include <co/RefPtr.h>
 #include <co/Coral.h>
 #include <co/IObject.h>
@@ -33,7 +33,7 @@
 #include "SQLiteDBConnection.h"
 
 
-class PersistentSpaceTest : public ERMSpace {};
+class SpacePersisterTest : public ERMSpace {};
 
 
 inline erm::Multiplicity mult( co::int32 min, co::int32 max )
@@ -43,58 +43,45 @@ inline erm::Multiplicity mult( co::int32 min, co::int32 max )
 	return m;
 }
 
-TEST_F( PersistentSpaceTest, exceptionsTest )
+TEST_F( SpacePersisterTest, exceptionsTest )
 {
-	co::RefPtr<co::IObject> spaceSaverObj = co::newInstance( "ca.PersistentSpace" );
-	co::RefPtr<ca::ISpaceSaver> spaceSaver = spaceSaverObj->getService<ca::ISpaceSaver>();
+	co::RefPtr<co::IObject> persisterObj = co::newInstance( "ca.SpacePersister" );
+	ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
 
-	std::string fileName = "SimpleSpaceSave.db";
+	EXPECT_THROW( persister->restore(), co::IllegalStateException ); //spaceStore and universe not set
+	EXPECT_THROW( persister->restoreRevision(1), co::IllegalStateException ); //spaceStore and universe not set
 	
-	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //spaceFile and space not set
-
-	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalStateException ); //spaceFile and space not set
-
+	std::string fileName = "SimpleSpaceSave.db";
 	remove( fileName.c_str() );
-
-	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
-	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 
 	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
 	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
+
 	startWithExtendedERM();
-	spaceObj->setService( "universe", universe );
 
 	universeObj->setService("model", _model.get());
 	
-	space->setRootObject(_erm->getProvider());
-
-	spaceSaver->setSpace( space );
-
-	EXPECT_THROW( spaceSaver->setup(), co::IllegalStateException ); //spaceFile not set
+	EXPECT_THROW( persister->initialize( _erm->getProvider() ), co::IllegalStateException ); //spaceFile not set
 	
-	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalStateException ); //spaceFile not set
+	EXPECT_THROW( persister->restore(), co::IllegalStateException ); //spaceStore not set
+	EXPECT_THROW( persister->restoreRevision(1), co::IllegalStateException ); //spaceStore not set
 
 	co::RefPtr<co::IObject> spaceStoreObj = co::newInstance( "ca.DBSpaceStore" );
 	spaceStoreObj->getService<ca::INamed>()->setName( fileName );
 
-	spaceSaverObj->setService( "spaceStore", spaceStoreObj->getService<ca::ISpaceStore>() );
+	persisterObj->setService( "store", spaceStoreObj->getService<ca::ISpaceStore>() );
 
 	remove( fileName.c_str() );
 	sqlite3* hndl;
 	sqlite3_open( fileName.c_str(), &hndl );
 	sqlite3_close( hndl );
 
-	EXPECT_THROW( spaceSaver->getVersion(1), co::IllegalArgumentException ); //empty database
+	EXPECT_THROW( persister->restoreRevision(1), co::IllegalArgumentException ); //empty database
 
 }
 
-TEST_F( PersistentSpaceTest, testNewFileSetup )
+TEST_F( SpacePersisterTest, testNewFileSetup )
 {
-	int modelVersion = 1;
-
-	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
-	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
-	
 	startWithExtendedERM();
 	_relAB->setMultiplicityB( mult( 1, 2 ) );
 	_relBC->setMultiplicityA( mult( 3, 4 ) );
@@ -103,33 +90,27 @@ TEST_F( PersistentSpaceTest, testNewFileSetup )
 	_relCA->setMultiplicityB( mult( 9, 0 ) );
 
 	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
-	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
-	spaceObj->setService( "universe", universe );
-
 	universeObj->setService("model", _model.get());
-	
-	space->setRootObject(_erm->getProvider());
-	
+	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
+
 	std::string fileName = "SimpleSpaceSave.db";
 	
 	remove( fileName.c_str() );
 
-	co::RefPtr<co::IObject> obj = co::newInstance( "ca.PersistentSpace" );
-	co::RefPtr<ca::ISpaceSaver> spaceSav = obj->getService<ca::ISpaceSaver>();
-
-	spaceSav->setSpace( space );
+	co::RefPtr<co::IObject> persisterObj = co::newInstance( "ca.SpacePersister" );
+	ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
 	
 	co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.DBSpaceStore" );
 	spaceFileObj->getService<ca::INamed>()->setName( fileName );
 
-	obj->setService( "spaceStore", spaceFileObj->getService<ca::ISpaceStore>() );
+	persisterObj->setService( "store", spaceFileObj->getService<ca::ISpaceStore>() );
+	persisterObj->setService( "universe", universe );
 
-	spaceSav->setSpace( space );
+	EXPECT_NO_THROW( persister->initialize( _erm->getProvider() ) );
+	EXPECT_NO_THROW( persister->restoreRevision(1) );
 
-	ASSERT_NO_THROW(spaceSav->setup());
-	ca::ISpace * spaceRestored;
-	ASSERT_NO_THROW( spaceRestored = spaceSav->getVersion(1) );
-
+	ca::ISpace * spaceRestored = persister->getSpace();
+	
 	co::IObject* objRest = spaceRestored->getRootObject();
 
 	erm::IModel* erm = objRest->getService<erm::IModel>();
