@@ -1,5 +1,0 @@
-component DBSpaceFile
-{
-	provides ISpaceFile spaceFile;
-	provides INamed fileName;
-};
