@@ -10,8 +10,8 @@ namespace ca
 	
 	bool SQLiteResultSet::next()
 	{
-		int status = sqlite3_step(_stmt);
-		if(status == SQLITE_ERROR)
+		int status = sqlite3_step( _stmt );
+		if( status == SQLITE_ERROR )
 		{
 			throw ca::DBException("error on getting next result on ResultSet");
 		}
@@ -22,7 +22,7 @@ namespace ca
 		return true;
 	}
 	
-	const std::string SQLiteResultSet::getValue( co::uint32 columnIndex)
+	const std::string SQLiteResultSet::getValue( co::uint32 columnIndex )
 	{
 		if( columnIndex >= _columnCount )
 		{

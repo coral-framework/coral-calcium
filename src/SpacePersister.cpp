@@ -1,10 +1,10 @@
 #include "SpacePersister_Base.h"
+
 #include <ca/ISpaceChanges.h>
 #include <ca/IUniverse.h>
 #include <ca/ISpace.h>
-#include <ca/InvalidSpaceFileException.h>
+#include <ca/IOException.h>
 #include <ca/FormatException.h>
-
 #include <ca/ISpaceStore.h>
 
 #include <co/RefVector.h>
@@ -17,7 +17,6 @@
 #include <co/IllegalArgumentException.h>
 #include <co/IllegalCastException.h>
 #include <co/IllegalStateException.h>
-
 #include <co/Log.h>
 
 #include <map>
@@ -128,7 +127,7 @@ namespace ca {
 					
 					_space = space;
 				}
-				catch(ca::InvalidSpaceFileException e)
+				catch( ca::IOException& e )
 				{
 					_spaceStore->close();
 					throw e;
@@ -180,6 +179,8 @@ namespace ca {
 			SpacePersisterCache _cache;
 
 			co::RefVector<ca::ISpaceChanges> _spaceChanges;
+
+			typedef map<co::uint32, std::string> FieldValueMap;
 
 			void observe()
 			{
@@ -448,12 +449,12 @@ namespace ca {
 				std::vector<ca::StoredFieldValue> fieldValues;
 				_spaceStore->getValues( id, revision, fieldValues );
 				
-				map<int, std::string> mapFieldValue;
+				FieldValueMap mapFieldValue;
 
 				for( int i = 0; i < fieldValues.size(); i++ )
 				{
 					ca::StoredFieldValue fieldValue = fieldValues[i];
-					mapFieldValue.insert( pair<int, std::string>( fieldValue.fieldId, fieldValue.value ) );
+					mapFieldValue.insert( FieldValueMap::value_type( fieldValue.fieldId, fieldValue.value ) );
 				}
 
 				co::IPort* port;
@@ -485,11 +486,11 @@ namespace ca {
 						{
 							object->setServiceAt( port, refObj->getServiceAt( getFirstFacet(refObj, port->getType()) ) );
 						}
-						catch( co::IllegalCastException e )
+						catch( co::IllegalCastException& e )
 						{
 							stringstream ss;
 							ss << "Could not restore object, invalid value type for port " << port->getName() << "on entity " << entity;
-							throw ca::InvalidSpaceFileException( ss.str() );
+							throw ca::IOException( ss.str() );
 						}
 					}
 
@@ -520,12 +521,12 @@ namespace ca {
 				co::IService* type = (co::IService*)getType( typeId );
 
 				_spaceStore->getValues( id, revision, fieldValues );
-				map<int, std::string> mapFieldValue;
+				FieldValueMap mapFieldValue;
 
 				for( int i = 0; i < fieldValues.size(); i++ )
 				{
 					ca::StoredFieldValue fieldValue = fieldValues[i];
-					mapFieldValue.insert( pair<int, std::string>( fieldValue.fieldId, fieldValue.value ) );
+					mapFieldValue.insert( FieldValueMap::value_type( fieldValue.fieldId, fieldValue.value ) );
 				}
 
 				co::Range<co::IField* const> fields = service->getInterface()->getFields();
@@ -588,7 +589,7 @@ namespace ca {
 					{
 						_serializer.fromString(strValue, field->getType(), fieldValue);
 					}
-					catch( ca::FormatException e )
+					catch( ca::FormatException& e )
 					{
 						stringstream ss;
 						ss << "Invalid field value for field " << field->getName();
@@ -605,11 +606,11 @@ namespace ca {
 					}
 
 				}
-				catch (co::IllegalCastException e)
+				catch (co::IllegalCastException& e)
 				{
 					stringstream ss;
 					ss << "Invalid field value type for field " << field->getName() << "; type expected: " << field->getType()->getFullName();
-					throw ca::InvalidSpaceFileException( ss.str() );
+					throw ca::IOException( ss.str() );
 				}
 
 			}
@@ -645,9 +646,9 @@ namespace ca {
 						AnyArrayUtil arrayUtil;
 						arrayUtil.setArrayComplexTypeElement( arrayValue, i, servicePtr );
 					}
-					catch ( co::NotSupportedException e )
+					catch ( co::NotSupportedException& e )
 					{
-						throw ca::InvalidSpaceFileException("Could not restore array");
+						throw ca::IOException( "Could not restore array" );
 					}
 				}
 

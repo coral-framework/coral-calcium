@@ -73,7 +73,7 @@ namespace ca {
 			{
 				_model->getFields(type, refVector);
 			}
-			catch ( ca::ModelException e )
+			catch ( ca::ModelException& e )
 			{
 				std::string msg = e.getMessage();
 				printf( msg.c_str() );
@@ -152,7 +152,7 @@ namespace ca {
 			{
 				reflector->setField(value, fields[i], fieldValue);
 			}
-			catch( co::IllegalArgumentException e)
+			catch( co::IllegalArgumentException& e )
 			{
 				msg.clear();
 				msg << "Could not desserialize type " << type->getFullName() << " " << e.getMessage();

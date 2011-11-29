@@ -1,12 +1,3 @@
-/*******************************************************************************
-** C++ mapping generated for type 'ca.IDBConnection'
-**
-** Created: Fri Nov 04 15:48:29 2011
-**      by: Coral Compiler version 0.7.0
-**
-** WARNING! All changes made in this file will be lost when recompiling!
-********************************************************************************/
-
 #ifndef _CA_IDBCONNECTION_H_
 #define _CA_IDBCONNECTION_H_
 

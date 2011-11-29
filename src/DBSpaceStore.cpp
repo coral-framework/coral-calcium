@@ -61,7 +61,7 @@ namespace ca {
 				createTables();
 				fillLatestRevision();
 			}
-			catch( ca::DBException e )
+			catch( ca::DBException& e )
 			{
 				throw ca::IOException( e.what() );
 			}
@@ -74,7 +74,7 @@ namespace ca {
 			{
 				_db.close();
 			}
-			catch( ca::DBException e )
+			catch( ca::DBException& e )
 			{
 				throw ca::IOException( e.what() );
 			}
@@ -176,7 +176,7 @@ namespace ca {
 				delete rs;
 				stringstream ss;
 				ss << "Not such object, id=" << objectId;
-				throw IOException(ss.str());
+				throw IOException( ss.str() );
 			}
 					
 		}
@@ -313,7 +313,7 @@ namespace ca {
 				
 				_db.execute("COMMIT TRANSACTION");
 			}
-			catch(ca::DBException e)
+			catch( ca::DBException& e )
 			{
 				_db.execute("ROLLBACK TRANSACTION");
 				throw ca::IOException( e.what() );
@@ -346,7 +346,7 @@ namespace ca {
 				ca::IResultSet* rs = _db.executeQuery( sql );
 				return rs;
 			}
-			catch ( ca::DBException e )
+			catch ( ca::DBException& e )
 			{
 				throw ca::IOException( "Unexpected database query exception" );
 			}		
@@ -360,7 +360,7 @@ namespace ca {
 				_db.execute( sql );
 					
 			}
-			catch ( ca::DBException e )
+			catch ( ca::DBException& e )
 			{
 				throw ca::IOException( "Unexpected database query exception" );
 			}	
