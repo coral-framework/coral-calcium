@@ -2,7 +2,6 @@
 #define _DB_SPACE_STORE_QUERIES_
 
 #include <sstream>
-using namespace std;
 
 class DBSpaceStoreQueries
 {
@@ -27,7 +26,7 @@ class DBSpaceStoreQueries
 	
 	static std::string selectFieldValues(int objectId, int revision)
 	{
-		stringstream revisionSS;
+		std::stringstream revisionSS;
 		revisionSS << "WHERE REVISION <= " << revision;
 		
 		return selectFieldValueRevisioned( objectId, revisionSS.str() );
@@ -40,7 +39,7 @@ class DBSpaceStoreQueries
 
 	static std::string selectFieldValueRevisioned(int objectId, std::string revisionStr)
 	{
-		stringstream sql;
+		std::stringstream sql;
 		sql << "SELECT F.FIELD_ID, FV.VALUE FROM\
 			OBJECT OBJ LEFT OUTER JOIN TYPE T ON OBJ.TYPE_ID = T.TYPE_ID\
 			LEFT OUTER JOIN FIELD F ON F.TYPE_ID = T.TYPE_ID\
@@ -111,7 +110,7 @@ class DBSpaceStoreQueries
 
 	static std::string insertField(int typeId, std::string fieldName, int fieldTypeId)
 	{
-		stringstream ss;
+		std::stringstream ss;
 		ss << "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ('" << typeId << "', '" << fieldName << "', " << fieldTypeId << ");";
 				
 		return ss.str();
@@ -119,7 +118,7 @@ class DBSpaceStoreQueries
 	
 	static std::string insertType( std::string typeName, int version )
 	{
-		stringstream ss;
+		std::stringstream ss;
 		ss << "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES ('" << typeName << "', " << version << ")";
 				
 		return ss.str();
@@ -128,7 +127,7 @@ class DBSpaceStoreQueries
 	static std::string insertFieldValue( int fieldId, int objId, int revision, std::string value )
 	{
 
-		stringstream ss;
+		std::stringstream ss;
 		ss << "INSERT INTO FIELD_VALUE (FIELD_ID, OBJECT_ID, REVISION, VALUE) VALUES (" << fieldId
 							<< ", " << objId << ", " << revision << ", '" << value << "')";
 		return ss.str();				
@@ -136,7 +135,7 @@ class DBSpaceStoreQueries
 
 	static std::string insertObject( int typeId )
 	{
-		stringstream ss;
+		std::stringstream ss;
 		ss << "INSERT INTO OBJECT (TYPE_ID) VALUES (" << typeId << ");";
 
 		return ss.str();
@@ -144,7 +143,7 @@ class DBSpaceStoreQueries
 
 	static std::string selectEntityFromObject( int objId )
 	{
-		stringstream ss;
+		std::stringstream ss;
 		ss << "SELECT O.TYPE_ID FROM OBJECT O WHERE O.OBJECT_ID = " << objId;
 
 		return ss.str();
@@ -153,7 +152,7 @@ class DBSpaceStoreQueries
 	
 	static std::string selectTypeById( co::int32 typeId )
 	{
-		stringstream ss;
+		std::stringstream ss;
 		ss << "SELECT T.TYPE_ID, T.TYPE_NAME, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = " << typeId;
 
 		return ss.str();
@@ -171,7 +170,7 @@ class DBSpaceStoreQueries
 
 	static std::string selectObjectIdForRevision( co::uint32 revision )
 	{
-		stringstream ss;
+		std::stringstream ss;
 
 		ss << "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION >= " << revision << " ORDER BY REVISION LIMIT 1";
 		return ss.str();
@@ -179,7 +178,7 @@ class DBSpaceStoreQueries
 
 	static std::string insertNewRevision( co::uint32 rootObjectId, co::uint32 revision )
 	{
-		stringstream ss;
+		std::stringstream ss;
 
 		ss << "INSERT INTO SPACE VALUES (" << rootObjectId << ", " << revision << ", datetime('now') )";
 		return ss.str();

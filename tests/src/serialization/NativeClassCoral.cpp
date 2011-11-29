@@ -1,7 +1,6 @@
 #include "NativeClass.h"
 #include "NativeClassCoral_Adapter.h"
 #include <string>
-using namespace std;
 
 namespace serialization {
 

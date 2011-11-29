@@ -1,5 +1,4 @@
 #include "sqlite3.h"
-#include "IResultSet.h"
 #include <co/Coral.h>
 
 #ifndef _CA_SQLITERESULTSET_H_
@@ -7,29 +6,33 @@
 
 namespace ca
 {
-	class SQLiteResultSet : public IResultSet
+
+class SQLiteResultSet
+{
+public:
+	SQLiteResultSet()
 	{
-	public:
-		SQLiteResultSet(){}
+		_stmt = NULL;
+	}
 
-		virtual ~SQLiteResultSet()
-		{
-			finalize();
-		}
+	virtual ~SQLiteResultSet()
+	{
+		finalize();
+	}
 
-		virtual bool next();
+	bool next();
 		
-		virtual const std::string getValue( co::uint32 columnIndex);
+	const std::string getValue( co::uint32 columnIndex);
 
-		virtual void finalize();
+	void finalize();
 
-		virtual void setStatement(sqlite3_stmt* stmt);
+	void setStatement(sqlite3_stmt* stmt);
 		
-	private:
-		sqlite3_stmt* _stmt;
-		std::string _value;
-		unsigned int _columnCount;
-	};
+private:
+	sqlite3_stmt* _stmt;
+	std::string _value;
+	unsigned int _columnCount;
+};
 
 }
 

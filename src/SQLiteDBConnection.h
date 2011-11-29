@@ -11,11 +11,10 @@
 #define _CA_SQLITEDBCONNECTION_H_
 
 #include <co/TypeTraits.h>
-#include "IDBConnection.h"
 #include "sqlite3.h"
+#include "SQLiteResultSet.h"
 
 #include <string>
-using namespace std;
 
 // Forward Declarations:
 namespace ca {
@@ -26,7 +25,7 @@ namespace ca {
 // ca.IDBConnection Mapping:
 namespace ca {
 
-class SQLiteDBConnection : public IDBConnection
+class SQLiteDBConnection
 {
 public:
 
@@ -40,7 +39,7 @@ public:
 
 	void execute( const std::string& insertOrUpdateSQL );
 
-	ca::IResultSet* executeQuery( const std::string& querySQL );
+	void executeQuery( const std::string& querySQL, ca::SQLiteResultSet& rs );
 
 	bool isConnected();
 

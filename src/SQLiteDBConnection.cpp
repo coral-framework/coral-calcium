@@ -1,14 +1,12 @@
 #include "SQLiteDBConnection.h"
 #include "SQLiteResultSet.h"
-#include "IDBConnection.h"
-#include "IResultSet.h"
 
 #include "sqlite3.h"
 #include "DBException.h"
 
 
-namespace ca
-{
+namespace ca {
+	
 	SQLiteDBConnection::SQLiteDBConnection()
 	{
 		_db = 0;
@@ -50,7 +48,7 @@ namespace ca
 		}
 	}
 
-	ca::IResultSet* SQLiteDBConnection::executeQuery( const std::string& querySQL )
+	void SQLiteDBConnection::executeQuery( const std::string& querySQL, ca::SQLiteResultSet& resultSetSQLite )
 	{ 
 		if(!_db)
 		{
@@ -66,11 +64,7 @@ namespace ca
 			throw ca::DBException(errorMsg);
 		}
 
-		SQLiteResultSet* resultSetSQLite = new SQLiteResultSet();
-						
-		resultSetSQLite->setStatement(_statement);
-			
-		return resultSetSQLite;
+		resultSetSQLite.setStatement(_statement);
 	}
 
 	void SQLiteDBConnection::open()
@@ -131,4 +125,5 @@ namespace ca
 		}
 		return result;
 	}
-};
+
+}; // namespace ca

@@ -6,91 +6,91 @@
 #include <string>
 #include <ca/IModel.h>
 #include "AnyArrayUtil.h"
-using namespace std;
 
 namespace ca {
-	class StringSerializer
-	{
-	public:
-
-		StringSerializer();
-
-		~StringSerializer() {;}
-
-		void fromString( const std::string& valueToStr, co::IType* type, co::Any& value );
-
-		void toString( const co::Any& value, std::string& valueToStr );
-
-		void setModel( ca::IModel* model );
-
-	private:
-
-		ca::IModel* _model;
-
-		//determine which fields should be serialized. If a IModel is provided, it is used to tell the fields to be serialized.
-		//If not, all fields of the given type will be serialized.
-		std::vector<co::IField*> getFieldsToSerializeForType( co::IRecordType* type );
-
-		//de-serialization functions
-
-		void fromStream( stringstream& ss, co::IType* type, co::Any& value );
-
-		void readComplexType( stringstream& ss, co::Any& value, co::IType* type );
-
-		template< typename T>
-		T readPrimitive(stringstream& ss, co::TypeKind tk);
-
-		bool readBoolean( stringstream& ss );
-
-		void readArray( std::stringstream &ss, co::Any& value, co::IType* type );
-
-		void readComplexTypeArrayFromStream( stringstream& ss, co::IType* elementType, co::Any& value );
-
-		void readStringArrayFromStream( std::stringstream& ss, co::Any& value);
-
-		void readEnumArrayFromStream(stringstream& ss, co::IType* type, co::Any& value);
-
-		co::int32 readEnum( stringstream& ss, co::IEnum* enumType );
-
-		std::string readLiteralFromStream(stringstream& ss);
+class StringSerializer
+{
 	
-		template<typename T>
-		void readPrimitiveArrayFromStream( std::stringstream& ss, co::Any& value, co::IType* elementType );
+public:
 
-		void readPrimitiveType( std::stringstream& ss, co::Any& value, co::TypeKind tk );
+	StringSerializer();
 
-		//any helper function
-		template< typename T >
-		void applyPrimitiveToAny( std::stringstream& ss, co::Any& value, co::TypeKind tk );
+	~StringSerializer() {;}
 
-		//stream read error check functions
-		void assertNotFail( stringstream& ss, std::string additionalInfo );
+	void fromString( const std::string& valueToStr, co::IType* type, co::Any& value );
 
-		void assertNotInvalidArrayChar( char check );
+	void toString( const co::Any& value, std::string& valueToStr );
+
+	void setModel( ca::IModel* model );
+
+private:
+
+	ca::IModel* _model;
+
+	//determine which fields should be serialized. If a IModel is provided, it is used to tell the fields to be serialized.
+	//If not, all fields of the given type will be serialized.
+	std::vector<co::IField*> getFieldsToSerializeForType( co::IRecordType* type );
+
+	//de-serialization functions
+
+	void fromStream( std::stringstream& ss, co::IType* type, co::Any& value );
+
+	void readComplexType( std::stringstream& ss, co::Any& value, co::IType* type );
+
+	template< typename T>
+	T readPrimitive( std::stringstream& ss, co::TypeKind tk );
+
+	bool readBoolean( std::stringstream& ss );
+
+	void readArray( std::stringstream &ss, co::Any& value, co::IType* type );
+
+	void readComplexTypeArrayFromStream( std::stringstream& ss, co::IType* elementType, co::Any& value );
+
+	void readStringArrayFromStream( std::stringstream& ss, co::Any& value);
+
+	void readEnumArrayFromStream( std::stringstream& ss, co::IType* type, co::Any& value);
+
+	co::int32 readEnum( std::stringstream& ss, co::IEnum* enumType );
+
+	std::string readLiteralFromStream( std::stringstream& ss );
 	
-		//serialization functions
-		void toStream( const co::Any& value, stringstream& ss );
+	template<typename T>
+	void readPrimitiveArrayFromStream( std::stringstream& ss, co::Any& value, co::IType* elementType );
 
-		void writeEnum(const co::Any& value, stringstream& ss, co::IType* type);
+	void readPrimitiveType( std::stringstream& ss, co::Any& value, co::TypeKind tk );
 
-		void writeArray(const co::Any& value, stringstream& ss, co::IType* type);
+	//any helper function
+	template< typename T >
+	void applyPrimitiveToAny( std::stringstream& ss, co::Any& value, co::TypeKind tk );
 
-		void writeBasicType(const co::Any& value, stringstream& ss);
+	//stream read error check functions
+	void assertNotFail( std::stringstream& ss, std::string additionalInfo );
 
-		void writeComplexType(const co::Any& value, stringstream& ss, co::IType* type);
+	void assertNotInvalidArrayChar( char check );
+	
+	//serialization functions
+	void toStream( const co::Any& value, std::stringstream& ss );
 
-		//string values helpers
-		std::string extractStringValueWithoutQuotes( stringstream& ss );
+	void writeEnum(const co::Any& value, std::stringstream& ss, co::IType* type);
 
-		std::string extractQuotedString(stringstream& ss);
+	void writeArray(const co::Any& value, std::stringstream& ss, co::IType* type);
 
-		std::string extractLongBracketsString(stringstream& ss);
+	void writeBasicType(const co::Any& value, std::stringstream& ss);
 
-		bool mustBeEscaped( const std::string& str );
+	void writeComplexType(const co::Any& value, std::stringstream& ss, co::IType* type);
 
-		void escapeLuaString(const std::string&  str, stringstream& ss);
+	//string values helpers
+	std::string extractStringValueWithoutQuotes( std::stringstream& ss );
 
-	};
+	std::string extractQuotedString( std::stringstream& ss );
 
-}
+	std::string extractLongBracketsString( std::stringstream& ss );
+
+	bool mustBeEscaped( const std::string& str );
+
+	void escapeLuaString( const std::string&  str, std::stringstream& ss );
+
+};
+
+} // namespace ca
 #endif // _CA_ISTRINGSERIALIZER_H_

@@ -12,8 +12,6 @@
 
 #include <exception>
 
-using namespace std;
-
 // ca.DBException Mapping:
 namespace ca {
 

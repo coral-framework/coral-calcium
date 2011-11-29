@@ -20,7 +20,6 @@
 #include <co/Log.h>
 
 #include <map>
-using namespace std;
 
 #include <ca/StoredType.h>
 #include <ca/StoredFieldValue.h>
@@ -180,7 +179,7 @@ namespace ca {
 
 			co::RefVector<ca::ISpaceChanges> _spaceChanges;
 
-			typedef map<co::uint32, std::string> FieldValueMap;
+			typedef std::map<co::uint32, std::string> FieldValueMap;
 
 			void observe()
 			{
@@ -246,20 +245,20 @@ namespace ca {
 						{
 							co::Range<co::IService* const> services = fieldValue.get<co::Range<co::IService* const>>();
 							
-							vector<co::int32> refs;
+							std::vector<co::int32> refs;
 							while(!services.isEmpty())
 							{
 								co::IService* const serv = services.getFirst();
 								saveObject(serv->getProvider());
 								
-								int refId = _cache.getObjectId(serv->getProvider());
+								int refId = _cache.getObjectId( serv->getProvider() );
 								
-								refs.push_back(refId);
+								refs.push_back( refId );
 								services.popFirst();
 							
 							}
 							co::Any refsValue;
-							refsValue.set<const std::vector<co::int32>&>(refs);
+							refsValue.set<const std::vector<co::int32>&>( refs );
 							fieldValueStr = getValueAsString(refsValue);
 						}
 						else
@@ -398,7 +397,7 @@ namespace ca {
 					if(port->getIsFacet())
 					{
 						saveService(service, port);
-						stringstream insertValue;
+						std::stringstream insertValue;
 						
 						_serializer.toString( _cache.getObjectId( service ), refStr);
 					}
@@ -488,7 +487,7 @@ namespace ca {
 						}
 						catch( co::IllegalCastException& e )
 						{
-							stringstream ss;
+							std::stringstream ss;
 							ss << "Could not restore object, invalid value type for port " << port->getName() << "on entity " << entity;
 							throw ca::IOException( ss.str() );
 						}
@@ -591,7 +590,7 @@ namespace ca {
 					}
 					catch( ca::FormatException& e )
 					{
-						stringstream ss;
+						std::stringstream ss;
 						ss << "Invalid field value for field " << field->getName();
 						throw ca::FormatException( ss.str() );
 					}
@@ -608,7 +607,7 @@ namespace ca {
 				}
 				catch (co::IllegalCastException& e)
 				{
-					stringstream ss;
+					std::stringstream ss;
 					ss << "Invalid field value type for field " << field->getName() << "; type expected: " << field->getType()->getFullName();
 					throw ca::IOException( ss.str() );
 				}

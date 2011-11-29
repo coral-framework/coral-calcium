@@ -7,7 +7,6 @@
 
 #include <string.h>
 #include <map>
-using namespace std;
 
 class SpacePersisterCache 
 {
@@ -120,14 +119,14 @@ public:
 
 private:
 
-	typedef map<co::IService*, co::uint32> ObjectIdMap;
-	typedef map<co::uint32, co::IService*> IdObjectMap;
+	typedef std::map<co::IService*, co::uint32> ObjectIdMap;
+	typedef std::map<co::uint32, co::IService*> IdObjectMap;
 
-	typedef map<co::IType*, co::uint32> TypeIdMap;
-	typedef map<co::uint32, co::IType*> IdTypeMap;
+	typedef std::map<co::IType*, co::uint32> TypeIdMap;
+	typedef std::map<co::uint32, co::IType*> IdTypeMap;
 
-	typedef map<co::IMember*, co::uint32> MemberIdMap;
-	typedef map<co::uint32, co::IMember*> IdMemberMap;
+	typedef std::map<co::IMember*, co::uint32> MemberIdMap;
+	typedef std::map<co::uint32, co::IMember*> IdMemberMap;
 
 	ObjectIdMap _objectIdCache;
 	IdObjectMap _objectCache;
