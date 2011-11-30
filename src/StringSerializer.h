@@ -8,6 +8,7 @@
 #include "AnyArrayUtil.h"
 
 namespace ca {
+
 class StringSerializer
 {
 	

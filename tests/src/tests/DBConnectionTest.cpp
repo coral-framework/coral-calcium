@@ -1,8 +1,7 @@
 #include "ERMSpace.h"
 
 #include <ca/INamed.h>
-#include "IDBConnection.h"
-#include "SQLiteDBConnection.h"
+#include "SQLiteConnection.h"
 #include "SQLiteResultSet.h"
 #include "DBException.h"
 #include <co/Coral.h>
@@ -18,7 +17,7 @@ TEST_F( DBConnectionTest, testOpenNonExistingDB )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
-	ca::SQLiteDBConnection sqliteDBConn;
+	ca::SQLiteConnection sqliteDBConn;
 
 	sqliteDBConn.setFileName(fileName);
 
@@ -32,7 +31,7 @@ TEST_F( DBConnectionTest, testExecuteWithoutOpen )
 
 	std::string fileName = "SimpleSpaceSave.db";
 
-	ca::SQLiteDBConnection sqliteDBConn;
+	ca::SQLiteConnection sqliteDBConn;
 
 	sqliteDBConn.setFileName(fileName);
 
@@ -48,7 +47,7 @@ TEST_F( DBConnectionTest, testCreateDatabase )
 
 	remove( fileName.c_str() );
 
-	ca::SQLiteDBConnection sqliteDBConn;
+	ca::SQLiteConnection sqliteDBConn;
 
 	sqliteDBConn.setFileName(fileName);
 
@@ -69,7 +68,7 @@ TEST_F( DBConnectionTest, testSuccessfullExecutes )
 
 	remove( fileName.c_str() );
 
-	ca::SQLiteDBConnection sqliteDBConn;
+	ca::SQLiteConnection sqliteDBConn;
 
 	sqliteDBConn.setFileName( fileName );
 	EXPECT_NO_THROW( sqliteDBConn.createDatabase() );
@@ -91,7 +90,7 @@ TEST_F( DBConnectionTest, openExistingDB )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
-	ca::SQLiteDBConnection sqliteDBConn;
+	ca::SQLiteConnection sqliteDBConn;
 
 	sqliteDBConn.setFileName( fileName );
 
@@ -117,7 +116,7 @@ TEST_F( DBConnectionTest, closeDBFail )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
-	ca::SQLiteDBConnection sqliteDBConn;
+	ca::SQLiteConnection sqliteDBConn;
 
 	sqliteDBConn.setFileName(fileName);
 

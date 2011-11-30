@@ -7,8 +7,8 @@
 ** WARNING! All changes made in this file will be lost when recompiling!
 ********************************************************************************/
 
-#ifndef _CA_SQLITEDBCONNECTION_H_
-#define _CA_SQLITEDBCONNECTION_H_
+#ifndef _CA_SQLiteConnection_H_
+#define _CA_SQLiteConnection_H_
 
 #include <co/TypeTraits.h>
 #include "sqlite3.h"
@@ -25,13 +25,13 @@ namespace ca {
 // ca.IDBConnection Mapping:
 namespace ca {
 
-class SQLiteDBConnection
+class SQLiteConnection
 {
 public:
 
-	SQLiteDBConnection();
+	SQLiteConnection();
 
-	virtual ~SQLiteDBConnection();
+	virtual ~SQLiteConnection();
 
 	void close();
 

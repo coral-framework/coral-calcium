@@ -8,7 +8,7 @@ class DBSpaceStoreQueries
 
 	public:
 	
-	static std::string selectTypeIdByName( std::string typeName, int version )
+	static std::string selectTypeIdByName( const std::string& typeName, co::uint32 version )
 	{
 		std::stringstream ss;
 		ss << "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = '" << typeName << "'  AND TYPE_VERSION = " << version;
@@ -16,7 +16,7 @@ class DBSpaceStoreQueries
 		return ss.str();
 	}
 
-	static std::string selectFieldIdByName( std::string fieldName, int typeId )
+	static std::string selectFieldIdByName( const std::string& fieldName, co::uint32 typeId )
 	{
 		std::stringstream ss;
 		ss << "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = '" << fieldName << "' AND TYPE_ID = " << typeId;
@@ -24,7 +24,7 @@ class DBSpaceStoreQueries
 		return ss.str();
 	}
 	
-	static std::string selectFieldValues(int objectId, int revision)
+	static std::string selectFieldValues( co::uint32 objectId, co::uint32 revision )
 	{
 		std::stringstream revisionSS;
 		revisionSS << "WHERE REVISION <= " << revision;
@@ -32,12 +32,12 @@ class DBSpaceStoreQueries
 		return selectFieldValueRevisioned( objectId, revisionSS.str() );
 	}
 
-	static std::string selectFieldValuesLatestVersion(int objectId)
+	static std::string selectFieldValuesLatestVersion( co::uint32 objectId )
 	{
 		return selectFieldValueRevisioned(objectId, "");
 	}
 
-	static std::string selectFieldValueRevisioned(int objectId, std::string revisionStr)
+	static std::string selectFieldValueRevisioned( co::uint32 objectId, const std::string& revisionStr)
 	{
 		std::stringstream sql;
 		sql << "SELECT F.FIELD_ID, FV.VALUE FROM\
@@ -108,7 +108,7 @@ class DBSpaceStoreQueries
 
 	}
 
-	static std::string insertField(int typeId, std::string fieldName, int fieldTypeId)
+	static std::string insertField( co::uint32 typeId, std::string fieldName, co::uint32 fieldTypeId )
 	{
 		std::stringstream ss;
 		ss << "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ('" << typeId << "', '" << fieldName << "', " << fieldTypeId << ");";
@@ -116,7 +116,7 @@ class DBSpaceStoreQueries
 		return ss.str();
 	}
 	
-	static std::string insertType( std::string typeName, int version )
+	static std::string insertType( const std::string& typeName, co::uint32 version )
 	{
 		std::stringstream ss;
 		ss << "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES ('" << typeName << "', " << version << ")";
@@ -124,7 +124,7 @@ class DBSpaceStoreQueries
 		return ss.str();
 	}
 
-	static std::string insertFieldValue( int fieldId, int objId, int revision, std::string value )
+	static std::string insertFieldValue( co::uint32 fieldId, co::uint32 objId, co::uint32 revision, std::string value )
 	{
 
 		std::stringstream ss;
@@ -133,7 +133,7 @@ class DBSpaceStoreQueries
 		return ss.str();				
 	}
 
-	static std::string insertObject( int typeId )
+	static std::string insertObject( co::uint32 typeId )
 	{
 		std::stringstream ss;
 		ss << "INSERT INTO OBJECT (TYPE_ID) VALUES (" << typeId << ");";
@@ -141,7 +141,7 @@ class DBSpaceStoreQueries
 		return ss.str();
 	}
 
-	static std::string selectEntityFromObject( int objId )
+	static std::string selectEntityFromObject( co::uint32 objId )
 	{
 		std::stringstream ss;
 		ss << "SELECT O.TYPE_ID FROM OBJECT O WHERE O.OBJECT_ID = " << objId;
@@ -150,7 +150,7 @@ class DBSpaceStoreQueries
 	}
 
 	
-	static std::string selectTypeById( co::int32 typeId )
+	static std::string selectTypeById( co::uint32 typeId )
 	{
 		std::stringstream ss;
 		ss << "SELECT T.TYPE_ID, T.TYPE_NAME, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = " << typeId;

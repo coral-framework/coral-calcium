@@ -23,14 +23,13 @@
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
 #include <ca/ModelException.h>
-#include "IResultSet.h"
 #include <ca/NoSuchObjectException.h>
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
 #include <cstdio>
 #include <sqlite3.h>
 
-#include "SQLiteDBConnection.h"
+#include "SQLiteConnection.h"
 
 
 class SpacePersisterTest : public ERMSpace {};

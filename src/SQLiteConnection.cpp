@@ -1,4 +1,4 @@
-#include "SQLiteDBConnection.h"
+#include "SQLiteConnection.h"
 #include "SQLiteResultSet.h"
 
 #include "sqlite3.h"
@@ -7,12 +7,12 @@
 
 namespace ca {
 	
-	SQLiteDBConnection::SQLiteDBConnection()
+	SQLiteConnection::SQLiteConnection()
 	{
 		_db = 0;
 	}
 
-	SQLiteDBConnection::~SQLiteDBConnection()
+	SQLiteConnection::~SQLiteConnection()
 	{
 		if( _db ) 
 		{
@@ -20,7 +20,7 @@ namespace ca {
 		}
 	}
 
-	void SQLiteDBConnection::createDatabase()
+	void SQLiteConnection::createDatabase()
 	{
 		if( fileExists( _fileName.c_str() ) )
 		{
@@ -33,7 +33,7 @@ namespace ca {
 		}
 	}
 
-	void SQLiteDBConnection::execute( const std::string& insertOrUpdateSQL ) 
+	void SQLiteConnection::execute( const std::string& insertOrUpdateSQL ) 
 	{
 		if(!_db)
 		{
@@ -48,7 +48,7 @@ namespace ca {
 		}
 	}
 
-	void SQLiteDBConnection::executeQuery( const std::string& querySQL, ca::SQLiteResultSet& resultSetSQLite )
+	void SQLiteConnection::executeQuery( const std::string& querySQL, ca::SQLiteResultSet& resultSetSQLite )
 	{ 
 		if(!_db)
 		{
@@ -67,7 +67,7 @@ namespace ca {
 		resultSetSQLite.setStatement(_statement);
 	}
 
-	void SQLiteDBConnection::open()
+	void SQLiteConnection::open()
 	{
 		if(!fileExists(_fileName.c_str()))
 		{
@@ -85,7 +85,7 @@ namespace ca {
 		}
 	}
 
-	void SQLiteDBConnection::close()
+	void SQLiteConnection::close()
 	{
 		int closeCode = sqlite3_close(_db);
 		if(closeCode == SQLITE_OK)
@@ -99,23 +99,23 @@ namespace ca {
 		}
 	}
 
-	const std::string& SQLiteDBConnection::getFileName()
+	const std::string& SQLiteConnection::getFileName()
 	{
 		return _fileName;
 	}
 
-	void SQLiteDBConnection::setFileName( const std::string& name )
+	void SQLiteConnection::setFileName( const std::string& name )
 	{
 		_fileName = name;
 	}
 
-	bool SQLiteDBConnection::isConnected()
+	bool SQLiteConnection::isConnected()
 	{
 		return _db != NULL;
 	}
 
 	
-	bool SQLiteDBConnection::fileExists(const char * filePath)
+	bool SQLiteConnection::fileExists(const char * filePath)
 	{
 		FILE* file = fopen(filePath, "r");
 		bool result = file != 0;

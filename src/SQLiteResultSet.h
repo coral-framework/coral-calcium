@@ -4,8 +4,7 @@
 #ifndef _CA_SQLITERESULTSET_H_
 #define _CA_SQLITERESULTSET_H_
 
-namespace ca
-{
+namespace ca {
 
 class SQLiteResultSet
 {
@@ -34,6 +33,6 @@ private:
 	unsigned int _columnCount;
 };
 
-}
+} // namespace ca
 
 #endif

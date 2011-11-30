@@ -781,4 +781,4 @@ void StringSerializer::escapeLuaString( const std::string&  str, std::stringstre
 
 }
 
-}
+}; // namespace ca

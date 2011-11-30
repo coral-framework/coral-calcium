@@ -13,7 +13,7 @@
 
 #include "DBException.h"
 
-#include "SQLiteDBConnection.h"
+#include "SQLiteConnection.h"
 #include "SQLiteResultSet.h"
 
 #include <string>
@@ -257,7 +257,7 @@ public:
 private:
 
 	std::string _fileName;
-	ca::SQLiteDBConnection _db;
+	ca::SQLiteConnection _db;
 	co::uint32 _currentRevision;
 	co::uint32 _latestRevision;
 	co::uint32 _rootObjectId;
@@ -337,7 +337,7 @@ private:
 
 	}
 
-	void executeQueryOrThrow( std::string sql, ca::SQLiteResultSet& rs )
+	void executeQueryOrThrow( const std::string& sql, ca::SQLiteResultSet& rs )
 	{
 		try
 		{
@@ -350,7 +350,7 @@ private:
 				
 	}
 
-	void executeOrThrow( std::string sql )
+	void executeOrThrow( const std::string& sql )
 	{
 		try
 		{
@@ -364,6 +364,6 @@ private:
 	}
 
 };
-CORAL_EXPORT_COMPONENT(DBSpaceStore, DBSpaceStore);
+CORAL_EXPORT_COMPONENT( DBSpaceStore, DBSpaceStore );
 
 } // namespace ca

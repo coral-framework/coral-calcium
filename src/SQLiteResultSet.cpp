@@ -58,4 +58,4 @@ void SQLiteResultSet::finalize()
 	_stmt = 0;
 }
 
-};
+}; // namespace ca

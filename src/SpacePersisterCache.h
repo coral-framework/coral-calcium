@@ -8,6 +8,8 @@
 #include <string.h>
 #include <map>
 
+namespace ca {
+
 class SpacePersisterCache 
 {
 public:
@@ -137,5 +139,7 @@ private:
 	MemberIdMap _memberIdCache;
 	IdMemberMap _memberCache;
 };
+
+} // namespace ca
 
 #endif
