@@ -483,7 +483,7 @@ namespace ca {
 						}
 						try
 						{
-							object->setServiceAt( port, refObj->getServiceAt( getFirstFacet(refObj, port->getType()) ) );
+							object->setServiceAt( port, refObj->getServiceAt( getFirstFacet( refObj, port->getType() ) ) );
 						}
 						catch( co::IllegalCastException& e )
 						{

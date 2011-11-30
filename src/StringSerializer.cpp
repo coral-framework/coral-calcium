@@ -53,9 +53,8 @@ void StringSerializer::setModel(ca::IModel* model)
 }
 
 
-std::vector<co::IField*> StringSerializer::getFieldsToSerializeForType( co::IRecordType* type )
+void StringSerializer::getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fieldsToSerialize )
 {
-	std::vector<co::IField*> fieldsToSerialize;
 	if( _model == 0 )
 	{
 		for(int i = 0; i < type->getFields().getSize(); i++)
@@ -82,7 +81,6 @@ std::vector<co::IField*> StringSerializer::getFieldsToSerializeForType( co::IRec
 			fieldsToSerialize.push_back( refVector[i].get() );
 		}
 	}
-	return fieldsToSerialize;
 }
 
 void StringSerializer::fromStream( std::stringstream& ss, co::IType* type, co::Any& value )
@@ -119,7 +117,8 @@ void StringSerializer::readComplexType( std::stringstream& ss, co::Any& value, c
 		throw ca::FormatException("'{' expected to start complex type value.");
 	}
 
-	std::vector<co::IField*> fields = getFieldsToSerializeForType(classType);
+	std::vector<co::IField*> fields; 
+	getFieldsToSerializeForType( classType, fields );
 	std::string fieldName;
 	co::Any fieldValue;
 
@@ -128,7 +127,7 @@ void StringSerializer::readComplexType( std::stringstream& ss, co::Any& value, c
 	std::stringstream msg;
 	for( int i = 0; i < fields.size(); i++ )
 	{
-		fieldName = readLiteralFromStream(ss);
+		readLiteralFromStream( ss, fieldName );
 
 		if( fieldName != fields[i]->getName() )
 		{
@@ -211,7 +210,7 @@ T StringSerializer::readPrimitive( std::stringstream& ss, co::TypeKind tk )
 bool StringSerializer::readBoolean( std::stringstream& ss )
 {
 	std::string boolStr;
-	boolStr = readLiteralFromStream( ss );
+	readLiteralFromStream( ss, boolStr );
 
 	if (boolStr != "true" && boolStr != "false")
 	{
@@ -237,14 +236,8 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 	co::IType* elementType = static_cast<co::IArray*>(type)->getElementType();
 	co::TypeKind tk = elementType->getKind();
 
-	co::Any indexArray;
-	std::string literalTmp;
-	co::Any::PseudoVector pseudoVector;
 	switch(tk)
 	{
-		case co::TK_ARRAY:
-			readArray( ss, indexArray, elementType);
-		break;
 		case co::TK_ENUM:
 			readEnumArrayFromStream(ss, elementType, value);
 		break;
@@ -348,7 +341,7 @@ void StringSerializer::readStringArrayFromStream( std::stringstream& ss, co::Any
 	char check;
 	while(true)
 	{
-		literalTmp = extractStringValueWithoutQuotes(ss);
+		extractStringValueWithoutQuotes( ss, literalTmp );
 		result.push_back(literalTmp);
 		ss.get(check);
 		assertNotFail(ss, "string array");
@@ -401,7 +394,8 @@ void StringSerializer::readEnumArrayFromStream( std::stringstream& ss, co::IType
 
 co::int32 StringSerializer::readEnum( std::stringstream& ss, co::IEnum* enumType )
 {
-	std::string literalTmp = readLiteralFromStream(ss);
+	std::string literalTmp; 
+	readLiteralFromStream( ss, literalTmp );
 	co::int32 enumValue = enumType->getValueOf(literalTmp);
 
 	if( enumValue == -1 )
@@ -414,13 +408,15 @@ co::int32 StringSerializer::readEnum( std::stringstream& ss, co::IEnum* enumType
 	return enumValue;
 }
 
-std::string StringSerializer::readLiteralFromStream( std::stringstream& ss )
+void StringSerializer::readLiteralFromStream( std::stringstream& ss, std::string& str )
 {
 	std::string result;
 	char buffer;
 
+	str = "";
+
 	ss.get(buffer);
-	result.push_back(buffer);
+	str.push_back(buffer);
 
 	if(!isalpha(buffer))
 	{
@@ -438,7 +434,7 @@ std::string StringSerializer::readLiteralFromStream( std::stringstream& ss )
 				
 		if(isalnum(buffer))
 		{
-			result.push_back(buffer);
+			str.push_back(buffer);
 			ss.get( buffer );
 		}
 		else
@@ -446,7 +442,6 @@ std::string StringSerializer::readLiteralFromStream( std::stringstream& ss )
 			break;
 		}
 	}
-	return result;
 }
 
 template<typename T>
@@ -532,32 +527,31 @@ void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value,
 		applyPrimitiveToAny<double>(ss, value, tk);
 	break;
 	case co::TK_STRING:
-		value.createString() = extractStringValueWithoutQuotes(ss);
+		extractStringValueWithoutQuotes( ss, value.createString() );
 	break;
 
 	}
 }
 
-std::string StringSerializer::extractStringValueWithoutQuotes( std::stringstream& ss )
+void StringSerializer::extractStringValueWithoutQuotes( std::stringstream& ss, std::string& str )
 {
 	if(ss.peek() == '\'')
 	{
-		return extractQuotedString(ss);
+		return extractQuotedString( ss, str );
 	}
 	else
 	{
-		return extractLongBracketsString(ss);
+		return extractLongBracketsString( ss, str );
 	}
 }
 
-std::string StringSerializer::extractQuotedString( std::stringstream& ss )
+void StringSerializer::extractQuotedString( std::stringstream& ss, std::string& str )
 {
 	char readBuffer;
-	std::string result;
 	ss.get(readBuffer);
 
 	assert(readBuffer == '\'');
-
+	str = "";
 	while(true)
 	{
 		ss.get(readBuffer);
@@ -568,39 +562,37 @@ std::string StringSerializer::extractQuotedString( std::stringstream& ss )
 		{
 			break;
 		}
-		result.push_back(readBuffer);
+		str.push_back(readBuffer);
 	}
-	return result;
 }
 
-std::string StringSerializer::extractLongBracketsString( std::stringstream& ss )
+void StringSerializer::extractLongBracketsString( std::stringstream& ss, std::string& str )
 {
 	char readBuffer;
 	char openBrackets[4];
-	std::string result;
+
 	ss.read(openBrackets, 3);
 
 	int cmp = strcmp(openBrackets, "[=[");
-
+	str = "";
 	while(true)
 	{
 		ss.get(readBuffer);
 
 		assertNotFail( ss, "string value" );
 
-		result.push_back(readBuffer);
+		str.push_back(readBuffer);
 		if( readBuffer == ']' )
 		{
-			std::string matchClose = result.substr(result.size() - 3, 3);
+			std::string matchClose = str.substr(str.size() - 3, 3);
 
 			if(matchClose == "]=]")
 			{
-				result = result.substr(0, result.size()-3);
+				str = str.substr(0, str.size()-3);
 				break;
 			}
 		}
 	}
-	return result;
 }
 
 void StringSerializer::toStream( const co::Any& value, std::stringstream& ss )
@@ -641,7 +633,8 @@ void StringSerializer::writeEnum( const co::Any& value, std::stringstream& ss, c
 void StringSerializer::writeComplexType( const co::Any& value, std::stringstream& ss, co::IType* type )
 {
 	co::IRecordType * recordType = static_cast<co::IRecordType*>(type);
-	std::vector<co::IField*> fields = getFieldsToSerializeForType( recordType );
+	std::vector<co::IField*> fields; 
+	getFieldsToSerializeForType( recordType, fields );
 	co::IReflector * ref = type->getReflector();
 	co::Any fieldValue;
 	std::string fieldValueStr;

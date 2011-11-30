@@ -30,7 +30,7 @@ private:
 
 	//determine which fields should be serialized. If a IModel is provided, it is used to tell the fields to be serialized.
 	//If not, all fields of the given type will be serialized.
-	std::vector<co::IField*> getFieldsToSerializeForType( co::IRecordType* type );
+	void getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fields );
 
 	//de-serialization functions
 
@@ -53,7 +53,7 @@ private:
 
 	co::int32 readEnum( std::stringstream& ss, co::IEnum* enumType );
 
-	std::string readLiteralFromStream( std::stringstream& ss );
+	void readLiteralFromStream( std::stringstream& ss, std::string& str );
 	
 	template<typename T>
 	void readPrimitiveArrayFromStream( std::stringstream& ss, co::Any& value, co::IType* elementType );
@@ -81,11 +81,11 @@ private:
 	void writeComplexType(const co::Any& value, std::stringstream& ss, co::IType* type);
 
 	//string values helpers
-	std::string extractStringValueWithoutQuotes( std::stringstream& ss );
+	void extractStringValueWithoutQuotes( std::stringstream& ss, std::string& str );
 
-	std::string extractQuotedString( std::stringstream& ss );
+	void extractQuotedString( std::stringstream& ss, std::string& str );
 
-	std::string extractLongBracketsString( std::stringstream& ss );
+	void extractLongBracketsString( std::stringstream& ss, std::string& str  );
 
 	bool mustBeEscaped( const std::string& str );
 
