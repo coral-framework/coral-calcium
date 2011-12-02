@@ -396,7 +396,7 @@ co::int32 StringSerializer::readEnum( std::stringstream& ss, co::IEnum* enumType
 {
 	std::string literalTmp; 
 	readLiteralFromStream( ss, literalTmp );
-	co::int32 enumValue = enumType->getValueOf(literalTmp);
+	co::int32 enumValue = enumType->getValueOf( literalTmp );
 
 	if( enumValue == -1 )
 	{

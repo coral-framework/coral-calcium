@@ -1,4 +1,4 @@
-component DBSpaceStore
+component SQLiteSpaceStore
 {
 	provides ISpaceStore store;
 	provides INamed name;

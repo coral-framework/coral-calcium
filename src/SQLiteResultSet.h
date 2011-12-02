@@ -25,12 +25,13 @@ public:
 
 	void finalize();
 
-	void setStatement(sqlite3_stmt* stmt);
-		
+	void setStatement( sqlite3_stmt* stmt, bool prepared );
+	
 private:
 	sqlite3_stmt* _stmt;
 	std::string _value;
 	unsigned int _columnCount;
+	bool _isPreparedStatement;
 };
 
 } // namespace ca

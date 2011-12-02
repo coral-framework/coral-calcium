@@ -136,7 +136,44 @@ TEST_F( DBConnectionTest, closeDBFail )
 	rs.finalize();
 }
 
+TEST_F( DBConnectionTest, preparedStatementTest )
+{
+	std::string fileName = "testStatement.db";
 
+	ca::SQLiteConnection sqliteDBConn;
+
+	sqliteDBConn.setFileName(fileName);
+
+	remove(fileName.c_str());
+
+	sqliteDBConn.createDatabase();
+
+	EXPECT_NO_THROW(sqliteDBConn.execute("CREATE TABLE A (fieldX INTEGER, fieldY TEXT)"));
+	ca::SQLitePreparedStatement stmt;
+	EXPECT_NO_THROW( sqliteDBConn.createPreparedStatement("INSERT INTO A VALUES (?, ?)", stmt) );
+
+	EXPECT_NO_THROW( stmt.setInt( 1, 1 ));
+	EXPECT_NO_THROW( stmt.setString( 2, "value" ));
+	EXPECT_NO_THROW( stmt.execute() );
+
+	EXPECT_NO_THROW( sqliteDBConn.createPreparedStatement("SELECT * FROM A WHERE fieldX =  ?", stmt) );
+	EXPECT_NO_THROW( stmt.setInt( 1, 1 ) );
+	ca::SQLiteResultSet rs;
+
+	EXPECT_NO_THROW( stmt.execute( rs ) );
+	
+	EXPECT_TRUE( rs.next() );
+
+	EXPECT_EQ( rs.getValue( 0 ), "1" );
+	EXPECT_EQ( rs.getValue( 1 ), "value" );
+
+	//not finalized IResultSet
+	EXPECT_THROW( sqliteDBConn.close(), ca::DBException );
+	
+	stmt.finalize();
+
+	EXPECT_NO_THROW( sqliteDBConn.close() );
+}
 
 
 

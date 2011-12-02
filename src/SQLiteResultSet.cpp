@@ -36,16 +36,17 @@ const std::string SQLiteResultSet::getValue( co::uint32 columnIndex )
 	return str;
 }
 
-void SQLiteResultSet::setStatement(sqlite3_stmt* stmt)
+void SQLiteResultSet::setStatement( sqlite3_stmt* stmt, bool prepared )
 { 
 	assert(stmt);
-	_stmt = stmt; 
+	_stmt = stmt;
+	_isPreparedStatement = prepared;
 	_columnCount = sqlite3_column_count(stmt);
 }
 
 void SQLiteResultSet::finalize()
 {
-	if( _stmt )
+	if( _stmt && !_isPreparedStatement )
 	{
 		int error = sqlite3_finalize(_stmt);
 

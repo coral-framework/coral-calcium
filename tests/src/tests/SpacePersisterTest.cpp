@@ -65,7 +65,7 @@ TEST_F( SpacePersisterTest, exceptionsTest )
 	EXPECT_THROW( persister->restore(), co::IllegalStateException ); //spaceStore not set
 	EXPECT_THROW( persister->restoreRevision(1), co::IllegalStateException ); //spaceStore not set
 
-	co::RefPtr<co::IObject> spaceStoreObj = co::newInstance( "ca.DBSpaceStore" );
+	co::RefPtr<co::IObject> spaceStoreObj = co::newInstance( "ca.SQLiteSpaceStore" );
 	spaceStoreObj->getService<ca::INamed>()->setName( fileName );
 
 	persisterObj->setService( "store", spaceStoreObj->getService<ca::ISpaceStore>() );
@@ -99,7 +99,7 @@ TEST_F( SpacePersisterTest, testNewFileSetup )
 	co::RefPtr<co::IObject> persisterObj = co::newInstance( "ca.SpacePersister" );
 	ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
 	
-	co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.DBSpaceStore" );
+	co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.SQLiteSpaceStore" );
 	spaceFileObj->getService<ca::INamed>()->setName( fileName );
 
 	persisterObj->setService( "store", spaceFileObj->getService<ca::ISpaceStore>() );
@@ -126,14 +126,14 @@ TEST_F( SpacePersisterTest, testNewFileSetup )
 	ASSERT_EQ( 3, rels.getSize() );
 
 	erm::IRelationship* rel = rels[0];
-	EXPECT_EQ( "relation A-B", rel->getRelation() );
-	EXPECT_EQ( entities[0], rel->getEntityA() );
-	EXPECT_EQ( entities[1], rel->getEntityB() );
 	EXPECT_EQ( 0, rel->getMultiplicityA().min );
 	EXPECT_EQ( 0, rel->getMultiplicityA().max );
 	EXPECT_EQ( 1, rel->getMultiplicityB().min );
 	EXPECT_EQ( 2, rel->getMultiplicityB().max );
-
+	EXPECT_EQ( "relation A-B", rel->getRelation() );
+	EXPECT_EQ( entities[0], rel->getEntityA() );
+	EXPECT_EQ( entities[1], rel->getEntityB() );
+	
 	rel = rels[1];
 	EXPECT_EQ( "relation B-C", rel->getRelation() );
 	EXPECT_EQ( entities[1], rel->getEntityA() );

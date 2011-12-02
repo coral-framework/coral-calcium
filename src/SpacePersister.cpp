@@ -259,11 +259,11 @@ namespace ca {
 							}
 							co::Any refsValue;
 							refsValue.set<const std::vector<co::int32>&>( refs );
-							fieldValueStr = getValueAsString(refsValue);
+							_serializer.toString( refsValue, fieldValueStr );
 						}
 						else
 						{
-							fieldValueStr = getValueAsString( fieldValue );
+							_serializer.toString( fieldValue, fieldValueStr );
 						}
 						
 					}
@@ -283,7 +283,7 @@ namespace ca {
 					}
 					else
 					{
-						fieldValueStr = getValueAsString(fieldValue);
+						_serializer.toString( fieldValue, fieldValueStr );
 					}
 
 					ca::StoredFieldValue value;
@@ -443,8 +443,6 @@ namespace ca {
 				
 				co::Range<co::IPort* const> ports = object->getComponent()->getPorts();
 
-				_cache.insertObjectCache( object, id );
-
 				std::vector<ca::StoredFieldValue> fieldValues;
 				_spaceStore->getValues( id, revision, fieldValues );
 				
@@ -455,6 +453,8 @@ namespace ca {
 					ca::StoredFieldValue fieldValue = fieldValues[i];
 					mapFieldValue.insert( FieldValueMap::value_type( fieldValue.fieldId, fieldValue.value ) );
 				}
+
+				_cache.insertObjectCache( object, id );
 
 				co::IPort* port;
 				for( int i = 0; i < ports.getSize(); i++ )
@@ -494,6 +494,7 @@ namespace ca {
 					}
 
 				}
+				
 			}
 
 			co::IPort* getFirstFacet( co::IObject* refObj, co::IType* type )
@@ -656,21 +657,6 @@ namespace ca {
 			int getCalciumModelId()
 			{
 				return 1;
-			}
-
-			std::string getValueAsString(co::Any& value)
-			{
-				
-				std::string result;
-				_serializer.toString(value, result);
-
-				if( value.getKind() == co::TK_STRING && result[0] == '\'' )
-				{
-					result.insert( 0, "\'" );
-					result.push_back('\'');
-				}
-
-				return result;
 			}
 
 			co::IObject* getObject( co::uint32 objectId, co::uint32 revision )

@@ -23,6 +23,14 @@ SQLiteConnection::~SQLiteConnection()
 	}
 }
 
+void SQLiteConnection::checkConnection()
+{
+	if(!_db)
+	{
+		throw ca::DBException("Database not connected. Cannot execute command");
+	}
+}
+
 void SQLiteConnection::createDatabase()
 {
 	if( fileExists( _fileName.c_str() ) )
@@ -38,10 +46,8 @@ void SQLiteConnection::createDatabase()
 
 void SQLiteConnection::execute( const std::string& insertOrUpdateSQL ) 
 {
-	if(!_db)
-	{
-		throw ca::DBException("Database not connected. Cannot execute command");
-	}
+	checkConnection();
+
 	char* error;
 	sqlite3_exec(_db, insertOrUpdateSQL.c_str(), 0, 0, &error);
 
@@ -53,6 +59,20 @@ void SQLiteConnection::execute( const std::string& insertOrUpdateSQL )
 
 void SQLiteConnection::executeQuery( const std::string& querySQL, ca::SQLiteResultSet& resultSetSQLite )
 { 
+	checkConnection();
+
+	int resultCode = sqlite3_prepare_v2( _db, querySQL.c_str(), -1, &_statement, 0 );
+
+	if(resultCode != SQLITE_OK)
+	{
+		CORAL_THROW( ca::DBException, "Query Failed: " << sqlite3_errmsg( _db ) );
+	}
+
+	resultSetSQLite.setStatement( _statement, false );
+}
+
+void SQLiteConnection::createPreparedStatement( const std::string& querySQL, ca::SQLitePreparedStatement& stmt )
+{
 	if(!_db)
 	{
 		throw ca::DBException( "Database not connected. Cannot execute command" );
@@ -65,12 +85,12 @@ void SQLiteConnection::executeQuery( const std::string& querySQL, ca::SQLiteResu
 		CORAL_THROW( ca::DBException, "Query Failed: " << sqlite3_errmsg( _db ) );
 	}
 
-	resultSetSQLite.setStatement(_statement);
+	stmt.setStatement(_statement);
 }
 
 void SQLiteConnection::open()
 {
-	if(!fileExists(_fileName.c_str()))
+	if( !fileExists( _fileName.c_str() ) )
 	{
 		throw ca::DBException( "Open database failed. Attempt to open non existing file" );
 	}
