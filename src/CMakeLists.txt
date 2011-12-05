@@ -19,7 +19,7 @@ FILE( GLOB sqlite_files ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/* )
 
 ADD_LIBRARY( ca MODULE ${_HEADERS} ${_SOURCES} ${_GENERATED_FILES} ${sqlite_files} )
 
-CORAL_TARGET( "ca" ca )
+CORAL_MODULE_TARGET( "ca" ca )
 
 TARGET_LINK_LIBRARIES( ca ${CORAL_LIBRARIES} )
 
