@@ -25,7 +25,7 @@
 #include <ca/StoredFieldValue.h>
 #include <ca/StoredField.h>
 
-#include "StringSerializer.h"
+#include "sqlite/StringSerializer.h"
 #include "SpacePersisterCache.h"
 
 namespace ca {

@@ -17,7 +17,7 @@
 #include <serialization/TwoLevelNestedStruct.h>
 #include <co/IllegalArgumentException.h>
 
-#include "StringSerializer.h"
+#include "sqlite/StringSerializer.h"
 
 class StringSerializationTests {
 public:

@@ -1,9 +1,9 @@
 #include "ERMSpace.h"
 
 #include <ca/INamed.h>
-#include "SQLiteConnection.h"
-#include "SQLiteResultSet.h"
-#include "DBException.h"
+#include "sqlite/SQLiteConnection.h"
+#include "sqlite/SQLiteResultSet.h"
+#include "sqlite/DBException.h"
 #include <co/Coral.h>
 #include <gtest/gtest.h>
 #include <cstdio>

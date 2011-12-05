@@ -9,18 +9,22 @@ INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR}/generated )
 FILE( GLOB _SOURCES *.cpp *.c )
 FILE( GLOB _HEADERS *.h )
 
-ADD_LIBRARY( ca MODULE ${_HEADERS} ${_SOURCES} ${_GENERATED_FILES} )
-
-CORAL_MODULE_TARGET( "ca" ca )
-
-TARGET_LINK_LIBRARIES( ca ${CORAL_LIBRARIES} )
+ADD_SUBDIRECTORY( sqlite )
 
 ################################################################################
 # Source Groups
 ################################################################################
 
-SOURCE_GROUP( "@Generated" FILES ${_GENERATED_FILES} )
+FILE( GLOB sqlite_files ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/* )
 
+ADD_LIBRARY( ca MODULE ${_HEADERS} ${_SOURCES} ${_GENERATED_FILES} ${sqlite_files} )
+
+CORAL_TARGET( "ca" ca )
+
+TARGET_LINK_LIBRARIES( ca ${CORAL_LIBRARIES} )
+
+SOURCE_GROUP( "SQLite" FILES ${sqlite_files} )
+SOURCE_GROUP( "@Generated" FILES ${_GENERATED_FILES} )
 ################################################################################
 # Install Rules
 ################################################################################

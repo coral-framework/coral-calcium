@@ -27,9 +27,9 @@
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
 #include <cstdio>
-#include <sqlite3.h>
+#include <sqlite/sqlite3.h>
 
-#include "SQLiteConnection.h"
+#include "sqlite/SQLiteConnection.h"
 
 
 class SpacePersisterTest : public ERMSpace {};
