@@ -2,6 +2,7 @@
 #define _NATIVE_CLASS_SERIALIZATION_
 
 #include <string>
+#include <stdio.h>
 
 namespace serializationNative {
 	class NativeClass
