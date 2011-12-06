@@ -42,10 +42,10 @@ void testComplexType( ca::StringSerializer& serializer, const T& complexType )
 	complexAny.set<const T&>( complexType );
 	co::Any complexResult;
 
-	EXPECT_NO_THROW(serializer.toString( complexAny, strOutput ));
-	
-	EXPECT_NO_THROW(serializer.fromString( strOutput, co::typeOf<T>::get(), complexResult ));
-	EXPECT_EQ( complexType, complexResult.get<const T&>() );
+	EXPECT_NO_THROW( serializer.toString( complexAny, strOutput ) );
+
+	EXPECT_NO_THROW( serializer.fromString( strOutput, co::typeOf<T>::get(), complexResult ) );
+	EXPECT_TRUE( complexType == complexResult.get<const T&>() );
 }
 
 template< typename T>
@@ -62,7 +62,6 @@ void testArrayToAndFromString( ca::StringSerializer& serializer, T* staticArray,
 
 TEST( StringSerializationTests, stringDefinitionBasicTypes )
 {
-
 	ca::StringSerializer serializer;
 
 	std::string expected;
@@ -190,7 +189,7 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 
 	ca::StringSerializer serializer;
 
-	struct serialization::BasicTypesStruct structValue;
+	serialization::BasicTypesStruct structValue;
 	structValue.intValue = 1;
 	structValue.strValue = "name"; 
 	structValue.doubleValue = 4.56;
@@ -278,23 +277,23 @@ TEST( StringSerializationTests, fromAndToTestCompositeTypes )
 
 	ca::StringSerializer serializer;
 
-	struct serialization::BasicTypesStruct structValue;
+	serialization::BasicTypesStruct structValue;
 	structValue.intValue = 1;
 	structValue.strValue = "name"; 
 	structValue.doubleValue = 4.56;
 	structValue.byteValue = 123;
 
-	testComplexType<serialization::BasicTypesStruct>(serializer, structValue);
+	testComplexType<serialization::BasicTypesStruct>( serializer, structValue );
 
 	serialization::NativeClassCoral nativeValue;
 	nativeValue.intValue = 4386;
 	nativeValue.strValue = "nameNative"; 
 	nativeValue.doubleValue = 6.52;
 	nativeValue.byteValue = -64;
-	
-	testComplexType<serialization::NativeClassCoral>(serializer, nativeValue);
 
-	struct serialization::NestedStruct nestedStruct;
+	testComplexType<serialization::NativeClassCoral>( serializer, nativeValue );
+
+	serialization::NestedStruct nestedStruct;
 	nestedStruct.int16Value = 1234;
 	nestedStruct.enumValue = serialization::Three;
 	nestedStruct.structValue.intValue = 1;
@@ -304,18 +303,18 @@ TEST( StringSerializationTests, fromAndToTestCompositeTypes )
 
 	testComplexType<serialization::NestedStruct>(serializer, nestedStruct);
 
-	struct serialization::TwoLevelNestedStruct twoLevelNestedStruct;
-	
+	serialization::TwoLevelNestedStruct twoLevelNestedStruct;
+
 	twoLevelNestedStruct.boolean = true;
 	twoLevelNestedStruct.nativeClass = nativeValue;
 	twoLevelNestedStruct.nested = nestedStruct;
 	testComplexType<serialization::TwoLevelNestedStruct>(serializer, twoLevelNestedStruct);
 
-	struct serialization::ArrayStruct arrayStruct;
+	serialization::ArrayStruct arrayStruct;
 	arrayStruct.enums.push_back(serialization::One);
 	arrayStruct.enums.push_back(serialization::Two);
 
-	for(int i = 0; i < 5; i++)
+	for( int i = 0; i < 5; i++ )
 	{
 		arrayStruct.integers.push_back(i*2);
 	}
@@ -328,7 +327,7 @@ TEST( StringSerializationTests, fromAndToTestCompositeTypes )
 	structValue.strValue = "valueSecondStruct";
 
 	arrayStruct.basicStructs.push_back( structValue );
-	testComplexType<serialization::ArrayStruct>(serializer, arrayStruct);
+	testComplexType<serialization::ArrayStruct>( serializer, arrayStruct );
 	
 }
 
@@ -442,7 +441,7 @@ TEST( StringSerializationTests, stringDefinitionArray )
 	serializer.toString( anyArray, actual );
 	EXPECT_EQ(expected, actual);
 
-	struct serialization::BasicTypesStruct arrayStruct[2];
+	serialization::BasicTypesStruct arrayStruct[2];
 	
 	arrayStruct[0].intValue = 1;
 	arrayStruct[0].strValue = "name"; 
@@ -456,7 +455,7 @@ TEST( StringSerializationTests, stringDefinitionArray )
 
 	expected = "{{byteValue=123,doubleValue=4.56,intValue=1,strValue='name'},{byteValue=-100,doubleValue=1200000,intValue=6,strValue='nameSecond'}}";
 
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<struct serialization::BasicTypesStruct>::get(), 0, arrayStruct, 2 );
+	anyArray.setArray( co::Any::AK_Range, co::typeOf<serialization::BasicTypesStruct>::get(), 0, arrayStruct, 2 );
 	serializer.toString( anyArray, actual );
 	EXPECT_EQ(expected, actual);
 
@@ -635,7 +634,7 @@ TEST( StringSerializationTests, fromStringPrimitiveArrayTest )
 	EXPECT_NO_THROW(serializer.fromString( strOutput, co::typeOf<std::vector<co::int32>>::get(), result ));
 	EXPECT_EQ(0, result.get<const std::vector<co::int32>&>().size());
 
-	struct serialization::BasicTypesStruct arrayStruct[2];
+	serialization::BasicTypesStruct arrayStruct[2];
 	
 	arrayStruct[0].intValue = 1;
 	arrayStruct[0].strValue = "name"; 
@@ -712,7 +711,7 @@ TEST( StringSerializationTests, serializationModelAwareTest )
 
 	co::Any value;
 
-	struct serialization::BasicTypesStruct structValue;
+	serialization::BasicTypesStruct structValue;
 	structValue.intValue = 1;
 	structValue.strValue = "name"; 
 	structValue.doubleValue = 4.56;
@@ -720,9 +719,9 @@ TEST( StringSerializationTests, serializationModelAwareTest )
 
 	value.set<const serialization::BasicTypesStruct&>(structValue);
 	
-	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::BasicTypesStruct>::get(), model);
+	testComplexTypeModelAware( serializer, value, co::typeOf<serialization::BasicTypesStruct>::get(), model );
 
-	struct serialization::NestedStruct nestedStruct;
+	serialization::NestedStruct nestedStruct;
 	nestedStruct.int16Value = 1234;
 	nestedStruct.enumValue = serialization::Three;
 	nestedStruct.structValue.intValue = 1;
@@ -742,7 +741,7 @@ TEST( StringSerializationTests, serializationModelAwareTest )
 	value.set<const serialization::NativeClassCoral&>(nativeValue);
 	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::NativeClassCoral>::get(), model);
 
-	struct serialization::TwoLevelNestedStruct twoLevelNestedStruct;
+	serialization::TwoLevelNestedStruct twoLevelNestedStruct;
 	
 	twoLevelNestedStruct.boolean = true;
 	twoLevelNestedStruct.nativeClass = nativeValue;
@@ -751,7 +750,7 @@ TEST( StringSerializationTests, serializationModelAwareTest )
 	value.set<const serialization::TwoLevelNestedStruct&>(twoLevelNestedStruct);
 	testComplexTypeModelAware(serializer, value, co::typeOf<serialization::TwoLevelNestedStruct>::get(), model);
 
-	struct serialization::ArrayStruct arrayStruct;
+	serialization::ArrayStruct arrayStruct;
 	arrayStruct.enums.push_back(serialization::One);
 	arrayStruct.enums.push_back(serialization::Two);
 
