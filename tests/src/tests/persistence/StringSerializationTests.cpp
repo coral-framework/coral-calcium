@@ -30,7 +30,7 @@ void compareArray(T* staticArray, std::vector<T> resultArray, int size)
 	EXPECT_EQ(size, resultArray.size());
 	for(int i = 0; i < size; i++)
 	{
-		EXPECT_EQ(staticArray[i], resultArray[i]);
+		EXPECT_TRUE( staticArray[i] == resultArray[i] );
 	}
 }
 
