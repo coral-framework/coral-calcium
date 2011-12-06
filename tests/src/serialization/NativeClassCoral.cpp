@@ -4,7 +4,7 @@
 
 namespace serialization {
 
-int NativeClassCoral_Adapter::getIntValue( serialization::NativeClassCoral& nativeClass )
+co::int32 NativeClassCoral_Adapter::getIntValue( serialization::NativeClassCoral& nativeClass )
 {
 	return nativeClass.intValue;
 }

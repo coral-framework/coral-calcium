@@ -3,7 +3,6 @@
 #include <co/Any.h>
 #include <co/Coral.h>
 #include <co/IType.h>
-#include <cstdio>
 #include <sstream>
 #include <co/IClassType.h>
 #include <co/IField.h>
@@ -41,7 +40,7 @@ void StringSerializer::toString( const co::Any& value, std::string& valueToStr )
 	{
 		throw co::IllegalArgumentException("Pointer serialization not supported");
 	}
-			
+	
 	std::stringstream valueStream;
 	toStream(value, valueStream);
 	valueToStr.assign(valueStream.str());
@@ -66,16 +65,8 @@ void StringSerializer::getFieldsToSerializeForType( co::IRecordType* type, std::
 	{
 		co::RefVector<co::IField> refVector;
 				
-		try 
-		{
-			_model->getFields(type, refVector);
-		}
-		catch ( ca::ModelException& e )
-		{
-			std::string msg = e.getMessage();
-			printf( msg.c_str() );
-		}
-
+		_model->getFields(type, refVector);
+		
 		for(int i = 0; i < refVector.size(); i++)
 		{
 			fieldsToSerialize.push_back( refVector[i].get() );
@@ -535,7 +526,7 @@ void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value,
 
 void StringSerializer::extractStringValueWithoutQuotes( std::stringstream& ss, std::string& str )
 {
-	if(ss.peek() == '\'')
+	if( ss.peek() == '\'')
 	{
 		return extractQuotedString( ss, str );
 	}
@@ -572,8 +563,11 @@ void StringSerializer::extractLongBracketsString( std::stringstream& ss, std::st
 	char openBrackets[4];
 
 	ss.read(openBrackets, 3);
+	openBrackets[3]='\0';
+	
+	assertNotFail( ss, "string value" );
+	assert( std::string( openBrackets ) == "[=[" );
 
-	int cmp = strcmp(openBrackets, "[=[");
 	str = "";
 	while(true)
 	{
