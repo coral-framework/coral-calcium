@@ -2,64 +2,63 @@
 # Calcium - Domain Model Framework
 ################################################################################
 
-CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )
+cmake_minimum_required( VERSION 2.6 )
 
-PROJECT( CALCIUM )
+project( CALCIUM )
 
 ################################################################################
 # Setup Coral
 ################################################################################
 
 # Resolve the CORAL_ROOT
-FILE( TO_CMAKE_PATH "$ENV{CORAL_ROOT}" CORAL_ROOT )
+file( TO_CMAKE_PATH "$ENV{CORAL_ROOT}" CORAL_ROOT )
 
 # Add Coral's CMake dir to the CMAKE_MODULE_PATH
-SET( CMAKE_MODULE_PATH ${CORAL_ROOT}/cmake ${CMAKE_MODULE_PATH} )
+set( CMAKE_MODULE_PATH ${CORAL_ROOT}/cmake ${CMAKE_MODULE_PATH} )
 
 # Load Coral's CMake package
-FIND_PACKAGE( Coral REQUIRED )
+find_package( Coral REQUIRED )
 
 # Configure the coral path
-SET( CORAL_PATH
-	"${CORAL_ROOT}/modules"
+set( CORAL_PATH
 	"${CMAKE_BINARY_DIR}/modules"
 	"${CMAKE_SOURCE_DIR}/modules"
 )
 
-INCLUDE_DIRECTORIES( ${CORAL_INCLUDE_DIRS} )
+include_directories( ${CORAL_INCLUDE_DIRS} )
 
 ################################################################################
 # Installation
 ################################################################################
 
 # enforce a safe default CMAKE_INSTALL_PREFIX
-IF( NOT CMAKE_INSTALL_PREFIX MATCHES "coral-calcium" )
-	SET( CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/coral-calcium" )
-ENDIF()
+if( NOT CMAKE_INSTALL_PREFIX MATCHES "coral-calcium" )
+	set( CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/coral-calcium" )
+endif()
 
 ################################################################################
 # Packaging
 ################################################################################
 
-SET( CPACK_PACKAGE_NAME					"coral-calcium" )
-SET( CPACK_PACKAGE_VERSION_MAJOR		"0" )
-SET( CPACK_PACKAGE_VERSION_MINOR		"1" )
-SET( CPACK_PACKAGE_VERSION_PATCH		"0" )
-SET( CPACK_PACKAGE_DESCRIPTION_SUMMARY	"Calcium is a versatile and minimally intrusive domain object model framework." )
+set( CPACK_PACKAGE_NAME					"coral-calcium" )
+set( CPACK_PACKAGE_VERSION_MAJOR		"0" )
+set( CPACK_PACKAGE_VERSION_MINOR		"1" )
+set( CPACK_PACKAGE_VERSION_PATCH		"0" )
+set( CPACK_PACKAGE_DESCRIPTION_SUMMARY	"Calcium is a versatile and minimally intrusive domain object model framework." )
 
-IF( WIN32 )
-	SET( CPACK_GENERATOR "ZIP" )
-ELSE()
-	SET( CPACK_GENERATOR "TBZ2" )
-ENDIF()
+if( WIN32 )
+	set( CPACK_GENERATOR "ZIP" )
+else()
+	set( CPACK_GENERATOR "TBZ2" )
+endif()
 
-INCLUDE( CPack )
+include( CPack )
 
 ################################################################################
 # Subdirectories
 ################################################################################
 
-ADD_SUBDIRECTORY( src )
+add_subdirectory( src )
 
-ENABLE_TESTING()
-ADD_SUBDIRECTORY( tests )
+enable_testing()
+add_subdirectory( tests )

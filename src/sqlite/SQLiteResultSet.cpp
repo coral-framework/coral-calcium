@@ -1,3 +1,8 @@
+/*
+ * Calcium - Domain Model Framework
+ * See copyright notice in LICENSE.md
+ */
+
 #include "SQLiteResultSet.h"
 #include "sqlite3.h"
 #include <co/Coral.h>
@@ -59,4 +64,4 @@ void SQLiteResultSet::finalize()
 	_stmt = 0;
 }
 
-}; // namespace ca
+} // namespace ca

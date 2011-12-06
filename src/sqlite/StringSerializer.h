@@ -1,3 +1,8 @@
+/*
+ * Calcium - Domain Model Framework
+ * See copyright notice in LICENSE.md
+ */
+
 #ifndef _CA_STRINGSERIALIZER_H_
 #define _CA_STRINGSERIALIZER_H_
 
@@ -11,12 +16,8 @@ namespace ca {
 
 class StringSerializer
 {
-	
 public:
-
 	StringSerializer();
-
-	~StringSerializer() {;}
 
 	void fromString( const std::string& valueToStr, co::IType* type, co::Any& value );
 
@@ -25,7 +26,6 @@ public:
 	void setModel( ca::IModel* model );
 
 private:
-
 	ca::IModel* _model;
 
 	//determine which fields should be serialized. If a IModel is provided, it is used to tell the fields to be serialized.
@@ -89,9 +89,9 @@ private:
 
 	bool mustBeEscaped( const std::string& str );
 
-	void escapeLuaString( const std::string&  str, std::stringstream& ss );
-
+	void escapeLuaString( const std::string& str, std::stringstream& ss );
 };
 
 } // namespace ca
+
 #endif // _CA_ISTRINGSERIALIZER_H_

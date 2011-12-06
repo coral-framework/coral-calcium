@@ -3,16 +3,16 @@
 ################################################################################
 
 # Add the tests 'module' dir to the CORAL_PATH
-SET( CORAL_PATH ${CORAL_PATH} "${CMAKE_SOURCE_DIR}/tests/modules" )
+set( CORAL_PATH ${CORAL_PATH} "${CMAKE_SOURCE_DIR}/tests/modules" )
 
 # Pass the CORAL_PATH as a precompiler definition to all subprojects
 CORAL_GET_PATH_STRING( CORAL_PATH_STR )
-SET_PROPERTY( DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS "CORAL_PATH=\"${CORAL_PATH_STR}\"" )
+set_property( DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS "CORAL_PATH=\"${CORAL_ROOT}/modules,${CORAL_PATH_STR}\"" )
 
 # Auxiliary Modules
-ADD_SUBDIRECTORY( camodels )
-ADD_SUBDIRECTORY( erm )
-ADD_SUBDIRECTORY( serialization )
+add_subdirectory( camodels )
+add_subdirectory( erm )
+add_subdirectory( serialization )
 
 # The test executable
-ADD_SUBDIRECTORY( tests )
+add_subdirectory( tests )

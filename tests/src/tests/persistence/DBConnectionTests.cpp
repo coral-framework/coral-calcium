@@ -1,17 +1,12 @@
-#include "ERMSpace.h"
-
-#include <ca/INamed.h>
+#include "../ERMSpace.h"
 #include "sqlite/SQLiteConnection.h"
 #include "sqlite/SQLiteResultSet.h"
 #include "sqlite/DBException.h"
-#include <co/Coral.h>
+#include <ca/INamed.h>
 #include <gtest/gtest.h>
 #include <cstdio>
 
-class DBConnectionTest : public ERMSpace {
-};
-
-
+class DBConnectionTest : public ERMSpace {};
 
 TEST_F( DBConnectionTest, testOpenNonExistingDB )
 {

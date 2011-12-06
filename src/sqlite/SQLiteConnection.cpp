@@ -1,11 +1,12 @@
+/*
+ * Calcium - Domain Model Framework
+ * See copyright notice in LICENSE.md
+ */
+
 #include "SQLiteConnection.h"
 #include "SQLiteResultSet.h"
-
-#include "sqlite3.h"
 #include "DBException.h"
-
-#include <co/Exception.h>
-
+#include "sqlite3.h"
 #include <sstream>
 
 namespace ca {
@@ -113,7 +114,7 @@ void SQLiteConnection::close()
 	{
 		_db = 0;
 	}
-	else 
+	else
 	{
 		throw ca::DBException("Could not close database. Check for not finalized IResultSets");
 	}
@@ -146,4 +147,4 @@ bool SQLiteConnection::fileExists(const char * filePath)
 	return result;
 }
 
-}; // namespace ca
+} // namespace ca

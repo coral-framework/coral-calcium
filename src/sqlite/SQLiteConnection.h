@@ -1,14 +1,10 @@
-/*******************************************************************************
-** C++ mapping generated for type 'ca.IDBConnection'
-**
-** Created: Fri Nov 04 15:48:29 2011
-**      by: Coral Compiler version 0.7.0
-**
-** WARNING! All changes made in this file will be lost when recompiling!
-********************************************************************************/
+/*
+ * Calcium - Domain Model Framework
+ * See copyright notice in LICENSE.md
+ */
 
-#ifndef _CA_SQLiteConnection_H_
-#define _CA_SQLiteConnection_H_
+#ifndef _SQLITECONNECTION_H_
+#define _SQLITECONNECTION_H_
 
 #include <co/TypeTraits.h>
 #include "sqlite3.h"
@@ -30,7 +26,6 @@ namespace ca {
 class SQLitePreparedStatement 
 {
 public:
-
 	SQLitePreparedStatement()
 	{
 		_preparedStatement = NULL;
@@ -110,7 +105,6 @@ private:
 class SQLiteConnection
 {
 public:
-
 	SQLiteConnection();
 
 	virtual ~SQLiteConnection();
@@ -142,8 +136,6 @@ private:
 
 	bool fileExists(const char * filePath);
 };
-
-
 
 } // namespace ca
 

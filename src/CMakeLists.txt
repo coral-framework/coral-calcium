@@ -1,41 +1,51 @@
 ################################################################################
+# Calcium Module ("ca")
+################################################################################
+
+project( CA )
+
+################################################################################
 # Build the Module
 ################################################################################
 
 CORAL_GENERATE_MODULE( _GENERATED_FILES ca lua.IState )
 
-INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR}/generated )
+include_directories( ${CMAKE_CURRENT_BINARY_DIR}/generated )
 
-FILE( GLOB _SOURCES *.cpp *.c )
-FILE( GLOB _HEADERS *.h )
+file( GLOB HEADER_FILES *.h )
+file( GLOB SOURCE_FILES *.cpp )
+file( GLOB SQLITE_FILES sqlite/* )
 
-ADD_SUBDIRECTORY( sqlite )
+add_library( ca MODULE ${HEADER_FILES} ${SOURCE_FILES} ${SQLITE_FILES} ${_GENERATED_FILES} )
+
+CORAL_MODULE_TARGET( "ca" ca )
 
 ################################################################################
 # Source Groups
 ################################################################################
 
-FILE( GLOB sqlite_files ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/* )
+source_group( "@Generated" FILES ${_GENERATED_FILES} )
 
-ADD_LIBRARY( ca MODULE ${_HEADERS} ${_SOURCES} ${_GENERATED_FILES} ${sqlite_files} )
+file( GLOB coreFiles Model* Object* Service* Space* Universe* Module* )
+source_group( "Core" FILES ${coreFiles} )
 
-CORAL_MODULE_TARGET( "ca" ca )
+file( GLOB persistenceFiles *Persister* )
+source_group( "Persistence" FILES ${persistenceFiles} )
+source_group( "Persistence\\SQLite" FILES ${SQLITE_FILES} )
 
-TARGET_LINK_LIBRARIES( ca ${CORAL_LIBRARIES} )
+source_group( "Undo" FILES "UndoManager.cpp" )
 
-SOURCE_GROUP( "SQLite" FILES ${sqlite_files} )
-SOURCE_GROUP( "@Generated" FILES ${_GENERATED_FILES} )
 ################################################################################
 # Install Rules
 ################################################################################
 
 # install shared library
-INSTALL( TARGETS ca
+install( TARGETS ca
 	DESTINATION "modules/ca"
 	COMPONENT "Calcium Module"
 )
 
-INSTALL( FILES "${CMAKE_BINARY_DIR}/modules/ca/ca_debug.pdb"
+install( FILES "${CMAKE_BINARY_DIR}/modules/ca/ca_debug.pdb"
 	DESTINATION "modules/ca"
 	CONFIGURATIONS Debug
 	COMPONENT "Calcium Module"
@@ -43,7 +53,7 @@ INSTALL( FILES "${CMAKE_BINARY_DIR}/modules/ca/ca_debug.pdb"
 )
 
 # install module files
-INSTALL( DIRECTORY ${CMAKE_SOURCE_DIR}/modules/ca
+install( DIRECTORY ${CMAKE_SOURCE_DIR}/modules/ca
 	DESTINATION "modules"
 	CONFIGURATIONS Release RelWithDebInfo
 	COMPONENT "Calcium Module"

@@ -2,7 +2,7 @@
  * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
-#include "ERMSpace.h"
+#include "../ERMSpace.h"
 
 #include <gtest/gtest.h>
 

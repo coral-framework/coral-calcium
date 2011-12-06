@@ -1,3 +1,8 @@
+/*
+ * Calcium - Domain Model Framework
+ * See copyright notice in LICENSE.md
+ */
+
 #include "sqlite3.h"
 #include <co/Coral.h>
 

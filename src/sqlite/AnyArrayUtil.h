@@ -1,3 +1,8 @@
+/*
+ * Calcium - Domain Model Framework
+ * See copyright notice in LICENSE.md
+ */
+
 #ifndef _ANY_ARRAY_UTIL_
 #define _ANY_ARRAY_UTIL_
 

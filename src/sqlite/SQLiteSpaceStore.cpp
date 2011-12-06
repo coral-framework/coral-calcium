@@ -1,3 +1,8 @@
+/*
+ * Calcium - Domain Model Framework
+ * See copyright notice in LICENSE.md
+ */
+
 #include "SQLiteSpaceStore_Base.h"
 
 #include <co/RefPtr.h>

@@ -3,8 +3,7 @@
  * See copyright notice in LICENSE.md
  */
 
-#include "ERMSpace.h"
-
+#include "../ERMSpace.h"
 #include <ca/INamed.h>
 #include <ca/IArchive.h>
 #include <ca/IOException.h>
