@@ -35,7 +35,7 @@ void compareArray(T* staticArray, std::vector<T> resultArray, int size)
 }
 
 template< typename T>
-void testComplexType( ca::StringSerializer& serializer, T& complexType )
+void testComplexType( ca::StringSerializer& serializer, const T& complexType )
 {
 	std::string strOutput;
 	co::Any complexAny;
