@@ -127,8 +127,8 @@ TEST( StringSerializationTests, stringDefinitionBasicTypes )
 	serializer.toString( co::Any(uInteger64), actual );
 	EXPECT_EQ(expected, actual);
 
-	float floatValue = 4.312300000f;
-	expected = "4.3123";
+	float floatValue = 4.3125f;
+	expected = "4.3125";
 	
 	serializer.toString( co::Any(floatValue), actual );
 	EXPECT_EQ(expected, actual);
@@ -139,8 +139,8 @@ TEST( StringSerializationTests, stringDefinitionBasicTypes )
 	serializer.toString(co::Any(floatValue), actual);
 	EXPECT_EQ(expected, actual);
 
-	floatValue = 0.00000123f;
-	expected = "1.23e-06";
+	floatValue = 0.0000512f;
+	expected = "5.12000005983282e-05";
 	
 	serializer.toString( co::Any(floatValue), actual );
 	EXPECT_EQ(expected, actual);
@@ -340,12 +340,12 @@ TEST( StringSerializationTests, stringDefinitionArray )
 	serializer.toString( anyArray, actual );
 	EXPECT_EQ(expected, actual);
 
-	float floatArray[] = {5.67f, -3.12e-10f};
-	expected = "{5.67,-3.12e-10}";
+	float floatArray[] = {6.25f, -3.35e-10f};
+	expected = "{6.25,-3.34999999962449e-10}";
 	
 	anyArray.setArray( co::Any::AK_Range, co::typeOf<float>::get(), 0, floatArray, 2 );
 	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	EXPECT_EQ( expected, actual );
 
 	double doubleArray[] = {-53485.67321312, 123e10};
 	expected = "{-53485.67321312,1230000000000}";

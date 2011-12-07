@@ -27,11 +27,9 @@ StringSerializer::StringSerializer()
 
 void StringSerializer::fromString( const std::string& valueToStr, co::IType* type, co::Any& value )
 {
-
 	std::stringstream ss( valueToStr );
 
 	fromStream( ss, type, value );
-
 }
 
 void StringSerializer::toString( const co::Any& value, std::string& valueToStr )
@@ -45,10 +43,15 @@ void StringSerializer::toString( const co::Any& value, std::string& valueToStr )
 	{
 		throw co::IllegalArgumentException("Pointer serialization not supported");
 	}
-	
+
+#ifdef CORAL_OS_WIN
+	// makes windows compatible with the rest of the world
+	_set_output_format( _TWO_DIGIT_EXPONENT );
+#endif
+
 	std::stringstream valueStream;
 	toStream(value, valueStream);
-	valueToStr.assign(valueStream.str());
+	valueStream.str().swap( valueToStr );
 }
 
 void StringSerializer::setModel(ca::IModel* model)
@@ -598,7 +601,7 @@ void StringSerializer::toStream( const co::Any& value, std::stringstream& ss )
 {
 	co::IType* type = value.getType();
 
-	if(type == NULL)
+	if( type == NULL )
 	{
 		writeBasicType(value, ss);
 	}
@@ -683,71 +686,19 @@ void StringSerializer::writeArray(const co::Any& value, std::stringstream& ss, c
 
 }
 
-void StringSerializer::writeBasicType(const co::Any& value, std::stringstream& ss)
+void StringSerializer::writeBasicType( const co::Any& value, std::stringstream& ss )
 {
-	#ifdef CORAL_OS_WIN
-	_set_output_format( _TWO_DIGIT_EXPONENT );
-	#endif
-
 	co::TypeKind kind = value.getKind();
-	char strNumber[32];
-	switch(kind)
+	if( kind == co::TK_BOOLEAN )
+		ss << ( value.get<bool>() ? "true" : "false" );
+	else if( kind == co::TK_STRING )
+		escapeLuaString( value.get<const std::string&>(), ss );
+	else
 	{
-	case co::TK_BOOLEAN:
-		if(value.get<bool>())
-		{
-			ss << "true";
-		}
-		else
-		{
-			ss << "false";
-		}
-	break;
-	case co::TK_INT8:
-		sprintf(strNumber, "%i", value.get<co::int8>());
-		ss << strNumber;
-	break;
-	case co::TK_UINT8:
-		sprintf(strNumber, "%i", value.get<co::uint8>());
-		ss << strNumber;
-	break;
-	case co::TK_INT16:
-		sprintf(strNumber, "%i", value.get<co::int16>());
-		ss << strNumber;
-	break;
-	case co::TK_UINT16:
-		sprintf(strNumber, "%i", value.get<co::uint16>());
-		ss << strNumber;
-	break;
-	case co::TK_INT32:
-		ss.precision( std::numeric_limits<long int>::digits10 + 1 );
-		ss << value.get<co::int32>();
-	break;
-	case co::TK_UINT32:
-		ss.precision( std::numeric_limits<unsigned long int>::digits10 + 1);
-		ss << value.get<co::uint32>();
-	break;
-	case co::TK_INT64:
-		ss.precision( std::numeric_limits<long long int>::digits10 + 1 );
-		ss << value.get<co::int64>();
-	break;
-	case co::TK_UINT64:
-		ss.precision( std::numeric_limits<unsigned long long int>::digits10 + 1 );
-		ss << value.get<co::uint64>();
-	break;
-	case co::TK_FLOAT:
-		ss.precision( std::numeric_limits<float>::digits10 + 1 );
-		ss << value.get<float>();
-	break;
-	case co::TK_DOUBLE:
-		ss.precision( std::numeric_limits<double>::digits10 + 1 );
-		ss << value.get<double>();
-	break;
-	case co::TK_STRING:
-		std::string s = value.get<const std::string&>();
-		escapeLuaString(s, ss );
-	break;
-
+		// 16 digits, sign, point, and \0
+		char buffer[32];
+		sprintf( buffer, "%.15g", value.get<double>() );
+		ss << buffer;
 	}
 }
 
@@ -757,14 +708,13 @@ bool StringSerializer::mustBeEscaped( const std::string& str )
 	for( size_t i = 0; i < size; ++i )
 	{
 		char c = str[i];
-				
 		if( c == '\'' || iscntrl( c ) )
 			return true;
 	}
 	return false;
 }
 
-void StringSerializer::escapeLuaString( const std::string&  str, std::stringstream& ss )
+void StringSerializer::escapeLuaString( const std::string& str, std::stringstream& ss )
 {
 	if( !mustBeEscaped( str ) )
 	{
@@ -774,7 +724,6 @@ void StringSerializer::escapeLuaString( const std::string&  str, std::stringstre
 	{
 		ss << "[=[" << str << "]=]";
 	}
-
 }
 
 }; // namespace ca
