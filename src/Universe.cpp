@@ -16,7 +16,7 @@ namespace ca {
 
 //------ Utility Macros for Handling Exceptions --------------------------------
 
-#define GEN_BARRIER( code, facetId, msg ) try { code; } catch( std::exception& e ) { \
+#define GEN_BARRIER( code, facetId, msg ) try { code; } catch( std::exception& ) { \
 	const char* name = getServiceTypeName( source, facetId ); \
 	CORAL_THROW( ca::UnexpectedException, \
 		"unexpected exception while tracking changes to service (" << \

@@ -13,6 +13,11 @@
 #include <co/IllegalArgumentException.h>
 #include <limits>
 
+
+#ifdef CORAL_OS_WIN
+#include <stdio.h>
+#endif
+
 namespace ca {
 
 StringSerializer::StringSerializer()
@@ -175,12 +180,12 @@ T StringSerializer::readPrimitive( std::stringstream& ss, co::TypeKind tk )
 	switch(tk)
 	{
 	case co::TK_BOOLEAN:
-		return (T)readBoolean(ss);
+		return readBoolean(ss);
 	break;
 	case co::TK_INT8:
 	case co::TK_UINT8:
 		ss >> byte;
-		resultT = (T)byte;
+		resultT = byte;
 	break;
 	case co::TK_INT16:
 	case co::TK_UINT16:
@@ -680,6 +685,10 @@ void StringSerializer::writeArray(const co::Any& value, std::stringstream& ss, c
 
 void StringSerializer::writeBasicType(const co::Any& value, std::stringstream& ss)
 {
+	#ifdef CORAL_OS_WIN
+	_set_output_format( _TWO_DIGIT_EXPONENT );
+	#endif
+
 	co::TypeKind kind = value.getKind();
 	char strNumber[32];
 	switch(kind)

@@ -490,7 +490,7 @@ private:
 				{
 					object->setServiceAt( port, refObj->getServiceAt( getFirstFacet( refObj, port->getType() ) ) );
 				}
-				catch( co::IllegalCastException& e )
+				catch( co::IllegalCastException& )
 				{
 					std::stringstream ss;
 					ss << "Could not restore object, invalid value type for port " << port->getName() << "on entity " << entity;
@@ -594,7 +594,7 @@ private:
 			{
 				_serializer.fromString(strValue, field->getType(), fieldValue);
 			}
-			catch( ca::FormatException& e )
+			catch( ca::FormatException& )
 			{
 				std::stringstream ss;
 				ss << "Invalid field value for field " << field->getName();
@@ -611,7 +611,7 @@ private:
 			}
 
 		}
-		catch (co::IllegalCastException& e)
+		catch (co::IllegalCastException&)
 		{
 			std::stringstream ss;
 			ss << "Invalid field value type for field " << field->getName() << "; type expected: " << field->getType()->getFullName();
@@ -651,7 +651,7 @@ private:
 				AnyArrayUtil arrayUtil;
 				arrayUtil.setArrayComplexTypeElement( arrayValue, i, servicePtr );
 			}
-			catch ( co::NotSupportedException& e )
+			catch ( co::NotSupportedException& )
 			{
 				throw ca::IOException( "Could not restore array" );
 			}
