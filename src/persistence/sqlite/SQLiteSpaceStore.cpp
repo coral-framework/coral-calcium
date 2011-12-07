@@ -15,7 +15,7 @@
 
 #include <ca/IOException.h>
 
-#include "DBException.h"
+#include "SQLiteException.h"
 
 #include "SQLiteConnection.h"
 #include "SQLiteResultSet.h"
@@ -30,6 +30,7 @@ class SQLiteSpaceStore : public SQLiteSpaceStore_Base
 public:
 	SQLiteSpaceStore()
 	{
+		// empty
 	}
 
 	virtual ~SQLiteSpaceStore()
@@ -39,22 +40,21 @@ public:
 
 	void open()
 	{
-			
 		assert( !_fileName.empty() );
 
 		_db.setFileName( _fileName );
-			
+
 		try
 		{
 			_db.createDatabase();
 		}
-		catch( ca::DBException& )
+		catch( ca::SQLiteException& )
 		{
 			try
 			{
 				_db.open();
 			}
-			catch( ca::DBException& e )
+			catch( ca::SQLiteException& e )
 			{
 				throw ca::IOException( e.what() );
 			}
@@ -65,11 +65,10 @@ public:
 			createTables();
 			fillLatestRevision();
 		}
-		catch( ca::DBException& e )
+		catch( ca::SQLiteException& e )
 		{
 			throw ca::IOException( e.what() );
 		}
-
 	}
 
 	void close()
@@ -78,7 +77,7 @@ public:
 		{
 			_db.close();
 		}
-		catch( ca::DBException& e )
+		catch( ca::SQLiteException& e )
 		{
 			throw ca::IOException( e.what() );
 		}
@@ -93,7 +92,6 @@ public:
 		{
 			_firstObject = true;
 		}
-
 	}
 
 	void endChanges()
@@ -115,7 +113,7 @@ public:
 
 	co::uint32 getOrAddType( const std::string& typeName, co::uint32 version ) 
 	{
-		ca::SQLiteResultSet rs; 
+		ca::SQLiteResultSet rs;
 		ca::SQLitePreparedStatement typeStmt;
 
 		std::string typeQuery = "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = ?  AND TYPE_VERSION = ?";
@@ -436,7 +434,7 @@ private:
 
 			_db.execute("COMMIT TRANSACTION");
 		}
-		catch( ca::DBException& e )
+		catch( ca::SQLiteException& e )
 		{
 			_db.execute("ROLLBACK TRANSACTION");
 			throw ca::IOException( e.what() );
@@ -468,7 +466,7 @@ private:
 		{
 			_db.createPreparedStatement( sql, stmt );
 		}
-		catch ( ca::DBException& )
+		catch ( ca::SQLiteException& )
 		{
 			throw ca::IOException( "Unexpected database query exception: Create Statement error" );
 		}
@@ -480,7 +478,7 @@ private:
 		{
 			stmt.execute( rs );
 		}
-		catch ( ca::DBException& )
+		catch ( ca::SQLiteException& )
 		{
 			throw ca::IOException( "Unexpected database query exception" );
 		}		
@@ -493,7 +491,7 @@ private:
 		{
 			stmt.execute();
 		}
-		catch ( ca::DBException& )
+		catch ( ca::SQLiteException& )
 		{
 			throw ca::IOException( "Unexpected database query exception" );
 		}		
@@ -506,7 +504,7 @@ private:
 		{
 			_db.executeQuery( sql, rs );
 		}
-		catch ( ca::DBException& )
+		catch ( ca::SQLiteException& )
 		{
 			throw ca::IOException( "Unexpected database query exception" );
 		}		
@@ -520,13 +518,13 @@ private:
 			_db.execute( sql );
 					
 		}
-		catch ( ca::DBException& )
+		catch ( ca::SQLiteException& )
 		{
 			throw ca::IOException( "Unexpected database query exception" );
 		}	
 	}
-
 };
+
 CORAL_EXPORT_COMPONENT( SQLiteSpaceStore, SQLiteSpaceStore );
 
 } // namespace ca

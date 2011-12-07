@@ -1,3 +1,4 @@
+#include "persistence/StringSerializer.h"
 
 #include <gtest/gtest.h>
 #include <co/Coral.h>
@@ -16,13 +17,6 @@
 #include <serialization/ArrayStruct.h>
 #include <serialization/TwoLevelNestedStruct.h>
 #include <co/IllegalArgumentException.h>
-
-#include "sqlite/StringSerializer.h"
-
-class StringSerializationTests {
-public:
-
-};
 
 template< typename T >
 void compareArray(T* staticArray, std::vector<T> resultArray, int size)
@@ -700,7 +694,6 @@ void testComplexTypeModelAware( ca::StringSerializer& serializer, co::Any& compl
 
 	compareAnyModelAware( complexAny, complexResult, type, model );
 }
-
 
 TEST( StringSerializationTests, serializationModelAwareTest )
 {

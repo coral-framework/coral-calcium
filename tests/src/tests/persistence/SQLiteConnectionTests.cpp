@@ -1,14 +1,14 @@
 #include "../ERMSpace.h"
-#include "sqlite/SQLiteConnection.h"
-#include "sqlite/SQLiteResultSet.h"
-#include "sqlite/DBException.h"
+#include "persistence/sqlite/SQLiteConnection.h"
+#include "persistence/sqlite/SQLiteResultSet.h"
+#include "persistence/sqlite/SQLiteException.h"
 #include <ca/INamed.h>
 #include <gtest/gtest.h>
 #include <cstdio>
 
-class DBConnectionTest : public ERMSpace {};
+class SQLiteConnectionTests : public ERMSpace {};
 
-TEST_F( DBConnectionTest, testOpenNonExistingDB )
+TEST_F( SQLiteConnectionTests, testOpenNonExistingDB )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
@@ -18,12 +18,11 @@ TEST_F( DBConnectionTest, testOpenNonExistingDB )
 
 	remove(fileName.c_str());
 
-	EXPECT_THROW(sqliteDBConn.open(), ca::DBException);
+	EXPECT_THROW(sqliteDBConn.open(), ca::SQLiteException);
 }
 
-TEST_F( DBConnectionTest, testExecuteWithoutOpen )
+TEST_F( SQLiteConnectionTests, testExecuteWithoutOpen )
 {
-
 	std::string fileName = "SimpleSpaceSave.db";
 
 	ca::SQLiteConnection sqliteDBConn;
@@ -32,11 +31,11 @@ TEST_F( DBConnectionTest, testExecuteWithoutOpen )
 
 	ca::SQLiteResultSet rs;
 	
-	EXPECT_THROW( sqliteDBConn.execute("CREATE TABLE A (fieldX INTEGER)"), ca::DBException );
-	EXPECT_THROW( sqliteDBConn.executeQuery("SELECT * FROM A", rs), ca::DBException );
+	EXPECT_THROW( sqliteDBConn.execute("CREATE TABLE A (fieldX INTEGER)"), ca::SQLiteException );
+	EXPECT_THROW( sqliteDBConn.executeQuery("SELECT * FROM A", rs), ca::SQLiteException );
 }
 
-TEST_F( DBConnectionTest, testCreateDatabase )
+TEST_F( SQLiteConnectionTests, testCreateDatabase )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
@@ -52,12 +51,12 @@ TEST_F( DBConnectionTest, testCreateDatabase )
 	fclose( fileDB );
 	
 	//attempt to create again the database
-	EXPECT_THROW(sqliteDBConn.createDatabase(), ca::DBException);
+	EXPECT_THROW(sqliteDBConn.createDatabase(), ca::SQLiteException);
 	
 	sqliteDBConn.close();
 }
 
-TEST_F( DBConnectionTest, testSuccessfullExecutes )
+TEST_F( SQLiteConnectionTests, testSuccessfullExecutes )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
@@ -81,7 +80,7 @@ TEST_F( DBConnectionTest, testSuccessfullExecutes )
 	sqliteDBConn.close();
 }
 
-TEST_F( DBConnectionTest, openExistingDB )
+TEST_F( SQLiteConnectionTests, openExistingDB )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
@@ -98,7 +97,7 @@ TEST_F( DBConnectionTest, openExistingDB )
 	EXPECT_NO_THROW( sqliteDBConn.open() );
 	
 	//you cannot open an already opened database
-	EXPECT_THROW( sqliteDBConn.open(), ca::DBException );
+	EXPECT_THROW( sqliteDBConn.open(), ca::SQLiteException );
 
 	EXPECT_NO_THROW( sqliteDBConn.close() );
 
@@ -107,7 +106,7 @@ TEST_F( DBConnectionTest, openExistingDB )
 
 }
 
-TEST_F( DBConnectionTest, closeDBFail )
+TEST_F( SQLiteConnectionTests, closeDBFail )
 {
 	std::string fileName = "SimpleSpaceSave.db";
 
@@ -126,12 +125,12 @@ TEST_F( DBConnectionTest, closeDBFail )
 	EXPECT_NO_THROW( sqliteDBConn.executeQuery( "SELECT * FROM A", rs ) );
 
 	//not finalized IResultSet
-	EXPECT_THROW(sqliteDBConn.close(), ca::DBException);
+	EXPECT_THROW(sqliteDBConn.close(), ca::SQLiteException);
 
 	rs.finalize();
 }
 
-TEST_F( DBConnectionTest, preparedStatementTest )
+TEST_F( SQLiteConnectionTests, preparedStatementTest )
 {
 	std::string fileName = "testStatement.db";
 
@@ -163,7 +162,7 @@ TEST_F( DBConnectionTest, preparedStatementTest )
 	EXPECT_EQ( rs.getValue( 1 ), "value" );
 
 	//not finalized IResultSet
-	EXPECT_THROW( sqliteDBConn.close(), ca::DBException );
+	EXPECT_THROW( sqliteDBConn.close(), ca::SQLiteException );
 	
 	stmt.finalize();
 

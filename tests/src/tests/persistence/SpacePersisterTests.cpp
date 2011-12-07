@@ -4,6 +4,8 @@
  */
 #include "../ERMSpace.h"
 
+#include "persistence/sqlite/sqlite3.h"
+
 #include <gtest/gtest.h>
 
 #include <co/Coral.h>
@@ -27,12 +29,9 @@
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
 #include <cstdio>
-#include <sqlite/sqlite3.h>
-
-#include "sqlite/SQLiteConnection.h"
 
 
-class SpacePersisterTest : public ERMSpace {};
+class SpacePersisterTests : public ERMSpace {};
 
 
 inline erm::Multiplicity mult( co::int32 min, co::int32 max )
@@ -42,7 +41,7 @@ inline erm::Multiplicity mult( co::int32 min, co::int32 max )
 	return m;
 }
 
-TEST_F( SpacePersisterTest, exceptionsTest )
+TEST_F( SpacePersisterTests, exceptionsTest )
 {
 	co::RefPtr<co::IObject> persisterObj = co::newInstance( "ca.SpacePersister" );
 	ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
@@ -79,7 +78,7 @@ TEST_F( SpacePersisterTest, exceptionsTest )
 
 }
 
-TEST_F( SpacePersisterTest, testNewFileSetup )
+TEST_F( SpacePersisterTests, testNewFileSetup )
 {
 	startWithExtendedERM();
 	_relAB->setMultiplicityB( mult( 1, 2 ) );

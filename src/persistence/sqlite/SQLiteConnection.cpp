@@ -5,7 +5,7 @@
 
 #include "SQLiteConnection.h"
 #include "SQLiteResultSet.h"
-#include "DBException.h"
+#include "SQLiteException.h"
 #include "sqlite3.h"
 #include <sstream>
 
@@ -28,7 +28,7 @@ void SQLiteConnection::checkConnection()
 {
 	if(!_db)
 	{
-		throw ca::DBException("Database not connected. Cannot execute command");
+		throw ca::SQLiteException("Database not connected. Cannot execute command");
 	}
 }
 
@@ -36,12 +36,12 @@ void SQLiteConnection::createDatabase()
 {
 	if( fileExists( _fileName.c_str() ) )
 	{
-		throw ca::DBException("Create database failed. File already exists");
+		throw ca::SQLiteException("Create database failed. File already exists");
 	}
 
 	if( !sqlite3_open(_fileName.c_str(), &_db) == SQLITE_OK )
 	{
-		throw ca::DBException("Create database failed");
+		throw ca::SQLiteException("Create database failed");
 	}
 }
 
@@ -54,7 +54,7 @@ void SQLiteConnection::execute( const std::string& insertOrUpdateSQL )
 
 	if(error)
 	{
-		throw ca::DBException(error);
+		throw ca::SQLiteException(error);
 	}
 }
 
@@ -66,7 +66,7 @@ void SQLiteConnection::executeQuery( const std::string& querySQL, ca::SQLiteResu
 
 	if(resultCode != SQLITE_OK)
 	{
-		CORAL_THROW( ca::DBException, "Query Failed: " << sqlite3_errmsg( _db ) );
+		CORAL_THROW( ca::SQLiteException, "Query Failed: " << sqlite3_errmsg( _db ) );
 	}
 
 	resultSetSQLite.setStatement( _statement, false );
@@ -76,14 +76,14 @@ void SQLiteConnection::createPreparedStatement( const std::string& querySQL, ca:
 {
 	if(!_db)
 	{
-		throw ca::DBException( "Database not connected. Cannot execute command" );
+		throw ca::SQLiteException( "Database not connected. Cannot execute command" );
 	}
 
 	int resultCode = sqlite3_prepare_v2( _db, querySQL.c_str(), -1, &_statement, 0 );
 
 	if(resultCode != SQLITE_OK)
 	{
-		CORAL_THROW( ca::DBException, "Query Failed: " << sqlite3_errmsg( _db ) );
+		CORAL_THROW( ca::SQLiteException, "Query Failed: " << sqlite3_errmsg( _db ) );
 	}
 
 	stmt.setStatement(_statement);
@@ -93,17 +93,17 @@ void SQLiteConnection::open()
 {
 	if( !fileExists( _fileName.c_str() ) )
 	{
-		throw ca::DBException( "Open database failed. Attempt to open non existing file" );
+		throw ca::SQLiteException( "Open database failed. Attempt to open non existing file" );
 	}
 
 	if( _db )
 	{
-		throw ca::DBException( "Open database failed. Database already opened" );
+		throw ca::SQLiteException( "Open database failed. Database already opened" );
 	}
 			
 	if(!sqlite3_open(_fileName.c_str(), &_db) == SQLITE_OK)
 	{
-		throw ca::DBException( "Open database failed" );
+		throw ca::SQLiteException( "Open database failed" );
 	}
 }
 
@@ -116,7 +116,7 @@ void SQLiteConnection::close()
 	}
 	else
 	{
-		throw ca::DBException("Could not close database. Check for not finalized IResultSets");
+		throw ca::SQLiteException("Could not close database. Check for not finalized IResultSets");
 	}
 }
 
