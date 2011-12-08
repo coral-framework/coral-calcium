@@ -2,19 +2,21 @@
  * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
-
 #ifndef _SQLITECONNECTION_H_
 #define _SQLITECONNECTION_H_
 
 #include <co/TypeTraits.h>
-#include "sqlite3.h"
 #include "SQLiteResultSet.h"
-
 #include <co/Log.h>
-
 #include <string>
 
 // Forward Declarations:
+extern "C"
+{
+	typedef struct sqlite3 sqlite3;
+	typedef struct sqlite3_stmt sqlite3_stmt;
+}
+
 namespace ca {
 	class IResultSet;
 } // namespace ca
@@ -36,69 +38,49 @@ public:
 		finalize();
 	}
 
-	void setStatement( sqlite3_stmt* stmt )
+	void setStatement( sqlite3_stmt* stmt );
+	
+	void bind( int index, double value );
+
+	inline void bind( int index, const std::string& value )
 	{
-		finalize();
-		_preparedStatement = stmt;
+		bind( index, value.c_str() );
 	}
 
-	void setDouble( co::uint32 index, double doubleValue )
+	void bind( int index, const char* value );
+
+	void bind( int index, co::int16 value )
 	{
-		handleErrorCode( sqlite3_bind_double( _preparedStatement, index, doubleValue ));
+		bind( index, static_cast<co::int32>(value) );
 	}
 
-	void setString( co::uint32 index, const char* strValue )
+	inline void bind( int index, co::uint16 value )
 	{
-		handleErrorCode( sqlite3_bind_text( _preparedStatement, index, strValue, -1, NULL ));
+		bind( index, static_cast<co::int32>(value) );
 	}
 
-	void setInt( co::uint32 index, int intValue )
+	void bind( int index, co::int32 value );
+
+	inline void bind( int index, co::uint32 value )
 	{
-		handleErrorCode( sqlite3_bind_int( _preparedStatement, index, intValue ) );
+		bind( index, static_cast<co::int64>(value) );
 	}
 
-	void setInt64( co::uint32 index, co::int64 intValue )
-	{
-		handleErrorCode( sqlite3_bind_int64( _preparedStatement, index, intValue ) );
-	}
+	void bind( int index, co::int64 value );
 
-	void execute( SQLiteResultSet& rs )
-	{
-		rs.setStatement( _preparedStatement, true );
-	}
+	void execute( SQLiteResultSet& rs );
 
-	void execute()
-	{
-		handleErrorCode( sqlite3_step( _preparedStatement ) );
-	}
+	void execute();
 
-	void reset()
-	{
-		if( _preparedStatement )
-		{
-			sqlite3_reset( _preparedStatement );
-		}
-	}
+	void reset();
 
-	void finalize()
-	{
-		if( _preparedStatement )
-		{
-			sqlite3_finalize( _preparedStatement );
-			_preparedStatement = NULL;
-		}
-	}
+	void finalize();
 
 private:
 	sqlite3_stmt* _preparedStatement;
 
-	void handleErrorCode( int errorCode )
-	{
-		if( errorCode != SQLITE_OK && errorCode != SQLITE_DONE )
-		{
-			CORAL_DLOG(INFO) << errorCode;
-		}
-	}
+	void handleErrorCode( int errorCode );
+	
 
 };
 
@@ -107,7 +89,7 @@ class SQLiteConnection
 public:
 	SQLiteConnection();
 
-	virtual ~SQLiteConnection();
+	~SQLiteConnection();
 
 	void close();
 
@@ -134,7 +116,6 @@ private:
 
 	void checkConnection();
 
-	bool fileExists(const char * filePath);
 };
 
 } // namespace ca

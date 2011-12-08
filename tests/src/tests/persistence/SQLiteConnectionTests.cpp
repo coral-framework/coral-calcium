@@ -146,12 +146,14 @@ TEST_F( SQLiteConnectionTests, preparedStatementTest )
 	ca::SQLitePreparedStatement stmt;
 	EXPECT_NO_THROW( sqliteDBConn.createPreparedStatement("INSERT INTO A VALUES (?, ?)", stmt) );
 
-	EXPECT_NO_THROW( stmt.setInt( 1, 1 ));
-	EXPECT_NO_THROW( stmt.setString( 2, "value" ));
+	std::string str("value");
+
+	EXPECT_NO_THROW( stmt.bind( 1, 1 ));
+	EXPECT_NO_THROW( stmt.bind( 2, "value" ));
 	EXPECT_NO_THROW( stmt.execute() );
 
 	EXPECT_NO_THROW( sqliteDBConn.createPreparedStatement("SELECT * FROM A WHERE fieldX =  ?", stmt) );
-	EXPECT_NO_THROW( stmt.setInt( 1, 1 ) );
+	EXPECT_NO_THROW( stmt.bind( 1, 1 ) );
 	ca::SQLiteResultSet rs;
 
 	EXPECT_NO_THROW( stmt.execute( rs ) );

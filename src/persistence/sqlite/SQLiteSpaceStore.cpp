@@ -99,8 +99,8 @@ public:
 		ca::SQLitePreparedStatement stmt;
 		createStatementOrThrow( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )", stmt );
 
-		stmt.setInt( 1, _rootObjectId );
-		stmt.setInt( 2, _currentRevision );
+		stmt.bind( 1, _rootObjectId );
+		stmt.bind( 2, _currentRevision );
 
 		executeOrThrow( stmt );
 		stmt.finalize();
@@ -119,8 +119,8 @@ public:
 		std::string typeQuery = "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = ?  AND TYPE_VERSION = ?";
 		createStatementOrThrow( typeQuery, typeStmt );
 
-		typeStmt.setString( 1, typeName.c_str() );
-		typeStmt.setInt( 2, version );
+		typeStmt.bind( 1, typeName );
+		typeStmt.bind( 2, version );
 
 		executeQueryOrThrow( typeStmt, rs );
 
@@ -132,8 +132,8 @@ public:
 			ca::SQLitePreparedStatement stmt;
 			
 			createStatementOrThrow( "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES (?, ?)", stmt );
-			stmt.setString( 1, typeName.c_str() );
-			stmt.setInt( 2, version );
+			stmt.bind( 1, typeName );
+			stmt.bind( 2, version );
 			
 			executeOrThrow( stmt );
 			stmt.finalize();
@@ -156,9 +156,9 @@ public:
 
 		createStatementOrThrow( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ( ?, ?, ? );", stmt );
 		
-		stmt.setInt( 1, typeId );
-		stmt.setString( 2, fieldName.c_str() );
-		stmt.setInt( 3, fieldTypeId );
+		stmt.bind( 1, typeId );
+		stmt.bind( 2, fieldName );
+		stmt.bind( 3, fieldTypeId );
 
 		executeOrThrow( stmt );
 		stmt.finalize();
@@ -172,7 +172,7 @@ public:
 		ca::SQLitePreparedStatement stmt;
 
 		createStatementOrThrow( "INSERT INTO OBJECT (TYPE_ID) VALUES ( ? );", stmt );
-		stmt.setInt( 1, typeId );
+		stmt.bind( 1, typeId );
 		executeOrThrow( stmt );
 		
 		ca::SQLiteResultSet rs; 
@@ -204,10 +204,10 @@ public:
 		for( int i = 0; i < values.getSize(); i++ )
 		{
 			stmt.reset();
-			stmt.setInt( 1, values[i].fieldId );
-			stmt.setInt( 2, objId );
-			stmt.setInt( 3, _currentRevision );
-			stmt.setString( 4, values[i].value.c_str() );
+			stmt.bind( 1, values[i].fieldId );
+			stmt.bind( 2, objId );
+			stmt.bind( 3, _currentRevision );
+			stmt.bind( 4, values[i].value );
 
 			executeOrThrow( stmt );
 		}
@@ -221,7 +221,7 @@ public:
 		
 		createStatementOrThrow( "SELECT O.TYPE_ID FROM OBJECT O WHERE O.OBJECT_ID = ?", stmt );
 
-		stmt.setInt( 1, objectId );
+		stmt.bind( 1, objectId );
 
 		executeQueryOrThrow( stmt, rs );
 				
@@ -257,8 +257,8 @@ public:
 								ORDER BY OBJ.OBJECT_ID", stmt );
 
 		
-		stmt.setInt( 1, revision );
-		stmt.setInt( 2, objectId );
+		stmt.bind( 1, revision );
+		stmt.bind( 2, objectId );
 		executeQueryOrThrow( stmt, rs );
 				
 		while( rs.next() )
@@ -277,7 +277,7 @@ public:
 		ca::SQLiteResultSet rs;
 		createStatementOrThrow( "SELECT T.TYPE_ID, T.TYPE_NAME, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = ?", stmt );
 
-		stmt.setInt( 1, typeId );
+		stmt.bind( 1, typeId );
 
 		executeQueryOrThrow( stmt, rs );
 		
@@ -350,7 +350,7 @@ private:
 		ca::SQLitePreparedStatement stmt;
 		createStatementOrThrow( "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION >= ? ORDER BY REVISION LIMIT 1", stmt );
 
-		stmt.setInt( 1, revision );
+		stmt.bind( 1, revision );
 
 		ca::SQLiteResultSet rs;
 		executeQueryOrThrow( stmt, rs );
@@ -369,8 +369,8 @@ private:
 		ca::SQLiteResultSet rs;
 
 		createStatementOrThrow( "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = ? AND TYPE_ID = ?", stmt );
-		stmt.setString( 1, fieldName.c_str() );
-		stmt.setInt( 2, typeId );
+		stmt.bind( 1, fieldName );
+		stmt.bind( 2, typeId );
 
 		executeQueryOrThrow( stmt, rs );
 

@@ -2,12 +2,15 @@
  * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
-
-#include "sqlite3.h"
-#include <co/Coral.h>
-
 #ifndef _CA_SQLITERESULTSET_H_
 #define _CA_SQLITERESULTSET_H_
+
+#include <co/Coral.h>
+
+extern "C"
+{
+	typedef struct sqlite3_stmt sqlite3_stmt;
+}
 
 namespace ca {
 

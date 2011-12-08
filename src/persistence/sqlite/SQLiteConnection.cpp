@@ -8,6 +8,8 @@
 #include "SQLiteException.h"
 #include "sqlite3.h"
 #include <sstream>
+#include <co/reserved/OS.h>
+
 
 namespace ca {
 	
@@ -34,7 +36,7 @@ void SQLiteConnection::checkConnection()
 
 void SQLiteConnection::createDatabase()
 {
-	if( fileExists( _fileName.c_str() ) )
+	if( co::OS::isFile( _fileName ) )
 	{
 		throw ca::SQLiteException("Create database failed. File already exists");
 	}
@@ -91,7 +93,7 @@ void SQLiteConnection::createPreparedStatement( const std::string& querySQL, ca:
 
 void SQLiteConnection::open()
 {
-	if( !fileExists( _fileName.c_str() ) )
+	if( !co::OS::isFile( _fileName ) )
 	{
 		throw ca::SQLiteException( "Open database failed. Attempt to open non existing file" );
 	}
@@ -135,16 +137,66 @@ bool SQLiteConnection::isConnected()
 	return _db != NULL;
 }
 
-	
-bool SQLiteConnection::fileExists(const char * filePath)
+void SQLitePreparedStatement::setStatement( sqlite3_stmt* stmt )
 {
-	FILE* file = fopen(filePath, "r");
-	bool result = file != 0;
-	if(result)
-	{
-		fclose(file);
-	}
-	return result;
+	finalize();
+	_preparedStatement = stmt;
 }
 
+void SQLitePreparedStatement::handleErrorCode( int errorCode )
+{
+	if( errorCode != SQLITE_OK && errorCode != SQLITE_DONE )
+	{
+		CORAL_DLOG(INFO) << errorCode;
+	}
+}
+
+void SQLitePreparedStatement::bind( int index, double value )
+{
+	handleErrorCode( sqlite3_bind_double( _preparedStatement, index, value ));
+}
+
+void SQLitePreparedStatement::bind( int index, const char* value )
+{
+	handleErrorCode( sqlite3_bind_text( _preparedStatement, index, value, -1, NULL ));
+}
+
+void SQLitePreparedStatement::bind( int index, co::int32 value )
+{
+	handleErrorCode( sqlite3_bind_int( _preparedStatement, index, value ) );
+}
+
+void SQLitePreparedStatement::bind( int index, co::int64 value )
+{
+	handleErrorCode( sqlite3_bind_int64( _preparedStatement, index, value ) );
+}
+
+void SQLitePreparedStatement::execute( SQLiteResultSet& rs )
+{
+	rs.setStatement( _preparedStatement, true );
+}
+
+void SQLitePreparedStatement::execute()
+{
+	handleErrorCode( sqlite3_step( _preparedStatement ) );
+}
+
+void SQLitePreparedStatement::reset()
+{
+	if( _preparedStatement )
+	{
+		sqlite3_reset( _preparedStatement );
+	}
+}
+
+void SQLitePreparedStatement::finalize()
+{
+	if( _preparedStatement )
+	{
+		sqlite3_finalize( _preparedStatement );
+		_preparedStatement = NULL;
+	}
+}
+
+	
 } // namespace ca
