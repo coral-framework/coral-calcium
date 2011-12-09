@@ -6,8 +6,6 @@
 #include "SQLite.h"
 #include "sqlite3.h"
 #include <sstream>
-#include <co/reserved/OS.h>
-
 
 namespace ca {
 
@@ -89,7 +87,7 @@ void SQLiteConnection::open(const std::string& fileName)
 		throw ca::SQLiteException( "Open database failed. Database already opened" );
 	}
 			
-	if(!sqlite3_open(fileName.c_str(), &_db) == SQLITE_OK)
+	if(!sqlite3_open( fileName.c_str(), &_db) == SQLITE_OK )
 	{
 		throw ca::SQLiteException( "Open database failed" );
 	}
@@ -115,13 +113,15 @@ SQLiteStatement SQLiteConnection::prepare( const std::string& querySQL )
 		throw ca::SQLiteException( "Database not connected. Cannot execute command" );
 	}
 
-	int resultCode = sqlite3_prepare_v2( _db, querySQL.c_str(), -1, &_statement, 0 );
+	sqlite3_stmt * statement;
+
+	int resultCode = sqlite3_prepare_v2( _db, querySQL.c_str(), -1, &statement, 0 );
 
 	if(resultCode != SQLITE_OK)
 	{
 		CORAL_THROW( ca::SQLiteException, "Query Failed: " << sqlite3_errmsg( _db ) );
 	}
-	SQLiteStatement stmt( _statement );
+	SQLiteStatement stmt( statement );
 	return stmt;
 }
 

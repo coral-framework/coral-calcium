@@ -19,6 +19,9 @@ extern "C"
 
 namespace ca {
 
+	/*!
+		Exception class for SQLite errors
+	*/
 
 class SQLiteException : public co::Exception
 {
@@ -35,7 +38,9 @@ public:
 };
 
 
-
+/*!
+	Class to iterate through select sql clause results.
+*/
 class SQLiteResult
 {
 public:
@@ -47,11 +52,16 @@ public:
 	
 	~SQLiteResult(){} // empty
 
+	/*!
+		Gets the next row of query result.
+		\returns true if it successfully fetched the next row, false if there isn't any rows to be fetched.
+	*/
+
 	bool next();
 		
-	const std::string getString( co::uint32 columnIndex);
+	const std::string getString( co::uint32 columnIndex );
 
-	const co::uint32 getUint32( co::uint32 columnIndex);
+	const co::uint32 getUint32( co::uint32 columnIndex );
 
 private:
 	SQLiteResult& operator=( const SQLiteResult& o );
@@ -60,7 +70,9 @@ private:
 	mutable sqlite3_stmt* _stmt;
 };
 
-
+/*!
+	Abstraction for sql statements.	
+*/
 
 class SQLiteStatement 
 {
@@ -75,7 +87,9 @@ public:
 	{
 		finalize();
 	}
-
+	/*!
+		bind parameters to the statement, according to the given parameter type
+	*/
 	void bind( int index, double value );
 
 	inline void bind( int index, const std::string& value )
@@ -104,12 +118,24 @@ public:
 
 	void bind( int index, co::int64 value );
 
+	/*!
+		Executes a select statement. This statement must be valid as long as the SQLiteResult is being consulted.
+	*/
 	SQLiteResult query();
 
+	/*!
+		Executes a non select statement.
+	*/
 	void execute();
 
+	/*!
+		Resets the statement to its initial state. The parameters must be bound again, and the statement can be reused.
+	*/
 	void reset();
 
+	/*!
+	Releases the statement. If the statement is not finalized, it may prevent the closure of the associated SQLiteConnection.
+	*/
 	void finalize();
 
 private:
@@ -120,6 +146,12 @@ private:
 	mutable sqlite3_stmt* _stmt;
 };
 
+/*!
+
+	Connection to a sqlite3 database file
+
+*/
+
 class SQLiteConnection
 {
 public:
@@ -127,6 +159,10 @@ public:
 
 	~SQLiteConnection();
 
+	/*!
+		Open connection to the given file. 
+		\param fileName database file to be connected to. if the file already exists, a connection is opened. Otherwise, a file is created.
+	*/
 	void open( const std::string& fileName );
 
 	ca::SQLiteStatement prepare( const std::string& querySQL );
@@ -140,8 +176,6 @@ private:
 
 private:
 	sqlite3* _db;
-	sqlite3_stmt* _statement;
-
 };
 
 } // namespace ca
