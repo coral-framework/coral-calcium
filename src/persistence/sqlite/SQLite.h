@@ -43,7 +43,7 @@ public:
 	SQLiteResult( sqlite3_stmt* stmt );
 
 	// copy constructor
-	SQLiteResult( SQLiteResult& o );
+	SQLiteResult( const SQLiteResult& o );
 	
 	~SQLiteResult(){} // empty
 
@@ -57,7 +57,7 @@ private:
 	SQLiteResult& operator=( const SQLiteResult& o );
 
 private:
-	sqlite3_stmt* _stmt;
+	mutable sqlite3_stmt* _stmt;
 };
 
 
@@ -68,7 +68,7 @@ public:
 	SQLiteStatement( sqlite3_stmt* stmt );
 	
 	
-	SQLiteStatement( SQLiteStatement& o);
+	SQLiteStatement( const SQLiteStatement& o);
 	
 
 	~SQLiteStatement()
@@ -117,7 +117,7 @@ private:
 	SQLiteStatement& operator=( const SQLiteStatement& o );
 
 private:
-	sqlite3_stmt* _stmt;
+	mutable sqlite3_stmt* _stmt;
 };
 
 class SQLiteConnection

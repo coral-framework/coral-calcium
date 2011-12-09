@@ -20,7 +20,7 @@ SQLiteResult::SQLiteResult( sqlite3_stmt* stmt )
 	_stmt = stmt;
 }
 
-SQLiteResult::SQLiteResult( SQLiteResult& o )
+SQLiteResult::SQLiteResult( const SQLiteResult& o )
 {
 	_stmt = o._stmt;
 	o._stmt = NULL;
@@ -148,7 +148,7 @@ SQLiteStatement::SQLiteStatement( sqlite3_stmt* stmt )
 	_stmt = stmt;
 }
 
-SQLiteStatement::SQLiteStatement( SQLiteStatement& o)
+SQLiteStatement::SQLiteStatement( const SQLiteStatement& o)
 {
 	_stmt = o._stmt;
 	o._stmt = NULL;
