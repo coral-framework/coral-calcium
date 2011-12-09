@@ -2,12 +2,12 @@
  * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
-#ifndef _SQLITECONNECTION_H_
-#define _SQLITECONNECTION_H_
+#ifndef _CA_SQLITE_H_
+#define _CA_SQLITE_H_
 
 #include <co/TypeTraits.h>
-#include "SQLiteResultSet.h"
 #include <co/Log.h>
+#include <co/Exception.h>
 #include <string>
 
 // Forward Declarations:
@@ -18,28 +18,64 @@ extern "C"
 }
 
 namespace ca {
-	class IResultSet;
-} // namespace ca
-// End Of Forward Declarations
 
-// ca.IDBConnection Mapping:
-namespace ca {
 
-class SQLitePreparedStatement 
+class SQLiteException : public co::Exception
 {
 public:
-	SQLitePreparedStatement()
-	{
-		_preparedStatement = NULL;
-	} 
+	SQLiteException()
+	{;}
+
+	SQLiteException( const std::string& message )
+		: co::Exception( message )
+	{;}
+
+	virtual ~SQLiteException() throw()
+	{;}
+};
+
+
+
+class SQLiteResult
+{
+public:
 	
-	~SQLitePreparedStatement()
+	SQLiteResult( sqlite3_stmt* stmt );
+
+	// copy constructor
+	SQLiteResult( SQLiteResult& o );
+	
+	~SQLiteResult(){} // empty
+
+	bool next();
+		
+	const std::string getString( co::uint32 columnIndex);
+
+	const co::uint32 getUint32( co::uint32 columnIndex);
+
+private:
+	SQLiteResult& operator=( const SQLiteResult& o );
+
+private:
+	sqlite3_stmt* _stmt;
+};
+
+
+
+class SQLiteStatement 
+{
+public:
+	SQLiteStatement( sqlite3_stmt* stmt );
+	
+	
+	SQLiteStatement( SQLiteStatement& o);
+	
+
+	~SQLiteStatement()
 	{
 		finalize();
 	}
 
-	void setStatement( sqlite3_stmt* stmt );
-	
 	void bind( int index, double value );
 
 	inline void bind( int index, const std::string& value )
@@ -68,7 +104,7 @@ public:
 
 	void bind( int index, co::int64 value );
 
-	void execute( SQLiteResultSet& rs );
+	SQLiteResult query();
 
 	void execute();
 
@@ -77,11 +113,11 @@ public:
 	void finalize();
 
 private:
-	sqlite3_stmt* _preparedStatement;
-
 	void handleErrorCode( int errorCode );
-	
+	SQLiteStatement& operator=( const SQLiteStatement& o );
 
+private:
+	sqlite3_stmt* _stmt;
 };
 
 class SQLiteConnection
@@ -91,33 +127,23 @@ public:
 
 	~SQLiteConnection();
 
-	void close();
+	void open( const std::string& fileName );
 
-	void createDatabase();
-
-	void execute( const std::string& insertOrUpdateSQL );
-
-	void executeQuery( const std::string& querySQL, ca::SQLiteResultSet& rs );
-
-	void createPreparedStatement( const std::string& querySQL, ca::SQLitePreparedStatement& stmt );
+	ca::SQLiteStatement prepare( const std::string& querySQL );
 
 	bool isConnected();
 
-	void open();
+	void close();
 
-	void setFileName(const std::string& fileName);
-
-	const std::string& getFileName();
+private:
+	void checkConnection();
 
 private:
 	sqlite3* _db;
-	std::string _fileName;
 	sqlite3_stmt* _statement;
-
-	void checkConnection();
 
 };
 
 } // namespace ca
 
-#endif // _CA_IDBCONNECTION_H_
+#endif // _CA_SQLITE_H_

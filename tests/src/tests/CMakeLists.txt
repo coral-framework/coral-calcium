@@ -17,8 +17,7 @@ include_directories(
 set( REPLICATED_MODULE_FILES
 	${CA_SOURCE_DIR}/persistence/StringSerializer.cpp
 	${CA_SOURCE_DIR}/persistence/sqlite/sqlite3.c
-	${CA_SOURCE_DIR}/persistence/sqlite/SQLiteConnection.cpp
-	${CA_SOURCE_DIR}/persistence/sqlite/SQLiteResultSet.cpp
+	${CA_SOURCE_DIR}/persistence/sqlite/SQLite.cpp
 )
 
 # Gather source files in the current directory
