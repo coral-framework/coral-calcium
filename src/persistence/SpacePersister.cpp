@@ -31,7 +31,6 @@
 #include <ca/StoredField.h>
 
 #include "StringSerializer.h"
-#include "SpacePersisterCache.h"
 
 namespace ca {
 
@@ -58,6 +57,8 @@ public:
 		_spaceChanges.push_back( changes );
 	}
 
+	// ------ ca.ISpacePersister Methods ------ //
+
 	void initialize( co::IObject* rootObject )
 	{
 
@@ -78,7 +79,7 @@ public:
 		{
 			_spaceStore->close();
 		}
-		
+
 		_spaceStore->close();
 
 	}
@@ -87,8 +88,6 @@ public:
 	{
 		return _space.get();
 	}
-
-	// ------ ca.ISpaceSaver Methods ------ //
 
 	void restore()
 	{
@@ -116,11 +115,11 @@ public:
 
 		try
 		{
-			_cache.clear();
+			clear();
 			co::uint32 rootObject = _spaceStore->getRootObject( revision );
 			restoreObject( rootObject, revision );
 
-			co::IObject* object = (co::IObject*)_cache.getObject( rootObject );
+			co::IObject* object = (co::IObject*)getObject( rootObject );
 		
 			co::IObject* spaceObj = co::newInstance( "ca.Space" );
 			ca::ISpace* space = spaceObj->getService<ca::ISpace>();
@@ -147,7 +146,9 @@ public:
 			current = _spaceChanges[ i ];
 		}
 	}
+
 protected:
+
 	ca::ISpaceStore* getStoreService()
 	{
 		return _spaceStore.get();
@@ -170,22 +171,8 @@ protected:
 		_universe = universe;
 		_model = (ca::IModel*)_universe->getProvider()->getService( "model" );
 	}
+
 private:
-
-	co::RefPtr<ca::ISpace> _space;
-	ca::IModel* _model;
-
-	StringSerializer _serializer;
-
-	co::RefPtr<ca::IUniverse> _universe;
-	co::RefPtr<ca::ISpaceStore> _spaceStore;
-
-	SpacePersisterCache _cache;
-
-	co::RefVector<ca::ISpaceChanges> _spaceChanges;
-
-	typedef std::map<co::uint32, std::string> FieldValueMap;
-
 	void observe()
 	{
 		_space->addSpaceObserver( this );
@@ -202,7 +189,7 @@ private:
 
 	void saveService(co::RefPtr<co::IService> obj, co::IPort* port)
 	{
-		int objId = _cache.getObjectId(obj.get());
+		int objId = getObjectId(obj.get());
 		if(objId != 0)
 		{
 			return;
@@ -213,10 +200,10 @@ private:
 
 		std::string typeFullName = type->getFullName();
 
-		int entityId = _cache.getTypeId( obj->getInterface() );
+		int entityId = getTypeId( obj->getInterface() );
 
 		objId = _spaceStore->addObject( entityId );
-		_cache.insertObjectCache(obj.get(), objId);
+		insertObjectCache(obj.get(), objId);
 
 		co::Range<co::IField* const> fields = type->getFields();
 						
@@ -228,12 +215,12 @@ private:
 		{
 			co::IField* field =  fields[i];
 			
-			int fieldId = _cache.getMemberId( field );
+			int fieldId = getMemberId( field );
 			if( fieldId == 0 )
 			{
 				continue;
 			}
-			int fieldTypeId = _cache.getTypeId( field->getType() );
+			int fieldTypeId = getTypeId( field->getType() );
 			
 			co::IReflector* reflector = field->getOwner()->getReflector();
 			co::Any fieldValue;
@@ -256,7 +243,7 @@ private:
 						co::IService* const serv = services.getFirst();
 						saveObject(serv->getProvider());
 						
-						int refId = _cache.getObjectId( serv->getProvider() );
+						int refId = getObjectId( serv->getProvider() );
 						
 						refs.push_back( refId );
 						services.popFirst();
@@ -282,7 +269,7 @@ private:
 				else
 				{
 					saveObject( service->getProvider() );
-					_serializer.toString( _cache.getObjectId(service->getProvider()), fieldValueStr );
+					_serializer.toString( getObjectId(service->getProvider()), fieldValueStr );
 				}
 				
 			}
@@ -301,7 +288,7 @@ private:
 
 	bool needsToSaveType( co::IType* type )
 	{
-		return ( _cache.getTypeId( type ) == 0 );
+		return ( getTypeId( type ) == 0 );
 	}
 
 	void saveEntity( co::IType* type )
@@ -328,13 +315,13 @@ private:
 		}
 			
 		int typeId = _spaceStore->getOrAddType( type->getFullName(), getCalciumModelId() );
-		_cache.insertTypeCache( type, typeId );
+		insertTypeCache( type, typeId );
 	}
 
 	void saveField(co::IMember* member, int entityId, int fieldTypeId)
 	{
 		int fieldId = _spaceStore->addField( entityId, member->getName(), fieldTypeId );
-		_cache.insertMemberCache( member, fieldId );
+		insertMemberCache( member, fieldId );
 
 	}
 
@@ -342,7 +329,7 @@ private:
 	{
 
 		int getIdFromSavedEntity = _spaceStore->getOrAddType( entityInterface->getFullName(), getCalciumModelId() );
-		_cache.insertTypeCache( entityInterface, getIdFromSavedEntity );
+		insertTypeCache( entityInterface, getIdFromSavedEntity );
 
 		co::RefVector<co::IField> fields;
 		_model->getFields(entityInterface, fields);
@@ -351,12 +338,12 @@ private:
 		{
 			co::IField* field =  it->get();
 			
-			int fieldTypeId = _cache.getTypeId( field->getType() );
+			int fieldTypeId = getTypeId( field->getType() );
 
 			if( fieldTypeId == 0 )
 			{
 				saveEntity( field->getType() );
-				fieldTypeId = _cache.getTypeId( field->getType() );
+				fieldTypeId = getTypeId( field->getType() );
 			}
 			
 			saveField(field, getIdFromSavedEntity, fieldTypeId);
@@ -367,7 +354,7 @@ private:
 
 	void saveObject(co::RefPtr<co::IObject> object)
 	{
-		if(_cache.getObjectId(object.get()) != 0)
+		if(getObjectId(object.get()) != 0)
 		{
 			return;
 		}
@@ -377,10 +364,10 @@ private:
 		std::string name = component->getFullName();
 		saveEntity(component);
 
-		int entityId = _cache.getTypeId( component );
+		int entityId = getTypeId( component );
 		int objId = _spaceStore->addObject( entityId );
 
-		_cache.insertObjectCache(object.get(), objId);
+		insertObjectCache(object.get(), objId);
 
 		co::Range<co::IPort* const> ports = component->getPorts();
 
@@ -389,7 +376,7 @@ private:
 		for( int i = 0; i < ports.getSize(); i++ )
 		{
 			co::IPort* port = (ports[i]);
-			fieldId = _cache.getMemberId( port );
+			fieldId = getMemberId( port );
 			
 			if( fieldId == 0 )
 			{
@@ -404,11 +391,11 @@ private:
 				saveService(service, port);
 				std::stringstream insertValue;
 				
-				_serializer.toString( _cache.getObjectId( service ), refStr);
+				_serializer.toString( getObjectId( service ), refStr);
 			}
 			else
 			{
-				_serializer.toString( _cache.getObjectId( service->getProvider() ), refStr);
+				_serializer.toString( getObjectId( service->getProvider() ), refStr);
 			}
 			ca::StoredFieldValue value;
 			value.fieldId = fieldId;
@@ -423,7 +410,7 @@ private:
 	void saveComponent(co::IComponent* component)
 	{
 		int componentId = _spaceStore->getOrAddType( component->getFullName(), getCalciumModelId() );
-		_cache.insertTypeCache( component, componentId );
+		insertTypeCache( component, componentId );
 
 		co::RefVector< co::IPort > ports;
 		_model->getPorts( component, ports );
@@ -459,14 +446,14 @@ private:
 			mapFieldValue.insert( FieldValueMap::value_type( fieldValue.fieldId, fieldValue.value ) );
 		}
 
-		_cache.insertObjectCache( object, id );
+		insertObjectCache( object, id );
 
 		co::IPort* port;
 		for( int i = 0; i < ports.getSize(); i++ )
 		{
 			port = ports[i];
 			
-			int fieldId = _cache.getMemberId( port );
+			int fieldId = getMemberId( port );
 			if( fieldId == 0 )
 			{
 				continue;
@@ -540,7 +527,7 @@ private:
 		for( int i = 0; i < fields.getSize(); i++)
 		{
 			co::IField* field = fields[i];
-			int fieldId = _cache.getMemberId( field );
+			int fieldId = getMemberId( field );
 			if( fieldId == 0 )
 			{
 				continue;
@@ -666,12 +653,12 @@ private:
 
 	co::IObject* getObject( co::uint32 objectId, co::uint32 revision )
 	{
-		co::IObject* object = (co::IObject*) _cache.getObject( objectId );
+		co::IObject* object = (co::IObject*) getObject( objectId );
 		
 		if( object == NULL )
 		{
 			restoreObject( objectId, revision );
-			co::IService* service = _cache.getObject( objectId );
+			co::IService* service = getObject( objectId );
 			if(service == NULL)
 			{
 				throw co::IllegalStateException();
@@ -683,7 +670,7 @@ private:
 
 	co::IType* getType( co::uint32 id )
 	{
-		co::IType* resultType = _cache.getType( id );
+		co::IType* resultType = getCachedType( id );
 
 		if( resultType == NULL )
 		{
@@ -692,7 +679,7 @@ private:
 
 			resultType = co::getType( storedType.typeName );
 
-			_cache.insertTypeCache( resultType, id );
+			insertTypeCache( resultType, id );
 			
 			if( resultType->getKind() == co::TK_COMPONENT || resultType->getKind() == co::TK_INTERFACE )
 			{
@@ -704,7 +691,7 @@ private:
 					storedFieldName = storedType.fields[i].fieldName;
 					co::IMember* member = compositeType->getMember( storedFieldName );
 					assert( member != NULL );
-					_cache.insertMemberCache( member, storedType.fields[i].fieldId );
+					insertMemberCache( member, storedType.fields[i].fieldId );
 				} 
 			}
 		}
@@ -712,6 +699,142 @@ private:
 		return resultType;
 
 	}
+
+	co::uint32 getTypeId( co::IType* type )
+	{
+		TypeIdMap::iterator it = _typeIdCache.find( type );
+
+		if(it != _typeIdCache.end())
+		{
+			return it->second;
+		}
+
+		return 0;
+	}
+
+	co::IType* getCachedType( co::uint32 id )
+	{
+		IdTypeMap::iterator it = _typeCache.find(id);
+
+		if(it != _typeCache.end())
+		{
+			return it->second;
+		}
+
+		return NULL;
+
+	}
+
+	co::IMember* getMember( co::uint32 id )
+	{
+		IdMemberMap::iterator it = _memberCache.find(id);
+
+		if(it != _memberCache.end())
+		{
+			return it->second;
+		}
+
+		return NULL;
+
+	}
+
+	co::uint32 getMemberId( co::IMember* member )
+	{
+		MemberIdMap::iterator it = _memberIdCache.find( member );
+
+		if(it != _memberIdCache.end())
+		{
+			return it->second;
+		}
+
+		return 0;
+	}
+
+	co::IService* getObject( co::uint32 id )
+	{
+		IdObjectMap::iterator it = _objectCache.find(id);
+
+		if(it != _objectCache.end())
+		{
+			return it->second;
+		}
+
+		return NULL;
+
+	}
+
+	co::uint32 getObjectId(co::IService* obj)
+	{
+		ObjectIdMap::iterator it = _objectIdCache.find(obj);
+
+		if(it != _objectIdCache.end())
+		{
+			return it->second;
+		}
+
+		return 0;
+	}
+
+	//generates two way mapping
+	void insertObjectCache( co::IService* obj, co::uint32 id )
+	{
+		_objectIdCache.insert(ObjectIdMap::value_type( obj, id ));
+		_objectCache.insert(IdObjectMap::value_type( id, obj ));
+	}
+
+	void insertTypeCache( co::IType* type, co::uint32 id )
+	{
+		_typeIdCache.insert( TypeIdMap::value_type( type, id ) );
+		_typeCache.insert( IdTypeMap::value_type( id, type ) );
+	}
+
+	void insertMemberCache( co::IMember* member, co::uint32 id )
+	{
+		_memberIdCache.insert( MemberIdMap::value_type( member, id ) );
+		_memberCache.insert( IdMemberMap::value_type( id, member ) );
+	}
+
+	void clear()
+	{
+		_objectCache.clear();
+		_objectIdCache.clear();
+
+		_typeCache.clear();
+		_typeIdCache.clear();
+
+		_memberCache.clear();
+		_memberIdCache.clear();
+	}
+private:
+
+	co::RefPtr<ca::ISpace> _space;
+	ca::IModel* _model;
+
+	StringSerializer _serializer;
+
+	co::RefPtr<ca::IUniverse> _universe;
+	co::RefPtr<ca::ISpaceStore> _spaceStore;
+
+	co::RefVector<ca::ISpaceChanges> _spaceChanges;
+
+	typedef std::map<co::uint32, std::string> FieldValueMap;
+	typedef std::map<co::IService*, co::uint32> ObjectIdMap;
+	typedef std::map<co::uint32, co::IService*> IdObjectMap;
+
+	typedef std::map<co::IType*, co::uint32> TypeIdMap;
+	typedef std::map<co::uint32, co::IType*> IdTypeMap;
+
+	typedef std::map<co::IMember*, co::uint32> MemberIdMap;
+	typedef std::map<co::uint32, co::IMember*> IdMemberMap;
+
+	ObjectIdMap _objectIdCache;
+	IdObjectMap _objectCache;
+
+	TypeIdMap _typeIdCache;
+	IdTypeMap _typeCache;
+
+	MemberIdMap _memberIdCache;
+	IdMemberMap _memberCache;
 };
 
 CORAL_EXPORT_COMPONENT( SpacePersister, SpacePersister );
