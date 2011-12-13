@@ -27,7 +27,8 @@ class SQLiteSpaceStore : public SQLiteSpaceStore_Base
 public:
 	SQLiteSpaceStore()
 	{
-		// empty
+		_inTransaction = false;
+		_startedRevision = false;
 	}
 
 	virtual ~SQLiteSpaceStore()
@@ -66,8 +67,8 @@ public:
 
 	void beginChanges()
 	{
-		_latestRevision++;
-		_currentRevision = _latestRevision;
+		executeOrThrow(prepareOrThrow("BEGIN TRANSACTION"));
+		_inTransaction = true;
 
 		if( _currentRevision == 1 )
 		{
@@ -77,13 +78,36 @@ public:
 
 	void endChanges()
 	{
-		ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )" );
+		if( _startedRevision )
+		{
+			ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )" );
 
-		stmt.bind( 1, _rootObjectId );
-		stmt.bind( 2, _currentRevision );
+			stmt.bind( 1, _rootObjectId );
+			stmt.bind( 2, _currentRevision );
 
-		executeOrThrow( stmt );
-		stmt.finalize();
+			executeOrThrow( stmt );
+			_startedRevision = false;
+
+			stmt.finalize();
+		}
+		
+
+		try 
+		{
+			executeOrThrow(prepareOrThrow("COMMIT TRANSACTION"));
+			_inTransaction = false;
+		}
+		catch( ca::IOException& e )
+		{
+			if( _inTransaction )
+			{
+				executeOrThrow(prepareOrThrow("ROLLBACK TRANSACTION"));
+				_inTransaction = false;
+			}
+			
+			throw e;
+		}
+
 	}
 
 	co::uint32 getRootObject( co::uint32 revision )
@@ -104,6 +128,7 @@ public:
 		co::uint32 id;
 		if( !rs.next() )
 		{
+			checkBeginTransaction();
 			typeStmt.reset();
 
 			ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES (?, ?)" );
@@ -130,6 +155,7 @@ public:
 		
 	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId )
 	{
+		checkBeginTransaction();
 		ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ( ?, ?, ? );" );
 
 		stmt.bind( 1, typeId );
@@ -144,11 +170,13 @@ public:
 	
 	co::uint32 addObject( co::uint32 typeId )
 	{
+		checkBeginTransaction();
+		checkGenerateRevision();
 
 		ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO OBJECT (TYPE_ID) VALUES ( ? );" );
 		stmt.bind( 1, typeId );
 		executeOrThrow( stmt );
-		
+
 		ca::SQLiteStatement stmtMaxObj = prepareOrThrow( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
 
 		ca::SQLiteResult rs = stmtMaxObj.query();
@@ -164,12 +192,15 @@ public:
 			_rootObjectId = resultId;
 			_firstObject = false;
 		}
-		stmt.finalize();
+		//stmt.finalize();
 		return resultId;
 	}
 
 	void addValues( co::uint32 objId, co::Range<const ca::StoredFieldValue> values )
 	{
+		checkBeginTransaction();
+		checkGenerateRevision();
+
 		ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO FIELD_VALUE (FIELD_ID, OBJECT_ID, REVISION, VALUE)\
 										 VALUES (?, ?, ?, ?)" );
 
@@ -249,6 +280,7 @@ public:
 		ca::SQLiteResult rs = executeQueryOrThrow( stmt );
 		
 		bool first = true;
+		StoredField sf;
 		while( rs.next() )
 		{
 			if( first )
@@ -256,14 +288,20 @@ public:
 				storedType.fields.clear();
 				storedType.typeId = typeId;
 				storedType.typeName = rs.getString( 1 );
+				
+				//check if it has fields...
+				if( rs.getString( 3 ) == "" )
+				{
+					break;
+				}
+				
 				first = false;
 			}
 
-			StoredField sf;
-			sf.fieldId = rs.getUint32( 2 );
 			sf.fieldName = rs.getString( 3 );
+			sf.fieldId = rs.getUint32( 2 );
 			sf.typeId = rs.getUint32( 4 );
-				
+
 			storedType.fields.push_back( sf );
 		}
 		stmt.finalize();
@@ -303,14 +341,6 @@ public:
 	}
 
 private:
-
-	std::string _fileName;
-	ca::SQLiteConnection _db;
-	co::uint32 _currentRevision;
-	co::uint32 _latestRevision;
-	co::uint32 _rootObjectId;
-	bool _firstObject;
-		
 	co::uint32 getRootObjectForRevision( co::uint32 revision )
 	{
 		co::uint32 rootObject = 0;
@@ -331,7 +361,6 @@ private:
 	co::uint32 getFieldIdByName( const std::string& fieldName, co::uint32 typeId )
 	{
 		
-
 		ca::SQLiteStatement stmt = prepareOrThrow( "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = ? AND TYPE_ID = ?" );
 		stmt.bind( 1, fieldName );
 		stmt.bind( 2, typeId );
@@ -349,12 +378,28 @@ private:
 		return result;
 	}
 
+	void checkGenerateRevision()
+	{
+		if( !_startedRevision )
+		{
+			_latestRevision++;
+			_currentRevision = _latestRevision;
+			_startedRevision = true;
+		}
+	}
+
+	void checkBeginTransaction()
+	{
+		if( !_inTransaction )
+		{
+			CORAL_THROW(ca::IOException, "Attempt to call a store modification routine without calling 'beginChanges' before.");
+		}
+	}
+
 	void createTables()
 	{
 		try{
 			_db.prepare("BEGIN TRANSACTION").execute();
-
-			_db.prepare("PRAGMA foreign_keys = 1");
 
 			_db.prepare( "CREATE TABLE if not exists [TYPE] (\
 				[TYPE_ID] INTEGER  PRIMARY KEY AUTOINCREMENT NOT NULL,\
@@ -369,7 +414,7 @@ private:
 				[FIELD_TYPE_ID] INTEGER NOT NULL,\
 				[FIELD_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
 				UNIQUE (FIELD_NAME, TYPE_ID),\
-				FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID)\
+				FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID),\
 				FOREIGN KEY (FIELD_TYPE_ID) REFERENCES TYPE(TYPE_ID)\
 				);" ).execute();
 
@@ -429,9 +474,9 @@ private:
 		{
 			return _db.prepare( sql );
 		}
-		catch ( ca::SQLiteException& )
+		catch ( ca::SQLiteException& e )
 		{
-			throw ca::IOException( "Unexpected database query exception: Create Statement error" );
+			CORAL_THROW( ca::IOException, "Unexpected database query exception, create Statement error: " << e.getMessage() );
 		}
 	}
 
@@ -441,9 +486,9 @@ private:
 		{
 			return stmt.query();
 		}
-		catch ( ca::SQLiteException& )
+		catch ( ca::SQLiteException& e )
 		{
-			throw ca::IOException( "Unexpected database query exception" );
+			CORAL_THROW( ca::IOException, "Unexpected database query exception: " << e.getMessage() );
 		}		
 				
 	}
@@ -454,12 +499,22 @@ private:
 		{
 			stmt.execute();
 		}
-		catch ( ca::SQLiteException& )
+		catch ( ca::SQLiteException& e )
 		{
-			throw ca::IOException( "Unexpected database query exception" );
+			CORAL_THROW( ca::IOException, "Unexpected database query exception: " << e.getMessage() );
 		}		
 				
 	}
+private:
+
+	std::string _fileName;
+	ca::SQLiteConnection _db;
+	co::uint32 _currentRevision;
+	co::uint32 _latestRevision;
+	co::uint32 _rootObjectId;
+	bool _firstObject;
+	bool _inTransaction;
+	bool _startedRevision;
 
 };
 

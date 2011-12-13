@@ -40,12 +40,13 @@ bool SQLiteResult::next()
 	
 const std::string SQLiteResult::getString( co::uint32 columnIndex )
 {
+	assert( sqlite3_data_count( _stmt ) > 0 );
 	assert( columnIndex < (co::uint32)sqlite3_column_count(_stmt) );
 	const unsigned char* value = sqlite3_column_text(_stmt, columnIndex);
 
 	if( value == NULL )
 	{
-		throw ca::SQLiteException("ResultSet not pointing to a valid row. Check if next was called");
+		return "";
 	}
 	std::string str( reinterpret_cast<const char*>( value ) );
 	return str;
@@ -53,12 +54,9 @@ const std::string SQLiteResult::getString( co::uint32 columnIndex )
 
 const co::uint32 SQLiteResult::getUint32( co::uint32 columnIndex )
 {
-	assert( columnIndex < (co::uint32)sqlite3_column_count(_stmt) );
-	const co::uint32 value = static_cast<co::uint32>(sqlite3_column_int64(_stmt, columnIndex));
-	if( value == NULL )
-	{
-		throw ca::SQLiteException("ResultSet not pointing to a valid row. Check if next was called");
-	}
+	assert( sqlite3_data_count( _stmt ) > 0 );
+	assert( columnIndex < (co::uint32)sqlite3_column_count( _stmt ) );
+	const co::uint32 value = static_cast<co::uint32>( sqlite3_column_int64( _stmt, columnIndex ) );
 	return value;
 }
 
@@ -86,11 +84,12 @@ void SQLiteConnection::open(const std::string& fileName)
 	{
 		throw ca::SQLiteException( "Open database failed. Database already opened" );
 	}
-			
+
 	if(!sqlite3_open( fileName.c_str(), &_db) == SQLITE_OK )
 	{
 		throw ca::SQLiteException( "Open database failed" );
 	}
+	prepare("PRAGMA foreign_keys = ON").execute();
 }
 
 void SQLiteConnection::close()

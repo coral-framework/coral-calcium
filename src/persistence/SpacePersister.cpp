@@ -198,8 +198,6 @@ private:
 		co::IInterface* type = port->getType();
 		saveEntity(type);
 
-		std::string typeFullName = type->getFullName();
-
 		int entityId = getTypeId( obj->getInterface() );
 
 		objId = _spaceStore->addObject( entityId );
