@@ -1,5 +1,6 @@
 #include "../ERMSpace.h"
 #include "persistence/sqlite/SQLite.h"
+#include <ca/IOException.h>
 #include <gtest/gtest.h>
 #include <co/reserved/OS.h>
 #include <cstdio>
@@ -26,8 +27,8 @@ TEST_F( SQLiteConnectionTests, testExecuteWithoutOpen )
 
 	ca::SQLiteConnection sqliteDBConn;
 
-	EXPECT_THROW( sqliteDBConn.prepare("CREATE TABLE A (fieldX INTEGER)").execute(), ca::SQLiteException );
-	EXPECT_THROW( ca::SQLiteResult rs = sqliteDBConn.prepare("SELECT * FROM A").query(), ca::SQLiteException );
+	EXPECT_THROW( sqliteDBConn.prepare("CREATE TABLE A (fieldX INTEGER)").execute(), ca::IOException );
+	EXPECT_THROW( ca::SQLiteResult rs = sqliteDBConn.prepare("SELECT * FROM A").query(), ca::IOException );
 }
 
 TEST_F( SQLiteConnectionTests, testCreateDatabase )
@@ -43,7 +44,7 @@ TEST_F( SQLiteConnectionTests, testCreateDatabase )
 	EXPECT_TRUE( co::OS::isFile(fileName) );
 	
 	//attempt to create again the database
-	EXPECT_THROW( sqliteDBConn.open( fileName ), ca::SQLiteException );
+	EXPECT_THROW( sqliteDBConn.open( fileName ), ca::IOException );
 	
 	sqliteDBConn.close();
 }
@@ -84,7 +85,7 @@ TEST_F( SQLiteConnectionTests, openExistingDB )
 	EXPECT_NO_THROW( sqliteDBConn.open( fileName ) );
 	
 	//you cannot open an already opened database
-	EXPECT_THROW( sqliteDBConn.open( fileName ), ca::SQLiteException );
+	EXPECT_THROW( sqliteDBConn.open( fileName ), ca::IOException );
 
 	EXPECT_NO_THROW( sqliteDBConn.close() );
 
@@ -109,7 +110,7 @@ TEST_F( SQLiteConnectionTests, closeDBFail )
 	ca::SQLiteStatement stmt = sqliteDBConn.prepare( "SELECT * FROM A" );
 
 	//not finalized IResultSet
-	EXPECT_THROW(sqliteDBConn.close(), ca::SQLiteException);
+	EXPECT_THROW(sqliteDBConn.close(), ca::IOException);
 
 	
 }
@@ -143,7 +144,7 @@ TEST_F( SQLiteConnectionTests, preparedStatementTest )
 	EXPECT_EQ( rs.getString( 1 ), "value" );
 
 	// unfinalized IResultSet
-	EXPECT_THROW( sqliteDBConn.close(), ca::SQLiteException );
+	EXPECT_THROW( sqliteDBConn.close(), ca::IOException );
 
 	stmt.finalize();
 	stmt2.finalize();

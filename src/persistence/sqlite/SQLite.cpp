@@ -6,6 +6,7 @@
 #include "SQLite.h"
 #include "sqlite3.h"
 #include <sstream>
+#include <ca/IOException.h>
 
 namespace ca {
 
@@ -30,7 +31,7 @@ bool SQLiteResult::next()
 	int status = sqlite3_step( _stmt );
 	if( status == SQLITE_ERROR )
 	{
-		throw ca::SQLiteException("error on getting next result on ResultSet");
+		throw ca::IOException("error on getting next result on ResultSet");
 	}
 	return status != SQLITE_DONE;
 }
@@ -131,7 +132,7 @@ void SQLiteStatement::handleErrorCode( int errorCode )
 {
 	if( errorCode != SQLITE_OK && errorCode != SQLITE_DONE )
 	{
-		CORAL_THROW( ca::SQLiteException, "SQLite statement error "
+		CORAL_THROW( ca::IOException, "SQLite statement error "
 			<< sqlite3_errmsg( sqlite3_db_handle( _stmt ) ) );
 	}
 }
@@ -153,10 +154,10 @@ SQLiteConnection::~SQLiteConnection()
 void SQLiteConnection::open(const std::string& fileName)
 {
 	if( isConnected() )
-		throw ca::SQLiteException( "Open database failed. Database already opened" );
+		throw ca::IOException( "Open database failed. Database already opened" );
 
 	if( sqlite3_open( fileName.c_str(), &_db ) != SQLITE_OK )
-		throw ca::SQLiteException( "Open database failed" );
+		throw ca::IOException( "Open database failed" );
 
 	prepare( "PRAGMA foreign_keys = ON" ).execute();
 }
@@ -167,24 +168,24 @@ void SQLiteConnection::close()
 		return;
 
 	if( sqlite3_close( _db ) != SQLITE_OK )
-		throw ca::SQLiteException( "Could not close database. Check for unfinalized IResultSets" );
+		throw ca::IOException( "Could not close database. Check for unfinalized IResultSets" );
 
 	_db = 0;
 }
 
-SQLiteStatement SQLiteConnection::prepare( const std::string& sql )
+SQLiteStatement SQLiteConnection::prepare( const char* sql )
 {
 	if( !_db )
 	{
-		throw ca::SQLiteException( "Database not connected. Cannot execute command" );
+		throw ca::IOException( "Database not connected. Cannot execute command" );
 	}
 
 	sqlite3_stmt* stmt;
 
-	int resultCode = sqlite3_prepare_v2( _db, sql.c_str(), -1, &stmt, 0 );
+	int resultCode = sqlite3_prepare_v2( _db, sql, -1, &stmt, 0 );
 	if( resultCode != SQLITE_OK )
 	{
-		CORAL_THROW( ca::SQLiteException, "Query Failed: " << sqlite3_errmsg( _db ) );
+		CORAL_THROW( ca::IOException, "Query Failed: " << sqlite3_errmsg( _db ) );
 	}
 
 	return SQLiteStatement( stmt );
@@ -194,7 +195,7 @@ void SQLiteConnection::checkConnection()
 {
 	if( !isConnected() )
 	{
-		throw ca::SQLiteException( "Database not connected. Cannot execute command" );
+		throw ca::IOException( "Database not connected. Cannot execute command" );
 	}
 }
 

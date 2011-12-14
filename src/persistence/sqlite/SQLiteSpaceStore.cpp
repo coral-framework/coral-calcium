@@ -15,6 +15,7 @@
 
 #include <ca/IOException.h>
 
+
 namespace ca {
 
 class SQLiteSpaceStore : public SQLiteSpaceStore_Base
@@ -35,51 +36,33 @@ public:
 	{
 		assert( !_fileName.empty() );
 
-		try
-		{
-			_db.open( _fileName );
-			createTables();
-			fillLatestRevision();
-		}
-		catch( ca::SQLiteException& e )
-		{
-			throw ca::IOException( e.what() );
-		}
+		_db.open( _fileName );
+		createTables();
+		fillLatestRevision();
+
 	}
 
 	void close()
 	{
-		try
-		{
-			_db.close();
-		}
-		catch( ca::SQLiteException& e )
-		{
-			throw ca::IOException( e.what() );
-		}
+		_db.close();
 	}
 
 	void beginChanges()
 	{
-		executeOrThrow( prepareOrThrow( "BEGIN TRANSACTION" ) );
+		_db.prepare( "BEGIN TRANSACTION" ).execute();
 		_inTransaction = true;
-
-		if( _currentRevision == 1 )
-		{
-			_firstObject = true;
-		}
 	}
 
 	void endChanges()
 	{
 		if( _startedRevision )
 		{
-			ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )" );
+			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )" );
 
 			stmt.bind( 1, _rootObjectId );
 			stmt.bind( 2, _currentRevision );
 
-			executeOrThrow( stmt );
+			stmt.execute();
 			_startedRevision = false;
 
 			stmt.finalize();
@@ -88,14 +71,14 @@ public:
 
 		try 
 		{
-			executeOrThrow( prepareOrThrow( "COMMIT TRANSACTION" ) );
+			_db.prepare( "COMMIT TRANSACTION" ).execute(); 
 			_inTransaction = false;
 		}
 		catch( ca::IOException& e )
 		{
 			if( _inTransaction )
 			{
-				executeOrThrow(prepareOrThrow("ROLLBACK TRANSACTION"));
+				_db.prepare("ROLLBACK TRANSACTION").execute();
 				_inTransaction = false;
 			}
 			
@@ -111,27 +94,26 @@ public:
 
 	co::uint32 getOrAddType( const std::string& typeName, co::uint32 version ) 
 	{
-		std::string typeQuery = "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = ?  AND TYPE_VERSION = ?";
-		ca::SQLiteStatement typeStmt = prepareOrThrow( typeQuery );
+		ca::SQLiteStatement typeStmt = _db.prepare( "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = ?  AND TYPE_VERSION = ?" );
 
 		typeStmt.bind( 1, typeName );
 		typeStmt.bind( 2, version );
 
-		ca::SQLiteResult rs = executeQueryOrThrow( typeStmt );
+		ca::SQLiteResult rs = typeStmt.query();
 		co::uint32 id;
 		if( !rs.next() )
 		{
 			checkBeginTransaction();
 			typeStmt.reset();
 
-			ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES (?, ?)" );
+			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES (?, ?)" );
 			stmt.bind( 1, typeName );
 			stmt.bind( 2, version );
 			
-			executeOrThrow( stmt );
+			stmt.execute();
 			stmt.finalize();
 			
-			ca::SQLiteResult rs = executeQueryOrThrow( typeStmt );
+			ca::SQLiteResult rs = typeStmt.query();
 			rs.next();
 			id = rs.getUint32(0);
 		}
@@ -148,13 +130,13 @@ public:
 	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId )
 	{
 		checkBeginTransaction();
-		ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ( ?, ?, ? );" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ( ?, ?, ? );" );
 
 		stmt.bind( 1, typeId );
 		stmt.bind( 2, fieldName );
 		stmt.bind( 3, fieldTypeId );
 
-		executeOrThrow( stmt );
+		stmt.execute();
 		stmt.finalize();
 
 		return getFieldIdByName(fieldName, typeId);
@@ -165,11 +147,11 @@ public:
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO OBJECT (TYPE_ID) VALUES ( ? );" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT (TYPE_ID) VALUES ( ? );" );
 		stmt.bind( 1, typeId );
-		executeOrThrow( stmt );
+		stmt.execute();
 
-		ca::SQLiteStatement stmtMaxObj = prepareOrThrow( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
+		ca::SQLiteStatement stmtMaxObj = _db.prepare( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
 
 		ca::SQLiteResult rs = stmtMaxObj.query();
 
@@ -184,7 +166,8 @@ public:
 			_rootObjectId = resultId;
 			_firstObject = false;
 		}
-		//stmt.finalize();
+
+		stmt.finalize();
 		return resultId;
 	}
 
@@ -193,7 +176,7 @@ public:
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = prepareOrThrow( "INSERT INTO FIELD_VALUE (FIELD_ID, OBJECT_ID, REVISION, VALUE)\
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD_VALUE (FIELD_ID, OBJECT_ID, REVISION, VALUE)\
 										 VALUES (?, ?, ?, ?)" );
 
 		for( int i = 0; i < values.getSize(); i++ )
@@ -204,18 +187,18 @@ public:
 			stmt.bind( 3, _currentRevision );
 			stmt.bind( 4, values[i].value );
 
-			executeOrThrow( stmt );
+			stmt.execute();
 		}
 		stmt.finalize();
 	}
 	
 	co::uint32 getObjectType( co::uint32 objectId )
 	{
-		ca::SQLiteStatement stmt = prepareOrThrow( "SELECT O.TYPE_ID FROM OBJECT O WHERE O.OBJECT_ID = ?" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_ID FROM OBJECT O WHERE O.OBJECT_ID = ?" );
 
 		stmt.bind( 1, objectId );
 
-		ca::SQLiteResult rs = executeQueryOrThrow( stmt );
+		ca::SQLiteResult rs = stmt.query();
 				
 		if( rs.next() )
 		{
@@ -238,7 +221,7 @@ public:
 		values.clear();
 		
 		
-		ca::SQLiteStatement stmt = prepareOrThrow( "SELECT F.FIELD_ID, FV.VALUE FROM\
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT F.FIELD_ID, FV.VALUE FROM\
 								OBJECT OBJ LEFT OUTER JOIN TYPE T ON OBJ.TYPE_ID = T.TYPE_ID\
 								LEFT OUTER JOIN FIELD F ON F.TYPE_ID = T.TYPE_ID\
 								LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_ID, \
@@ -250,7 +233,7 @@ public:
 		
 		stmt.bind( 1, revision );
 		stmt.bind( 2, objectId );
-		ca::SQLiteResult rs = executeQueryOrThrow( stmt );
+		ca::SQLiteResult rs = stmt.query();
 				
 		while( rs.next() )
 		{
@@ -265,11 +248,11 @@ public:
 	void getType( co::uint32 typeId, ca::StoredType& storedType )
 	{
 		
-		ca::SQLiteStatement stmt = prepareOrThrow( "SELECT T.TYPE_ID, T.TYPE_NAME, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = ?" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT T.TYPE_ID, T.TYPE_NAME, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = ?" );
 
 		stmt.bind( 1, typeId );
 
-		ca::SQLiteResult rs = executeQueryOrThrow( stmt );
+		ca::SQLiteResult rs = stmt.query();
 		
 		bool first = true;
 		StoredField sf;
@@ -336,11 +319,11 @@ private:
 	co::uint32 getRootObjectForRevision( co::uint32 revision )
 	{
 		co::uint32 rootObject = 0;
-		ca::SQLiteStatement stmt = prepareOrThrow( "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION >= ? ORDER BY REVISION LIMIT 1" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION >= ? ORDER BY REVISION LIMIT 1" );
 
 		stmt.bind( 1, revision );
 
-		ca::SQLiteResult rs = executeQueryOrThrow( stmt );
+		ca::SQLiteResult rs = stmt.query();
 		
 		if( rs.next() )
 		{
@@ -353,11 +336,11 @@ private:
 	co::uint32 getFieldIdByName( const std::string& fieldName, co::uint32 typeId )
 	{
 		
-		ca::SQLiteStatement stmt = prepareOrThrow( "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = ? AND TYPE_ID = ?" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = ? AND TYPE_ID = ?" );
 		stmt.bind( 1, fieldName );
 		stmt.bind( 2, typeId );
 
-		ca::SQLiteResult rs = executeQueryOrThrow( stmt );
+		ca::SQLiteResult rs = stmt.query();
 
 		co::uint32 result = 0;
 
@@ -376,6 +359,10 @@ private:
 		{
 			_latestRevision++;
 			_currentRevision = _latestRevision;
+			if( _currentRevision == 1 )
+			{
+				_firstObject = true;
+			}
 			_startedRevision = true;
 		}
 	}
@@ -435,16 +422,16 @@ private:
 
 			_db.prepare("COMMIT TRANSACTION").execute();
 		}
-		catch( ca::SQLiteException& e )
+		catch( ca::IOException& e )
 		{
 			_db.prepare("ROLLBACK TRANSACTION").execute();
-			throw ca::IOException( e.what() );
+			throw e;
 		}
 	}
 
 	void fillLatestRevision()
 	{
-		ca::SQLiteStatement stmt = prepareOrThrow( "SELECT MAX(REVISION), ROOT_OBJECT_ID FROM SPACE GROUP BY ROOT_OBJECT_ID" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT MAX(REVISION), ROOT_OBJECT_ID FROM SPACE GROUP BY ROOT_OBJECT_ID" );
 		ca::SQLiteResult rs = stmt.query();
 			
 		if( rs.next() )
@@ -458,43 +445,6 @@ private:
 		}
 		_currentRevision = _latestRevision;
 
-	}
-
-	ca::SQLiteStatement prepareOrThrow( const std::string& sql )
-	{
-		try
-		{
-			return _db.prepare( sql );
-		}
-		catch ( ca::SQLiteException& e )
-		{
-			CORAL_THROW( ca::IOException, "Unexpected database query exception, create Statement error: " << e.getMessage() );
-		}
-	}
-
-	ca::SQLiteResult executeQueryOrThrow( ca::SQLiteStatement& stmt )
-	{
-		try
-		{
-			return stmt.query();
-		}
-		catch ( ca::SQLiteException& e )
-		{
-			CORAL_THROW( ca::IOException, "Unexpected database query exception: " << e.getMessage() );
-		}		
-				
-	}
-
-	void executeOrThrow( ca::SQLiteStatement& stmt )
-	{
-		try
-		{
-			stmt.execute();
-		}
-		catch ( ca::SQLiteException& e )
-		{
-			CORAL_THROW( ca::IOException, "Unexpected database query exception: " << e.getMessage() );
-		}
 	}
 
 private:

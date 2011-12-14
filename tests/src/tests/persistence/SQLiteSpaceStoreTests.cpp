@@ -118,7 +118,7 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 {
 	spaceStore->open();
 	co::uint32 type1InsertedId, type2InsertedId;
-	spaceStore->beginChanges();
+	EXPECT_NO_THROW( spaceStore->beginChanges() );
 	EXPECT_NO_THROW( type1InsertedId = spaceStore->getOrAddType( "type1", 1 ) );
 	EXPECT_NO_THROW( type2InsertedId = spaceStore->getOrAddType( "type2", 2 ) );
 
@@ -131,7 +131,7 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 	ASSERT_FALSE ( obj1InsertedId == 0 );
 	ASSERT_FALSE ( obj2InsertedId == 0 );
 
-	spaceStore->endChanges();
+	EXPECT_NO_THROW( spaceStore->endChanges() );
 
 	co::uint32 type1ConsultedId, type2ConsultedId;
 	EXPECT_NO_THROW( type1ConsultedId = spaceStore->getObjectType( obj1InsertedId ) );
@@ -170,7 +170,7 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 	EXPECT_EQ( "type1", type.typeName );
 	EXPECT_EQ( type1InsertedId, type.typeId );
 
-	EXPECT_EQ( 3, type.fields.size() );
+	ASSERT_EQ( 3, type.fields.size() );
 
 	ca::StoredField field = type.fields[0];
 

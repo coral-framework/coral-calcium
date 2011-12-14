@@ -19,24 +19,6 @@ extern "C"
 namespace ca {
 
 /*!
-	Exception class for SQLite errors
- */
-class SQLiteException : public co::Exception
-{
-public:
-	SQLiteException()
-	{;}
-
-	SQLiteException( const std::string& message )
-		: co::Exception( message )
-	{;}
-
-	virtual ~SQLiteException() throw()
-	{;}
-};
-
-
-/*!
 	Class to iterate through SQLite query results (a list of rows).
 	No data is available until the first call to next().
  */
@@ -162,7 +144,7 @@ public:
 	 */
 	void open( const std::string& fileName );
 
-	ca::SQLiteStatement prepare( const std::string& sql );
+	ca::SQLiteStatement prepare( const char* sql );
 
 	void close();
 
