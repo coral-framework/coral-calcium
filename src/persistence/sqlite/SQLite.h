@@ -35,7 +35,7 @@ public:
 	bool next();
 
 	//! Retrieves the value at \a column as a string.
-	const std::string getString( int column );
+	const char* getString( int column );
 
 	//! Retrieves the value at \a column as an uint32.
 	co::uint32 getUint32( int column );
@@ -141,7 +141,7 @@ public:
 	/*!
 		Opens a connection to the database with the given \a fileName.
 		If the database does not exist yet, it is created.
-	 */
+		*/
 	void open( const std::string& fileName );
 
 	ca::SQLiteStatement prepare( const char* sql );

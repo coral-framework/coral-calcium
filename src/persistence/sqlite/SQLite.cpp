@@ -42,16 +42,11 @@ bool SQLiteResult::hasData( int column )
 	return count > 0 && column < count;
 }
 
-const std::string SQLiteResult::getString( int column )
+const char* SQLiteResult::getString( int column )
 {
 	assert( hasData( column ) );
-	const unsigned char* value = sqlite3_column_text( _stmt, column );
-	if( value == NULL )
-	{
-		return std::string();
-	}
-	std::string str( reinterpret_cast<const char*>( value ) );
-	return str;
+
+	return reinterpret_cast<const char*>( sqlite3_column_text( _stmt, column ) );
 }
 
 co::uint32 SQLiteResult::getUint32( int column )

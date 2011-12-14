@@ -140,8 +140,8 @@ TEST_F( SQLiteConnectionTests, preparedStatementTest )
 
 	EXPECT_TRUE( rs.next() );
 
-	EXPECT_EQ( rs.getString( 0 ), "1" );
-	EXPECT_EQ( rs.getString( 1 ), "value" );
+	EXPECT_EQ( 1, rs.getUint32( 0 ) );
+	EXPECT_EQ( "value", std::string( rs.getString( 1 ) ) );
 
 	// unfinalized IResultSet
 	EXPECT_THROW( sqliteDBConn.close(), ca::IOException );

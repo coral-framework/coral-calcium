@@ -208,7 +208,7 @@ private:
 		int j = 0;
 		std::vector<ca::StoredFieldValue> values;
 		std::string fieldValueStr;
-
+		std::vector<co::int32> refs;
 		for( int i = 0; i < fields.getSize(); i++ ) 
 		{
 			co::IField* field =  fields[i];
@@ -235,7 +235,7 @@ private:
 				{
 					co::Range<co::IService* const> services = fieldValue.get<co::Range<co::IService* const>>();
 					
-					std::vector<co::int32> refs;
+					refs.clear();
 					while(!services.isEmpty())
 					{
 						co::IService* const serv = services.getFirst();
@@ -427,7 +427,7 @@ private:
 
 		co::IType* type = getType( typeId );
 
-		std::string entity = type->getFullName();
+		const std::string& entity = type->getFullName();
 		
 		co::IObject* object = co::newInstance( entity );
 		

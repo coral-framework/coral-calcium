@@ -265,7 +265,7 @@ public:
 				storedType.typeName = rs.getString( 1 );
 				
 				//check if it has fields...
-				if( rs.getString( 3 ) == "" )
+				if( rs.getString( 3 ) == NULL )
 				{
 					break;
 				}
