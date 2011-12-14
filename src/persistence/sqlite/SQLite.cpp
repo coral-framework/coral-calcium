@@ -12,6 +12,7 @@ namespace ca {
 /************************************************************************/
 /* SQLiteResult                                                         */
 /************************************************************************/
+
 SQLiteResult::SQLiteResult( sqlite3_stmt* stmt )
 {
 	assert( stmt );
@@ -31,114 +32,35 @@ bool SQLiteResult::next()
 	{
 		throw ca::SQLiteException("error on getting next result on ResultSet");
 	}
-	if(status == SQLITE_DONE)
-	{
-		return false;
-	}
-	return true;
+	return status != SQLITE_DONE;
 }
-	
-const std::string SQLiteResult::getString( co::uint32 columnIndex )
-{
-	assert( sqlite3_data_count( _stmt ) > 0 );
-	assert( columnIndex < (co::uint32)sqlite3_column_count(_stmt) );
-	const unsigned char* value = sqlite3_column_text(_stmt, columnIndex);
 
+bool SQLiteResult::hasData( int column )
+{
+	int count = sqlite3_data_count( _stmt );
+	return count > 0 && count < column;
+}
+
+const std::string SQLiteResult::getString( int column )
+{
+	assert( hasData( column ) );
+	const unsigned char* value = sqlite3_column_text( _stmt, column );
 	if( value == NULL )
 	{
-		return "";
+		return std::string();
 	}
 	std::string str( reinterpret_cast<const char*>( value ) );
 	return str;
 }
 
-const co::uint32 SQLiteResult::getUint32( co::uint32 columnIndex )
+co::uint32 SQLiteResult::getUint32( int column )
 {
-	assert( sqlite3_data_count( _stmt ) > 0 );
-	assert( columnIndex < (co::uint32)sqlite3_column_count( _stmt ) );
-	const co::uint32 value = static_cast<co::uint32>( sqlite3_column_int64( _stmt, columnIndex ) );
-	return value;
+	assert( hasData( column ) );
+	return static_cast<co::uint32>( sqlite3_column_int64( _stmt, column ) );
 }
 
 /************************************************************************/
-/* SQLiteConnection                                                     */
-/************************************************************************/
-
-SQLiteConnection::SQLiteConnection()
-{
-	_db = 0;
-}
-
-SQLiteConnection::~SQLiteConnection()
-{
-	if( _db ) 
-	{
-		close();
-	}
-}
-
-
-void SQLiteConnection::open(const std::string& fileName)
-{
-	if( isConnected() )
-	{
-		throw ca::SQLiteException( "Open database failed. Database already opened" );
-	}
-
-	if(!sqlite3_open( fileName.c_str(), &_db) == SQLITE_OK )
-	{
-		throw ca::SQLiteException( "Open database failed" );
-	}
-	prepare("PRAGMA foreign_keys = ON").execute();
-}
-
-void SQLiteConnection::close()
-{
-	int closeCode = sqlite3_close(_db);
-	if(closeCode == SQLITE_OK)
-	{
-		_db = 0;
-	}
-	else
-	{
-		throw ca::SQLiteException("Could not close database. Check for not finalized IResultSets");
-	}
-}
-
-SQLiteStatement SQLiteConnection::prepare( const std::string& querySQL )
-{
-	if(!_db)
-	{
-		throw ca::SQLiteException( "Database not connected. Cannot execute command" );
-	}
-
-	sqlite3_stmt * statement;
-
-	int resultCode = sqlite3_prepare_v2( _db, querySQL.c_str(), -1, &statement, 0 );
-
-	if(resultCode != SQLITE_OK)
-	{
-		CORAL_THROW( ca::SQLiteException, "Query Failed: " << sqlite3_errmsg( _db ) );
-	}
-	SQLiteStatement stmt( statement );
-	return stmt;
-}
-
-bool SQLiteConnection::isConnected()
-{
-	return _db != NULL;
-}
-
-void SQLiteConnection::checkConnection()
-{
-	if( !isConnected() )
-	{
-		throw ca::SQLiteException("Database not connected. Cannot execute command");
-	}
-}
-
-/************************************************************************/
-/*           SQLiteStatement                                            */
+/* SQLiteStatement                                                      */
 /************************************************************************/
 
 SQLiteStatement::SQLiteStatement( sqlite3_stmt* stmt )
@@ -151,6 +73,11 @@ SQLiteStatement::SQLiteStatement( const SQLiteStatement& o)
 {
 	_stmt = o._stmt;
 	o._stmt = NULL;
+}
+
+SQLiteStatement::~SQLiteStatement()
+{
+	finalize();
 }
 
 void SQLiteStatement::bind( int index, double value )
@@ -175,8 +102,7 @@ void SQLiteStatement::bind( int index, co::int64 value )
 
 SQLiteResult SQLiteStatement::query()
 {
-	SQLiteResult rs( _stmt );
-	return rs;
+	return SQLiteResult( _stmt );
 }
 
 void SQLiteStatement::execute()
@@ -205,9 +131,71 @@ void SQLiteStatement::handleErrorCode( int errorCode )
 {
 	if( errorCode != SQLITE_OK && errorCode != SQLITE_DONE )
 	{
-		CORAL_THROW( ca::SQLiteException, "SQLite statement error " << sqlite3_errmsg( sqlite3_db_handle( _stmt ) ) );
+		CORAL_THROW( ca::SQLiteException, "SQLite statement error "
+			<< sqlite3_errmsg( sqlite3_db_handle( _stmt ) ) );
 	}
 }
 
-	
+/************************************************************************/
+/* SQLiteConnection                                                     */
+/************************************************************************/
+
+SQLiteConnection::SQLiteConnection()
+{
+	_db = 0;
+}
+
+SQLiteConnection::~SQLiteConnection()
+{
+	close();
+}
+
+void SQLiteConnection::open(const std::string& fileName)
+{
+	if( isConnected() )
+		throw ca::SQLiteException( "Open database failed. Database already opened" );
+
+	if( sqlite3_open( fileName.c_str(), &_db ) != SQLITE_OK )
+		throw ca::SQLiteException( "Open database failed" );
+
+	prepare( "PRAGMA foreign_keys = ON" ).execute();
+}
+
+void SQLiteConnection::close()
+{
+	if( !_db )
+		return;
+
+	if( sqlite3_close( _db ) != SQLITE_OK )
+		throw ca::SQLiteException( "Could not close database. Check for unfinalized IResultSets" );
+
+	_db = 0;
+}
+
+SQLiteStatement SQLiteConnection::prepare( const std::string& sql )
+{
+	if( !_db )
+	{
+		throw ca::SQLiteException( "Database not connected. Cannot execute command" );
+	}
+
+	sqlite3_stmt* stmt;
+
+	int resultCode = sqlite3_prepare_v2( _db, sql.c_str(), -1, &stmt, 0 );
+	if( resultCode != SQLITE_OK )
+	{
+		CORAL_THROW( ca::SQLiteException, "Query Failed: " << sqlite3_errmsg( _db ) );
+	}
+
+	return SQLiteStatement( stmt );
+}
+
+void SQLiteConnection::checkConnection()
+{
+	if( !isConnected() )
+	{
+		throw ca::SQLiteException( "Database not connected. Cannot execute command" );
+	}
+}
+
 } // namespace ca

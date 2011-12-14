@@ -13,7 +13,7 @@
 
 	Nested beginChange() / endChange() calls are allowed, as long as they are
 	balanced. Currently, all nested calls are ignored, and only the top-level
-	calls generate an entry on the undo stack.
+	call generates an entry on the undo stack (combining all nested changes).
  */
 interface IUndoManager extends ISpaceObserver
 {
@@ -23,20 +23,21 @@ interface IUndoManager extends ISpaceObserver
 	// Whether there are any changes to redo.
 	readonly bool canRedo;
 
-	// List of strings describing the changesets in the undo stack.
-	readonly string[] undoList;
+	// Descriptions of the changesets in the undo stack.
+	readonly string[] undoStack;
 
-	// List of strings describing the changesets in the redo stack.
-	readonly string[] redoList;
+	// Descriptions of the changesets in the redo stack.
+	readonly string[] redoStack;
 
 	/*
 		Starts recording changes into a changeset. Must be paired with an endChange() call.
-		The given \a description will be associated with the changeset in the undo/redo lists.
+		The given \a description will be associated with the changeset in the undo/redo stacks.
 	 */
 	void beginChange( in string description );
 
 	/*
-		Finishes recording changes and pushes a changeset onto the undo stack.
+		Finishes recording changes.
+		This pushes a changeset onto the undo stack and clears the redo stack.
 		\throw co.IllegalStateException if this manager is not currently recording a changeset.
 	 */
 	void endChange() raises co.IllegalStateException;

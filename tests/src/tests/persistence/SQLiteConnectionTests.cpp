@@ -142,17 +142,11 @@ TEST_F( SQLiteConnectionTests, preparedStatementTest )
 	EXPECT_EQ( rs.getString( 0 ), "1" );
 	EXPECT_EQ( rs.getString( 1 ), "value" );
 
-	//not finalized IResultSet
+	// unfinalized IResultSet
 	EXPECT_THROW( sqliteDBConn.close(), ca::SQLiteException );
-	
+
 	stmt.finalize();
 	stmt2.finalize();
 
 	EXPECT_NO_THROW( sqliteDBConn.close() );
 }
-
-
-
-
-
-

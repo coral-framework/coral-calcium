@@ -311,7 +311,7 @@ private:
 			saveInterface( interfaceType );
 			return;
 		}
-			
+
 		int typeId = _spaceStore->getOrAddType( type->getFullName(), getCalciumModelId() );
 		insertTypeCache( type, typeId );
 	}

@@ -51,12 +51,12 @@ public:
 		return !_descriptions[Stack_Redo].empty();
 	}
 
-	co::Range<std::string const> getUndoList()
+	co::Range<std::string const> getUndoStack()
 	{
 		return _descriptions[Stack_Undo];
 	}
 
-	co::Range<std::string const> getRedoList()
+	co::Range<std::string const> getRedoStack()
 	{
 		return _descriptions[Stack_Redo];
 	}
@@ -89,6 +89,7 @@ public:
 			return; // nested calls are ignored
 
 		recordChanges( Stack_Undo );
+		clearStack( Stack_Redo );
 	}
 
 	void undo()
@@ -105,12 +106,8 @@ public:
 	{
 		checkHasSpace();
 		checkNotRecording();
-
-		for( int s = Stack_Undo; s < Stack_Count; ++s )
-		{
-			_changes[s].clear();
-			_descriptions[s].clear();
-		}
+		for( Stack s = Stack_Undo; s < Stack_Count; ++s )
+			clearStack( s );
 	}
 
 	// ------ ca.ISpaceObserver Methods ------ //
@@ -176,6 +173,12 @@ private:
 	{
 		if( _nestingLevel )
 			throw co::IllegalStateException( "operation forbidden while recording a changeset" );
+	}
+
+	void clearStack( Stack s )
+	{
+		_changes[s].clear();
+		_descriptions[s].clear();
 	}
 
 	void recordChanges( Stack s )

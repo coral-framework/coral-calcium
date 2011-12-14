@@ -3,10 +3,10 @@
  * See copyright notice in LICENSE.md
  */
 
+#include "SQLite.h"
 #include "SQLiteSpaceStore_Base.h"
 
 #include <co/RefPtr.h>
-#include <co/Range.h>
 #include <co/IllegalArgumentException.h>
 
 #include <ca/StoredFieldValue.h>
@@ -15,15 +15,10 @@
 
 #include <ca/IOException.h>
 
-#include "SQLite.h"
-
-#include <string>
-
 namespace ca {
 
 class SQLiteSpaceStore : public SQLiteSpaceStore_Base
 {
-
 public:
 	SQLiteSpaceStore()
 	{
@@ -50,7 +45,6 @@ public:
 		{
 			throw ca::IOException( e.what() );
 		}
-
 	}
 
 	void close()
@@ -67,7 +61,7 @@ public:
 
 	void beginChanges()
 	{
-		executeOrThrow(prepareOrThrow("BEGIN TRANSACTION"));
+		executeOrThrow( prepareOrThrow( "BEGIN TRANSACTION" ) );
 		_inTransaction = true;
 
 		if( _currentRevision == 1 )
@@ -94,7 +88,7 @@ public:
 
 		try 
 		{
-			executeOrThrow(prepareOrThrow("COMMIT TRANSACTION"));
+			executeOrThrow( prepareOrThrow( "COMMIT TRANSACTION" ) );
 			_inTransaction = false;
 		}
 		catch( ca::IOException& e )
@@ -117,7 +111,6 @@ public:
 
 	co::uint32 getOrAddType( const std::string& typeName, co::uint32 version ) 
 	{
-
 		std::string typeQuery = "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = ?  AND TYPE_VERSION = ?";
 		ca::SQLiteStatement typeStmt = prepareOrThrow( typeQuery );
 
@@ -148,9 +141,8 @@ public:
 		}
 
 		typeStmt.finalize();
-		
-		return id;
 
+		return id;
 	}
 		
 	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId )
@@ -480,7 +472,7 @@ private:
 		}
 	}
 
-	ca::SQLiteResult executeQueryOrThrow( ca::SQLiteStatement& stmt )
+	ca::SQLiteResult executeQueryOrThrow( ca::SQLiteStatement stmt )
 	{
 		try
 		{
@@ -493,7 +485,7 @@ private:
 				
 	}
 
-	void executeOrThrow( ca::SQLiteStatement& stmt )
+	void executeOrThrow( ca::SQLiteStatement stmt )
 	{
 		try
 		{
@@ -502,11 +494,10 @@ private:
 		catch ( ca::SQLiteException& e )
 		{
 			CORAL_THROW( ca::IOException, "Unexpected database query exception: " << e.getMessage() );
-		}		
-				
+		}
 	}
-private:
 
+private:
 	std::string _fileName;
 	ca::SQLiteConnection _db;
 	co::uint32 _currentRevision;
@@ -515,7 +506,6 @@ private:
 	bool _firstObject;
 	bool _inTransaction;
 	bool _startedRevision;
-
 };
 
 CORAL_EXPORT_COMPONENT( SQLiteSpaceStore, SQLiteSpaceStore );

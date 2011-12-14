@@ -2,13 +2,12 @@
  * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
+
 #ifndef _CA_SQLITE_H_
 #define _CA_SQLITE_H_
 
-#include <co/TypeTraits.h>
 #include <co/Log.h>
 #include <co/Exception.h>
-#include <string>
 
 // Forward Declarations:
 extern "C"
@@ -19,10 +18,9 @@ extern "C"
 
 namespace ca {
 
-	/*!
-		Exception class for SQLite errors
-	*/
-
+/*!
+	Exception class for SQLite errors
+ */
 class SQLiteException : public co::Exception
 {
 public:
@@ -39,135 +37,132 @@ public:
 
 
 /*!
-	Class to iterate through select sql clause results.
-*/
+	Class to iterate through SQLite query results (a list of rows).
+	No data is available until the first call to next().
+ */
 class SQLiteResult
 {
 public:
-	
 	SQLiteResult( sqlite3_stmt* stmt );
-
-	// copy constructor
 	SQLiteResult( const SQLiteResult& o );
-	
-	~SQLiteResult(){} // empty
 
 	/*!
-		Gets the next row of query result.
-		\returns true if it successfully fetched the next row, false if there isn't any rows to be fetched.
+		Moves to the next row in the result set.
+		\return true if the next row was fetched, false if there are no more rows.
 	*/
-
 	bool next();
-		
-	const std::string getString( co::uint32 columnIndex );
 
-	const co::uint32 getUint32( co::uint32 columnIndex );
+	//! Retrieves the value at \a column as a string.
+	const std::string getString( int column );
+
+	//! Retrieves the value at \a column as an uint32.
+	co::uint32 getUint32( int column );
 
 private:
+	// forbid assignments
 	SQLiteResult& operator=( const SQLiteResult& o );
+
+	inline bool hasData( int column );
 
 private:
 	mutable sqlite3_stmt* _stmt;
 };
 
 /*!
-	Abstraction for sql statements.	
-*/
-
+	\brief Abstraction for a SQLite Prepared Statement.
+	Values are assigned to parameters using the bind() methods.
+ */
 class SQLiteStatement 
 {
 public:
 	SQLiteStatement( sqlite3_stmt* stmt );
-	
-	
 	SQLiteStatement( const SQLiteStatement& o);
-	
+	~SQLiteStatement();
 
-	~SQLiteStatement()
-	{
-		finalize();
-	}
-	/*!
-		bind parameters to the statement, according to the given parameter type
-	*/
+	//! Bind a double.
 	void bind( int index, double value );
 
+	//! Bind a string.
 	inline void bind( int index, const std::string& value )
 	{
 		bind( index, value.c_str() );
 	}
 
+	//! Bind a literal/C-string.
 	void bind( int index, const char* value );
 
+	//! Bind an int16 (promoting to int32).
 	void bind( int index, co::int16 value )
 	{
 		bind( index, static_cast<co::int32>(value) );
 	}
 
+	//! Bind an uint16 (promoting to int32).
 	inline void bind( int index, co::uint16 value )
 	{
 		bind( index, static_cast<co::int32>(value) );
 	}
 
+	//! Bind an int32.
 	void bind( int index, co::int32 value );
 
+	//! Bind an uint32 (promoting to int64).
 	inline void bind( int index, co::uint32 value )
 	{
 		bind( index, static_cast<co::int64>(value) );
 	}
 
+	//! Bind an int64.
 	void bind( int index, co::int64 value );
 
 	/*!
-		Executes a select statement. This statement must be valid as long as the SQLiteResult is being consulted.
-	*/
+		Executes a SELECT statement.
+		This statement must be valid as long as the SQLiteResult is being consulted.
+	 */
 	SQLiteResult query();
 
 	/*!
-		Executes a non select statement.
-	*/
+		Executes a non-SELECT statement.
+	 */
 	void execute();
 
-	/*!
-		Resets the statement to its initial state. The parameters must be bound again, and the statement can be reused.
-	*/
+	//! Resets the statement so it can be reused. Parameters must be bound again.
 	void reset();
 
 	/*!
-	Releases the statement. If the statement is not finalized, it may prevent the closure of the associated SQLiteConnection.
-	*/
+		Releases the statement. Called automatically when the object dies.
+		Unfinalized statements prevent their SQLiteConnection from being closed.
+	 */
 	void finalize();
 
 private:
-	void handleErrorCode( int errorCode );
+	// forbid assignments
 	SQLiteStatement& operator=( const SQLiteStatement& o );
+
+	void handleErrorCode( int errorCode );
 
 private:
 	mutable sqlite3_stmt* _stmt;
 };
 
 /*!
-
-	Connection to a sqlite3 database file
-
-*/
-
+	Connection to a SQLite database file.
+ */
 class SQLiteConnection
 {
 public:
 	SQLiteConnection();
-
 	~SQLiteConnection();
 
+	inline bool isConnected() { return _db != NULL; }
+
 	/*!
-		Open connection to the given file. 
-		\param fileName database file to be connected to. if the file already exists, a connection is opened. Otherwise, a file is created.
-	*/
+		Opens a connection to the database with the given \a fileName.
+		If the database does not exist yet, it is created.
+	 */
 	void open( const std::string& fileName );
 
-	ca::SQLiteStatement prepare( const std::string& querySQL );
-
-	bool isConnected();
+	ca::SQLiteStatement prepare( const std::string& sql );
 
 	void close();
 
