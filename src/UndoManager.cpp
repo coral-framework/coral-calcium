@@ -106,8 +106,8 @@ public:
 	{
 		checkHasSpace();
 		checkNotRecording();
-		for( Stack s = Stack_Undo; s < Stack_Count; ++s )
-			clearStack( s );
+		clearStack( Stack_Undo );
+		clearStack( Stack_Redo );
 	}
 
 	// ------ ca.ISpaceObserver Methods ------ //
