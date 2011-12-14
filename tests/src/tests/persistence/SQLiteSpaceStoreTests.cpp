@@ -118,9 +118,6 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 {
 	spaceStore->open();
 	co::uint32 type1InsertedId, type2InsertedId;
-
-
-
 	spaceStore->beginChanges();
 	EXPECT_NO_THROW( type1InsertedId = spaceStore->getOrAddType( "type1", 1 ) );
 	EXPECT_NO_THROW( type2InsertedId = spaceStore->getOrAddType( "type2", 2 ) );
@@ -201,4 +198,5 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 	EXPECT_EQ( type.typeId, coint32InsertedId );
 	EXPECT_EQ( type.typeName, "co.int32" );
 
+	spaceStore->close();
 }
