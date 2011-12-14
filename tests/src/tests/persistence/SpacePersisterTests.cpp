@@ -104,8 +104,8 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	persisterObj->setService( "store", spaceFileObj->getService<ca::ISpaceStore>() );
 	persisterObj->setService( "universe", universe );
 
-	EXPECT_NO_THROW( persister->initialize( _erm->getProvider() ) );
-	EXPECT_NO_THROW( persister->restoreRevision(1) );
+	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
+	ASSERT_NO_THROW( persister->restoreRevision(1) );
 
 	ca::ISpace * spaceRestored = persister->getSpace();
 	

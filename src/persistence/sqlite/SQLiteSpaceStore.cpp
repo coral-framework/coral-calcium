@@ -74,7 +74,7 @@ public:
 			_db.prepare( "COMMIT TRANSACTION" ).execute(); 
 			_inTransaction = false;
 		}
-		catch( ca::IOException& e )
+		catch( ... )
 		{
 			if( _inTransaction )
 			{
@@ -82,7 +82,7 @@ public:
 				_inTransaction = false;
 			}
 			
-			throw e;
+			throw;
 		}
 
 	}
@@ -422,10 +422,10 @@ private:
 
 			_db.prepare("COMMIT TRANSACTION").execute();
 		}
-		catch( ca::IOException& e )
+		catch( ... )
 		{
 			_db.prepare("ROLLBACK TRANSACTION").execute();
-			throw e;
+			throw;
 		}
 	}
 

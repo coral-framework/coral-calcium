@@ -138,7 +138,7 @@ TEST_F( SQLiteConnectionTests, preparedStatementTest )
 	EXPECT_NO_THROW( stmt2.bind( 1, 1 ) );
 	ca::SQLiteResult rs = stmt2.query();
 
-	EXPECT_TRUE( rs.next() );
+	ASSERT_TRUE( rs.next() );
 
 	EXPECT_EQ( 1, rs.getUint32( 0 ) );
 	EXPECT_EQ( "value", std::string( rs.getString( 1 ) ) );

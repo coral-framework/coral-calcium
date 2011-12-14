@@ -65,7 +65,7 @@ TEST_F( SQLiteSpaceStoreTests, testOpsWithoutOpen )
 TEST_F( SQLiteSpaceStoreTests, testChangesWithoutBegin )
 {
 
-	EXPECT_NO_THROW(spaceStore->open());
+	ASSERT_NO_THROW(spaceStore->open());
 
 	EXPECT_THROW( spaceStore->getOrAddType("type", 1), ca::IOException );
 	EXPECT_THROW( spaceStore->addObject(1), ca::IOException );
@@ -194,7 +194,7 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 
 	EXPECT_NO_THROW( spaceStore->getType( coint32InsertedId, type ));
 
-	EXPECT_EQ( 0, type.fields.size() );
+	ASSERT_EQ( 0, type.fields.size() );
 	EXPECT_EQ( type.typeId, coint32InsertedId );
 	EXPECT_EQ( type.typeName, "co.int32" );
 
