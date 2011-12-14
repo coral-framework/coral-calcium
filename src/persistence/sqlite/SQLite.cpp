@@ -38,7 +38,7 @@ bool SQLiteResult::next()
 bool SQLiteResult::hasData( int column )
 {
 	int count = sqlite3_data_count( _stmt );
-	return count > 0 && count < column;
+	return count > 0 && column < count;
 }
 
 const std::string SQLiteResult::getString( int column )

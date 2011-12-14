@@ -472,7 +472,7 @@ private:
 		}
 	}
 
-	ca::SQLiteResult executeQueryOrThrow( ca::SQLiteStatement stmt )
+	ca::SQLiteResult executeQueryOrThrow( ca::SQLiteStatement& stmt )
 	{
 		try
 		{
@@ -485,7 +485,7 @@ private:
 				
 	}
 
-	void executeOrThrow( ca::SQLiteStatement stmt )
+	void executeOrThrow( ca::SQLiteStatement& stmt )
 	{
 		try
 		{
