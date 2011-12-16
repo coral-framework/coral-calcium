@@ -53,8 +53,10 @@ public:
 		_inTransaction = true;
 	}
 
-	void endChanges()
+	void commitChanges()
 	{
+		checkBeginTransaction();
+
 		if( _startedRevision )
 		{
 			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )" );
@@ -67,24 +69,19 @@ public:
 
 			stmt.finalize();
 		}
-		
 
-		try 
+		_db.prepare( "COMMIT TRANSACTION" ).execute(); 
+		_inTransaction = false;
+
+	}
+
+	void discardChanges()
+	{
+		if( _inTransaction )
 		{
-			_db.prepare( "COMMIT TRANSACTION" ).execute(); 
+			_db.prepare("ROLLBACK TRANSACTION");
 			_inTransaction = false;
 		}
-		catch( ... )
-		{
-			if( _inTransaction )
-			{
-				_db.prepare("ROLLBACK TRANSACTION").execute();
-				_inTransaction = false;
-			}
-			
-			throw;
-		}
-
 	}
 
 	co::uint32 getRootObject( co::uint32 revision )
@@ -104,27 +101,31 @@ public:
 		if( !rs.next() )
 		{
 			checkBeginTransaction();
+
 			typeStmt.reset();
 
 			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES (?, ?)" );
 			stmt.bind( 1, typeName );
 			stmt.bind( 2, version );
-			
+
 			stmt.execute();
 			stmt.finalize();
-			
+
 			ca::SQLiteResult rs = typeStmt.query();
 			rs.next();
 			id = rs.getUint32(0);
+			typeStmt.finalize();
+			return id;
+			
 		}
 		else
 		{
 			id = rs.getUint32(0);
+			typeStmt.finalize();
+			return id;
 		}
 
-		typeStmt.finalize();
-
-		return id;
+		
 	}
 		
 	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId )
@@ -140,6 +141,7 @@ public:
 		stmt.finalize();
 
 		return getFieldIdByName(fieldName, typeId);
+		
 	}
 	
 	co::uint32 addObject( co::uint32 typeId )
@@ -169,6 +171,7 @@ public:
 
 		stmt.finalize();
 		return resultId;
+		
 	}
 
 	void addValues( co::uint32 objId, co::Range<const ca::StoredFieldValue> values )
@@ -177,7 +180,7 @@ public:
 		checkGenerateRevision();
 
 		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD_VALUE (FIELD_ID, OBJECT_ID, REVISION, VALUE)\
-										 VALUES (?, ?, ?, ?)" );
+												VALUES (?, ?, ?, ?)" );
 
 		for( int i = 0; i < values.getSize(); i++ )
 		{
@@ -190,6 +193,7 @@ public:
 			stmt.execute();
 		}
 		stmt.finalize();
+		
 	}
 	
 	co::uint32 getObjectType( co::uint32 objectId )
@@ -219,7 +223,6 @@ public:
 	void getValues( co::uint32 objectId, co::uint32 revision, std::vector<ca::StoredFieldValue>& values )
 	{
 		values.clear();
-		
 		
 		ca::SQLiteStatement stmt = _db.prepare( "SELECT F.FIELD_ID, FV.VALUE FROM\
 								OBJECT OBJ LEFT OUTER JOIN TYPE T ON OBJ.TYPE_ID = T.TYPE_ID\
@@ -367,6 +370,8 @@ private:
 		}
 	}
 
+
+
 	void checkBeginTransaction()
 	{
 		if( !_inTransaction )
@@ -381,44 +386,44 @@ private:
 			_db.prepare("BEGIN TRANSACTION").execute();
 
 			_db.prepare( "CREATE TABLE if not exists [TYPE] (\
-				[TYPE_ID] INTEGER  PRIMARY KEY AUTOINCREMENT NOT NULL,\
-				[TYPE_NAME] VARCHAR(128)  NOT NULL,\
-				[TYPE_VERSION] INTEGER  NOT NULL,\
-				UNIQUE (TYPE_NAME, TYPE_VERSION)\
-				);" ).execute();
-			
+						 [TYPE_ID] INTEGER  PRIMARY KEY AUTOINCREMENT NOT NULL,\
+						 [TYPE_NAME] VARCHAR(128)  NOT NULL,\
+						 [TYPE_VERSION] INTEGER  NOT NULL,\
+						 UNIQUE (TYPE_NAME, TYPE_VERSION)\
+						 );" ).execute();
+
 			_db.prepare( "CREATE TABLE if not exists [FIELD] (\
-				[FIELD_NAME] VARCHAR(128) NOT NULL,\
-				[TYPE_ID] INTEGER  NOT NULL,\
-				[FIELD_TYPE_ID] INTEGER NOT NULL,\
-				[FIELD_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
-				UNIQUE (FIELD_NAME, TYPE_ID),\
-				FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID),\
-				FOREIGN KEY (FIELD_TYPE_ID) REFERENCES TYPE(TYPE_ID)\
-				);" ).execute();
+						 [FIELD_NAME] VARCHAR(128) NOT NULL,\
+						 [TYPE_ID] INTEGER  NOT NULL,\
+						 [FIELD_TYPE_ID] INTEGER NOT NULL,\
+						 [FIELD_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
+						 UNIQUE (FIELD_NAME, TYPE_ID),\
+						 FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID),\
+						 FOREIGN KEY (FIELD_TYPE_ID) REFERENCES TYPE(TYPE_ID)\
+						 );" ).execute();
 
 			_db.prepare( "CREATE TABLE if not exists [OBJECT] (\
-				[OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
-				[TYPE_ID] INTEGER  NULL,\
-				FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID)\
-				);" ).execute();
+						 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
+						 [TYPE_ID] INTEGER  NULL,\
+						 FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID)\
+						 );" ).execute();
 
 			_db.prepare( "CREATE TABLE if not exists [FIELD_VALUE] (\
-				[FIELD_ID] INTEGER  NOT NULL,\
-				[VALUE] TEXT  NULL,\
-				[REVISION] INTEGER NOT NULL,\
-				[OBJECT_ID] INTEGER NOT NULL,\
-				PRIMARY KEY (FIELD_ID, REVISION, OBJECT_ID),\
-				FOREIGN KEY (FIELD_ID) REFERENCES FIELD(FIELD_ID),\
-				FOREIGN KEY (OBJECT_ID) REFERENCES OBJECT(OBJECT_ID)\
-				);" ).execute();
+						 [FIELD_ID] INTEGER  NOT NULL,\
+						 [VALUE] TEXT  NULL,\
+						 [REVISION] INTEGER NOT NULL,\
+						 [OBJECT_ID] INTEGER NOT NULL,\
+						 PRIMARY KEY (FIELD_ID, REVISION, OBJECT_ID),\
+						 FOREIGN KEY (FIELD_ID) REFERENCES FIELD(FIELD_ID),\
+						 FOREIGN KEY (OBJECT_ID) REFERENCES OBJECT(OBJECT_ID)\
+						 );" ).execute();
 
 			_db.prepare( "CREATE TABLE if not exists [SPACE] (\
-				[ROOT_OBJECT_ID] INTEGER NOT NULL,\
-				[REVISION] INTEGER  NOT NULL,\
-				[TIME] TEXT NOT NULL,\
-				UNIQUE( REVISION ),\
-				FOREIGN KEY (ROOT_OBJECT_ID) REFERENCES OBJECT(OBJECT_ID));" ).execute();
+						 [ROOT_OBJECT_ID] INTEGER NOT NULL,\
+						 [REVISION] INTEGER  NOT NULL,\
+						 [TIME] TEXT NOT NULL,\
+						 UNIQUE( REVISION ),\
+						 FOREIGN KEY (ROOT_OBJECT_ID) REFERENCES OBJECT(OBJECT_ID));" ).execute();
 
 			_db.prepare("COMMIT TRANSACTION").execute();
 		}
@@ -433,7 +438,7 @@ private:
 	{
 		ca::SQLiteStatement stmt = _db.prepare( "SELECT MAX(REVISION), ROOT_OBJECT_ID FROM SPACE GROUP BY ROOT_OBJECT_ID" );
 		ca::SQLiteResult rs = stmt.query();
-			
+
 		if( rs.next() )
 		{
 			_latestRevision = rs.getUint32(0);

@@ -15,7 +15,7 @@ TEST_F( SQLiteConnectionTests, testOpenNonExistingDB )
 
 	remove(fileName.c_str());
 
-	EXPECT_NO_THROW( sqliteDBConn.open( fileName ) );
+	ASSERT_NO_THROW( sqliteDBConn.open( fileName ) );
 
 	EXPECT_TRUE( co::OS::isFile(fileName) );
 

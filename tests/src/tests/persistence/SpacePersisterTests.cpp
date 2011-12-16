@@ -150,6 +150,6 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	EXPECT_EQ( 8, rel->getMultiplicityA().max );
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
-	
+
 }
 

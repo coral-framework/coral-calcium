@@ -22,7 +22,7 @@ namespace ca {
 
 StringSerializer::StringSerializer()
 {
-	_model = 0;
+	_model = NULL;
 }
 
 void StringSerializer::fromString( const std::string& valueToStr, co::IType* type, co::Any& value )
@@ -62,7 +62,7 @@ void StringSerializer::setModel(ca::IModel* model)
 
 void StringSerializer::getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fieldsToSerialize )
 {
-	if( _model == 0 )
+	if( _model == NULL )
 	{
 		for(int i = 0; i < type->getFields().getSize(); i++)
 		{

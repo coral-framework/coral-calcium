@@ -48,6 +48,10 @@ public:
 		{
 			_spaceStore->close();
 		}
+		if( _space != NULL )
+		{
+			_space->removeSpaceObserver( this );
+		}
 	}
 
 	// ------ ca.ISpaceObserver Methods ------ //
@@ -73,10 +77,17 @@ public:
 		{
 			_spaceStore->beginChanges();
 			saveObject( rootObject );
-			_spaceStore->endChanges();
+			_spaceStore->commitChanges();
+
+			co::IObject* obj = co::newInstance( "ca.Space" );
+			_space = obj->getService<ca::ISpace>();
+			_space->setRootObject( rootObject );
+			observe();
+
 		}
 		catch(...)
 		{
+			_spaceStore->discardChanges();
 			_spaceStore->close();
 		}
 
@@ -119,7 +130,7 @@ public:
 			co::uint32 rootObject = _spaceStore->getRootObject( revision );
 			restoreObject( rootObject, revision );
 
-			co::IObject* object = (co::IObject*)getObject( rootObject );
+			co::IObject* object = static_cast<co::IObject*>( getObject( rootObject ) );
 		
 			co::IObject* spaceObj = co::newInstance( "ca.Space" );
 			ca::ISpace* space = spaceObj->getService<ca::ISpace>();
@@ -129,6 +140,7 @@ public:
 			_spaceStore->close();
 			
 			_space = space;
+			observe();
 		}
 		catch( ca::IOException& e )
 		{
@@ -169,7 +181,7 @@ protected:
 	{
 		assert( universe );
 		_universe = universe;
-		_model = (ca::IModel*)_universe->getProvider()->getService( "model" );
+		_model = static_cast<ca::IModel*>( _universe->getProvider()->getService( "model" ) );
 	}
 
 private:
@@ -239,7 +251,7 @@ private:
 					while(!services.isEmpty())
 					{
 						co::IService* const serv = services.getFirst();
-						saveObject(serv->getProvider());
+						saveObject( serv->getProvider() );
 						
 						int refId = getObjectId( serv->getProvider() );
 						
@@ -466,7 +478,7 @@ private:
 			}
 			else 
 			{
-				co::IObject* refObj = (co::IObject*)getObject( idService, revision );
+				co::IObject* refObj = static_cast<co::IObject*>( getObject( idService, revision ) );
 				if( refObj == NULL )
 				{
 					throw co::IllegalStateException();
@@ -477,9 +489,7 @@ private:
 				}
 				catch( co::IllegalCastException& )
 				{
-					std::stringstream ss;
-					ss << "Could not restore object, invalid value type for port " << port->getName() << "on entity " << entity;
-					throw ca::IOException( ss.str() );
+					CORAL_THROW( ca::IOException, "Could not restore object, invalid value type for port " << port->getName() << "on entity " << entity );
 				}
 			}
 
@@ -508,7 +518,7 @@ private:
 		std::vector<ca::StoredFieldValue> fieldValues;
 
 		int typeId = _spaceStore->getOrAddType( service->getInterface()->getFullName(), getCalciumModelId() );
-		co::IService* type = (co::IService*)getType( typeId );
+		getType( typeId );
 
 		_spaceStore->getValues( id, revision, fieldValues );
 		FieldValueMap mapFieldValue;
@@ -563,7 +573,7 @@ private:
 				_serializer.fromString( strValue, co::typeOf<co::int32>::get(), refId );
 				
 				int refIdInt = refId.get<co::int32>();
-				co::IObject* ref = (co::IObject*)getObject( refIdInt, 1 );
+				co::IObject* ref = static_cast<co::IObject*>( getObject( refIdInt, 1 ) );
 				if( ref == NULL )
 				{
 					throw co::IllegalStateException();
@@ -620,7 +630,7 @@ private:
 		co::IObject* ref;
 		for( int i = 0; i < vec.size(); i++ )
 		{
-			ref = (co::IObject*)getObject( vec[i], 1 );
+			ref = static_cast<co::IObject*>( getObject( vec[i], 1 ) );
 			if( ref == NULL )
 			{
 				throw co::IllegalStateException();
@@ -651,8 +661,8 @@ private:
 
 	co::IObject* getObject( co::uint32 objectId, co::uint32 revision )
 	{
-		co::IObject* object = (co::IObject*) getObject( objectId );
-		
+		co::IObject* object = static_cast<co::IObject*>( getObject( objectId ) );
+
 		if( object == NULL )
 		{
 			restoreObject( objectId, revision );
@@ -661,7 +671,7 @@ private:
 			{
 				throw co::IllegalStateException();
 			}
-			object = (co::IObject*)service;
+			object = static_cast<co::IObject*>( service );
 		}
 		return object;
 	}
@@ -681,7 +691,7 @@ private:
 			
 			if( resultType->getKind() == co::TK_COMPONENT || resultType->getKind() == co::TK_INTERFACE )
 			{
-				co::ICompositeType* compositeType = (co::ICompositeType*)resultType;
+				co::ICompositeType* compositeType = static_cast< co::ICompositeType*>(resultType);
 				
 				std::string storedFieldName;
 				for( int i = 0; i < storedType.fields.size(); i++ )

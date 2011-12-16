@@ -103,7 +103,7 @@ TEST_F( SQLiteSpaceStoreTests, testGetOrAddType )
 
 	ASSERT_FALSE ( type1InsertedId == 0 );
 
-	spaceStore->endChanges();
+	spaceStore->commitChanges();
 
 	co::uint32 type1ConsultedId, type2ConsultedId;
 	EXPECT_NO_THROW( type1ConsultedId = spaceStore->getOrAddType( "type1", 1 ) );
@@ -122,8 +122,6 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 	EXPECT_NO_THROW( type1InsertedId = spaceStore->getOrAddType( "type1", 1 ) );
 	EXPECT_NO_THROW( type2InsertedId = spaceStore->getOrAddType( "type2", 2 ) );
 
-	EXPECT_THROW(spaceStore->addObject( 100 ), ca::IOException);
-
 	co::uint32 obj1InsertedId, obj2InsertedId;
 	EXPECT_NO_THROW( obj1InsertedId = spaceStore->addObject( type1InsertedId ) );
 	EXPECT_NO_THROW( obj2InsertedId = spaceStore->addObject( type2InsertedId ) );
@@ -131,7 +129,9 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 	ASSERT_FALSE ( obj1InsertedId == 0 );
 	ASSERT_FALSE ( obj2InsertedId == 0 );
 
-	EXPECT_NO_THROW( spaceStore->endChanges() );
+	EXPECT_THROW( spaceStore->addObject( 100 ), ca::IOException );
+
+	EXPECT_NO_THROW( spaceStore->commitChanges() );
 
 	co::uint32 type1ConsultedId, type2ConsultedId;
 	EXPECT_NO_THROW( type1ConsultedId = spaceStore->getObjectType( obj1InsertedId ) );
@@ -160,8 +160,9 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 
 	EXPECT_THROW( spaceStore->addField( 73462843, "invalid", coint32InsertedId ), ca::IOException ); //type id invalid
 	EXPECT_THROW( spaceStore->addField( type1InsertedId, "invalid", 918723 ), ca::IOException ); //field type id invalid
+	EXPECT_THROW( spaceStore->addField( 73462843, "invalid", 918723 ), ca::IOException ); //both are invalid
 
-	spaceStore->endChanges();
+	spaceStore->commitChanges();
 
 	ca::StoredType type;
 
@@ -197,6 +198,63 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 	ASSERT_EQ( 0, type.fields.size() );
 	EXPECT_EQ( type.typeId, coint32InsertedId );
 	EXPECT_EQ( type.typeName, "co.int32" );
+
+	spaceStore->close();
+}
+
+TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
+{
+	spaceStore->open();
+	spaceStore->beginChanges();
+
+	co::uint32 type1InsertedId, coint32InsertedId, stringInsertedId;
+	EXPECT_NO_THROW( type1InsertedId = spaceStore->getOrAddType( "type1", 1 ) );
+	EXPECT_NO_THROW( coint32InsertedId = spaceStore->getOrAddType( "co.int32", 1 ) );
+	EXPECT_NO_THROW( stringInsertedId = spaceStore->getOrAddType( "string", 1 ) );
+
+	co::uint32 field1, field2, field3;
+
+	EXPECT_NO_THROW( field1 = spaceStore->addField( type1InsertedId, "field", coint32InsertedId ) );
+	EXPECT_NO_THROW( field2 = spaceStore->addField( type1InsertedId, "field2", stringInsertedId ) );
+	EXPECT_NO_THROW( field3 = spaceStore->addField( type1InsertedId, "parent", type1InsertedId ) );
+
+	co::uint32 objectId;
+	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId ) );
+
+	std::vector<ca::StoredFieldValue> values;
+
+	ca::StoredFieldValue sfv;
+
+	sfv.fieldId = field1;
+	sfv.value = "1";
+	
+	values.push_back( sfv );
+
+	sfv.fieldId = field2;
+	sfv.value = "'stringValue'";
+
+	values.push_back( sfv );
+
+	sfv.fieldId = field3;
+	sfv.value = "nil";
+
+	values.push_back( sfv );
+
+	EXPECT_NO_THROW( spaceStore->addValues( objectId, values ) );
+
+	spaceStore->commitChanges();
+
+	std::vector<ca::StoredFieldValue> valuesRestored;
+
+	ASSERT_NO_THROW( spaceStore->getValues( objectId, spaceStore->getLatestRevision(), valuesRestored ) );
+
+	ASSERT_EQ( values.size(), valuesRestored.size() );
+
+	for( unsigned int i = 0; i < values.size(); i++ )
+	{
+		EXPECT_EQ( values[i].fieldId, valuesRestored[i].fieldId );
+		EXPECT_EQ( values[i].value, valuesRestored[i].value );
+	}
 
 	spaceStore->close();
 }
