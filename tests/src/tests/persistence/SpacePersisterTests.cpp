@@ -227,7 +227,6 @@ TEST_F( SpacePersisterTests, testSave )
 
 	ASSERT_NO_THROW( persister->save() );
 
-
 	ca::ISpacePersister* persiterRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore->restoreRevision( 2 ) );
@@ -376,4 +375,9 @@ TEST_F( SpacePersisterTests, testSave )
 	EXPECT_EQ( 8, rel->getMultiplicityA().max );
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
+
+	delete persister;
+	delete persiterRestore;
+	delete persiterRestore2;
+	delete persiterRestore3;
 }
