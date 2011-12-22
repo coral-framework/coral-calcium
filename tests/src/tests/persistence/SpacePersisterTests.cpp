@@ -43,12 +43,12 @@ public:
 		universeObj->setService("model", _model.get());
 	}
 
-	ca::ISpacePersister* createPersister( const std::string& fileName )
+	co::RefPtr<ca::ISpacePersister> createPersister( const std::string& fileName )
 	{
 		ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 
 		co::IObject* persisterObj = co::newInstance( "ca.SpacePersister" );
-		ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
+		co::RefPtr<ca::ISpacePersister> persister = persisterObj->getService<ca::ISpacePersister>();
 
 		co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.SQLiteSpaceStore" );
 		spaceFileObj->getService<ca::INamed>()->setName( fileName );
@@ -180,11 +180,11 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	
 	remove( fileName.c_str() );
 
-	ca::ISpacePersister* persister = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
 
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
-	ca::ISpacePersister* persisterToRestore = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persisterToRestore->restoreRevision( 1 ) );
 
@@ -231,10 +231,6 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	EXPECT_EQ( 8, rel->getMultiplicityA().max );
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
-
-	delete persister->getProvider();
-	delete persisterToRestore->getProvider();
-
 }
 
 TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
@@ -249,7 +245,7 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 
 	remove( fileName.c_str() );
 
-	ca::ISpacePersister* persister = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
 	ca::ISpace * spaceInitialized = persister->getSpace();
@@ -263,7 +259,7 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 
 	ASSERT_NO_THROW( persister->save() );
 
-	ca::ISpacePersister* persiterRestore = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persiterRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore->restoreRevision( 2 ) );
 
@@ -325,7 +321,6 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
-	delete persister;
 }
 
 
@@ -341,7 +336,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 
 	remove( fileName.c_str() );
 
-	ca::ISpacePersister* persister = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
 	ca::ISpace * spaceInitialized = persister->getSpace();
@@ -365,7 +360,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	applyChangeAndRemoveObject( spaceInitialized, serviceModel->getEntities()[3] );
 	ASSERT_NO_THROW( persister->save() );
 
-	ca::ISpacePersister* persiterRestore = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persiterRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore->restoreRevision( 2 ) );
 
@@ -413,7 +408,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
-	ca::ISpacePersister* persiterRestore2 = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persiterRestore2 = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore2->restoreRevision( 3 ) );
 
@@ -462,7 +457,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
-	ca::ISpacePersister* persiterRestore3 = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persiterRestore3 = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore3->restoreRevision( 4 ) );
 
@@ -514,7 +509,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
-	ca::ISpacePersister* persiterRestore4 = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persiterRestore4 = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore4->restoreRevision( 5 ) );
 
@@ -565,9 +560,4 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
-	delete persister->getProvider();
-	delete persiterRestore->getProvider();
-	delete persiterRestore2->getProvider();
-	delete persiterRestore3->getProvider();
-	delete persiterRestore4->getProvider();
 }
