@@ -65,9 +65,9 @@ private:
 
 void applyValueFieldChange( ca::ISpace* spaceERM )
 {
-	co::IObject* objRest = spaceERM->getRootObject();
+	co::RefPtr<co::IObject> objRest = spaceERM->getRootObject();
 
-	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
+	co::RefPtr<erm::IModel> serviceModel = objRest->getService<erm::IModel>();
 
 	serviceModel->getEntities()[0]->setName( "changedName" );
 	serviceModel->getRelationships()[1]->setRelation( "relationChanged" );
@@ -80,15 +80,15 @@ void applyValueFieldChange( ca::ISpace* spaceERM )
 
 void applyRefVecChange( ca::ISpace* spaceERM )
 {
-	co::IObject* objRest = spaceERM->getRootObject();
-	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
+	co::RefPtr<co::IObject> objRest = spaceERM->getRootObject();
+	co::RefPtr<erm::IModel> serviceModel = objRest->getService<erm::IModel>();
 
-	co::IObject* newEntity = co::newInstance( "erm.Entity"); 
-	erm::IEntity* newIEntity = newEntity->getService<erm::IEntity>();
+	co::RefPtr<co::IObject> newEntity = co::newInstance( "erm.Entity"); 
+	co::RefPtr<erm::IEntity> newIEntity = newEntity->getService<erm::IEntity>();
 	newIEntity->setName( "newEntity" );
-	serviceModel->addEntity( newIEntity );
+	serviceModel->addEntity( newIEntity.get() );
 
-	spaceERM->addChange( serviceModel );
+	spaceERM->addChange( serviceModel.get() );
 
 	spaceERM->notifyChanges();
 
@@ -98,7 +98,7 @@ void applyAddedObjectChange( ca::ISpace* spaceERM, erm::IEntity* entity )
 {
 	co::IObject* objRest = spaceERM->getRootObject();
 	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
-	
+
 	co::RefPtr<co::IObject> newEntityParent = co::newInstance( "erm.Entity");
 	erm::IEntity* newIEntityParent = newEntityParent->getService<erm::IEntity>();
 	newIEntityParent->setName( "newEntityParent" );
@@ -119,6 +119,7 @@ void applyChangeAndRemoveObject( ca::ISpace* spaceERM, erm::IEntity* entity )
 
 	spaceERM->addChange( entity->getParent() );
 	spaceERM->notifyChanges();
+	
 	entity->setParent( NULL );
 
 	spaceERM->addChange( entity );
@@ -231,8 +232,8 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
-	delete persister;
-	delete persisterToRestore;
+	delete persister->getProvider();
+	delete persisterToRestore->getProvider();
 
 }
 
@@ -358,7 +359,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	ASSERT_NO_THROW( persister->save() );
 	
 	applyAddedObjectChange( spaceInitialized, serviceModel->getEntities()[3] );
-
+	erm::IEntity* entityToDelete = objRest->getService<erm::IModel>()->getEntities()[3]->getParent();
 	ASSERT_NO_THROW( persister->save() );
 
 	applyChangeAndRemoveObject( spaceInitialized, serviceModel->getEntities()[3] );
@@ -564,9 +565,9 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
-	delete persister;
-	delete persiterRestore;
-	delete persiterRestore2;
-	delete persiterRestore3;
-	delete persiterRestore4;
+	delete persister->getProvider();
+	delete persiterRestore->getProvider();
+	delete persiterRestore2->getProvider();
+	delete persiterRestore3->getProvider();
+	delete persiterRestore4->getProvider();
 }
