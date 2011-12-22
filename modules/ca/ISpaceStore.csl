@@ -23,4 +23,5 @@ interface ISpaceStore
 	void getType( in uint32 typeId, out StoredType storedType ) raises ca.IOException;
 	void getValues( in uint32 objectId, in uint32 revision, out ca.StoredFieldValue[] values ) raises ca.IOException;
 	
+	uint32 getServiceProvider( in uint32 serviceId, in uint32 revision );
 };

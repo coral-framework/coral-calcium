@@ -309,7 +309,6 @@ public:
 
 		_rootObjectId = getRootObjectForRevision( currentRevision );
 			
-
 		_currentRevision = currentRevision;
 	}
 		
@@ -318,11 +317,29 @@ public:
 		return _latestRevision;
 	}
 
+	co::uint32 getServiceProvider( co::uint32 serviceId, co::uint32 revision )
+	{
+		co::uint32 object = 0;
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT OBJECT_ID FROM FIELD_VALUE WHERE VALUE = ? AND REVISION <= ? ORDER BY REVISION DESC LIMIT 1" );
+
+		stmt.bind( 1, serviceId );
+		stmt.bind( 2, revision );
+
+		ca::SQLiteResult rs = stmt.query();
+
+		if( rs.next() )
+		{
+			object = rs.getUint32(0);
+			stmt.finalize();
+		}
+		return object;
+	}
+
 private:
 	co::uint32 getRootObjectForRevision( co::uint32 revision )
 	{
 		co::uint32 rootObject = 0;
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION >= ? ORDER BY REVISION LIMIT 1" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION = ?" );
 
 		stmt.bind( 1, revision );
 

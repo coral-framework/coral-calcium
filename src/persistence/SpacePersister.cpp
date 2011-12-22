@@ -154,6 +154,7 @@ public:
 			spaceObj->setService( "universe", _universe.get() );
 			_space->setRootObject( object );
 			_space->notifyChanges();
+			
 			_spaceStore->close();
 			
 			observe();
@@ -183,8 +184,11 @@ public:
 			for( int j = 0; j < current->getRemovedObjects().getSize(); j++ )
 			{
 				co::IObject* currentObject = current->getRemovedObjects()[j];
-				_addedObjects.erase( currentObject );
+				
+				// currentObject was removed from the space graph, if it was present on previous changes,
+				// these can be ignored
 
+				_addedObjects.erase( currentObject );
 				_changeCache.erase( currentObject );
 
 				co::Range<co::IPort* const> ports = currentObject->getComponent()->getPorts();
@@ -196,28 +200,50 @@ public:
 			}
 
 			Change change;
+			ChangeSet serviceChangeSet;
+
 			for( int j = 0; j < current->getChangedObjects().getSize(); j++ )
 			{
 				ca::IObjectChanges * objectChanges = current->getChangedObjects()[j];
 
-				ChangeSet objChangeSet;
+				// changes have been made on an added object, there's no need to register these changes.
+				// updating the object is enough
+				ObjectSet::iterator objIt = _addedObjects.find( objectChanges->getObject() );
+				if( objIt != _addedObjects.end() )
+				{
+					_addedObjects.insert( objIt, objectChanges->getObject() );
+					continue;
+				}
+
+				ChangeSetCache::iterator it = _changeCache.find( objectChanges->getObject() );
+
+				bool objInserted = ( it != _changeCache.end() );
+
+				ChangeSet &objChangeSet = ( objInserted )?it->second:ChangeSet();
 
 				for( int k = 0; k < objectChanges->getChangedConnections().getSize(); k++ )
 				{
 					ca::ChangedConnection changedConn = objectChanges->getChangedConnections()[k];
-					
+
 					change.member = changedConn.receptacle.get();
 					change.newValue = changedConn.current.get();
 					objChangeSet.insert( change );
 				}
 
-				_changeCache.insert( ChangeSetCache::value_type( objectChanges->getObject(), objChangeSet ) );
-
-				ChangeSet serviceChangeSet;
+				if( !objInserted )
+				{
+					_changeCache.insert( ChangeSetCache::value_type( objectChanges->getObject(), objChangeSet ) );
+				}
 
 				for( int k = 0; k < objectChanges->getChangedServices().getSize(); k++ )
 				{
 					ca::IServiceChanges* changedServ = objectChanges->getChangedServices()[k];
+
+					ChangeSetCache::iterator it = _changeCache.find( changedServ->getService() );
+
+					bool servInserted = ( it != _changeCache.end() );
+
+					ChangeSet &serviceChangeSet = ( servInserted ) ? it->second : ChangeSet();
 
 					for( int l = 0; l < changedServ->getChangedValueFields().getSize(); l++ )
 					{
@@ -236,80 +262,98 @@ public:
 					for( int l = 0; l < changedServ->getChangedRefVecFields().getSize(); l++ )
 					{
 						change.member = changedServ->getChangedRefVecFields()[l].field.get();
-						
+
 						change.newValue.set< const co::RefVector<co::IService>& >( changedServ->getChangedRefVecFields()[l].current );
 						serviceChangeSet.insert( change );
 					}
 
-					if( !serviceChangeSet.empty() )
+					if( !servInserted )
 					{
 						_changeCache.insert( ChangeSetCache::value_type( changedServ->getService(), serviceChangeSet ) );
 					}
-					
 				}
 			}
 		}
-
+		std::vector<ca::StoredFieldValue> values;
+		
 		_spaceStore->open();
-		_spaceStore->beginChanges();
-
-		for( ObjectSet::iterator it = _addedObjects.begin(); it != _addedObjects.end(); it++ )
+		try
 		{
-			saveObject( *it );
-		}
+			_spaceStore->beginChanges();
 
-		for( ChangeSetCache::iterator it = _changeCache.begin(); it != _changeCache.end(); it++ )
-		{
-			co::uint32 objectId = getObjectId( it->first );
-			std::vector<ca::StoredFieldValue> values;
-
-			for( ChangeSet::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++ )
+			for( ObjectSet::iterator it = _addedObjects.begin(); it != _addedObjects.end(); it++ )
 			{
-				ca::StoredFieldValue value;
-				value.fieldId = getMemberId( it2->member );
-				std::string valueStr;
-				if( it2->newValue.getKind() == co::TK_ARRAY )
+				saveObject( *it );
+			}
+
+			for( ChangeSetCache::iterator it = _changeCache.begin(); it != _changeCache.end(); it++ )
+			{
+				co::uint32 objectId = getObjectId( it->first );
+
+				for( ChangeSet::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++ )
 				{
-					co::IType* elementType = it2->newValue.getType();
-
-					if( elementType->getKind() == co::TK_INTERFACE )
+					ca::StoredFieldValue value;
+					value.fieldId = getMemberId( it2->member );
+					std::string valueStr;
+					if( it2->newValue.getKind() == co::TK_ARRAY )
 					{
-						//RefVector value. get database ids;
-						const co::RefVector<co::IService>& services = it2->newValue.get<const co::RefVector<co::IService>&>();
+						co::IType* elementType = it2->newValue.getType();
 
-						std::vector<co::uint32> serviceIds;
-						for( int i = 0; i < services.size(); i++ )
+						if( elementType->getKind() == co::TK_INTERFACE )
 						{
-							serviceIds.push_back( getObjectId( services[i].get()->getProvider() ) );
+							//RefVector value. get database ids;
+							const co::RefVector<co::IService>& services = it2->newValue.get<const co::RefVector<co::IService>&>();
+
+							std::vector<co::uint32> serviceIds;
+							for( int i = 0; i < services.size(); i++ )
+							{
+								serviceIds.push_back( getObjectId( services[i].get() ) );
+							}
+
+							co::Any serviceIdsAny;
+							serviceIdsAny.set< const std::vector< co::uint32 >& >( serviceIds );
+
+							_serializer.toString( serviceIdsAny, valueStr );
 						}
-
-						co::Any serviceIdsAny;
-						serviceIdsAny.set< const std::vector< co::uint32 >& >( serviceIds );
-
-						_serializer.toString( serviceIdsAny, valueStr );
+						else
+						{
+							_serializer.toString( it2->newValue, valueStr );
+						}
+					}
+					else if( it2->newValue.getKind() == co::TK_INTERFACE )
+					{
+						co::IService* service = it2->newValue.get<co::IService*>();
+						if( service == NULL)
+						{
+							valueStr = "nil";
+						}
+						else
+						{
+							_serializer.toString( getObjectId( service ), valueStr );
+						}
 					}
 					else
 					{
 						_serializer.toString( it2->newValue, valueStr );
 					}
-				}
-				else if( it2->newValue.getKind() == co::TK_INTERFACE )
-				{
-					_serializer.toString( getObjectId( it2->newValue.get<co::IService*>()->getProvider() ), valueStr );
-				}
-				else
-				{
-					_serializer.toString( it2->newValue, valueStr );
+
+					value.value = valueStr;
+					values.push_back( value );
 				}
 
-				value.value = valueStr;
-				values.push_back( value );
+				_spaceStore->addValues( objectId, values );
+				values.clear();
 			}
-
-			_spaceStore->addValues( objectId, values );
+			_spaceStore->commitChanges();
+			_spaceStore->close();
 		}
-		_spaceStore->commitChanges();
-		_spaceStore->close();
+		catch( ... )
+		{
+			_spaceStore->discardChanges();
+			_spaceStore->close();
+			throw;
+		}
+
 
 		_addedObjects.clear();
 		_changeCache.clear();
@@ -410,7 +454,7 @@ private:
 						co::IService* const serv = services.getFirst();
 						saveObject( serv->getProvider() );
 						
-						int refId = getObjectId( serv->getProvider() );
+						int refId = getObjectId( serv );
 						
 						refs.push_back( refId );
 						services.popFirst();
@@ -436,7 +480,7 @@ private:
 				else
 				{
 					saveObject( service->getProvider() );
-					_serializer.toString( getObjectId(service->getProvider()), fieldValueStr );
+					_serializer.toString( getObjectId(service), fieldValueStr );
 				}
 				
 			}
@@ -561,7 +605,8 @@ private:
 			}
 			else
 			{
-				_serializer.toString( getObjectId( service->getProvider() ), refStr);
+				saveObject( service->getProvider() );
+				_serializer.toString( getObjectId( service ), refStr);
 			}
 			ca::StoredFieldValue value;
 			value.fieldId = fieldId;
@@ -634,14 +679,15 @@ private:
 			}
 			else 
 			{
-				co::IObject* refObj = static_cast<co::IObject*>( getObject( idService, revision ) );
+				co::uint32 idServiceProvider = _spaceStore->getServiceProvider( idService, revision );
+				co::IObject* refObj = static_cast<co::IObject*>( getObject( idServiceProvider, revision ) );
 				if( refObj == NULL )
 				{
 					throw co::IllegalStateException();
 				}
 				try
 				{
-					object->setServiceAt( port, refObj->getServiceAt( getFirstFacet( refObj, port->getType() ) ) );
+					object->setServiceAt( port, getObject( idService, revision ) );
 				}
 				catch( co::IllegalCastException& )
 				{
@@ -651,21 +697,6 @@ private:
 
 		}
 		
-	}
-
-	co::IPort* getFirstFacet( co::IObject* refObj, co::IType* type )
-	{
-		co::RefVector< co::IPort > ports;
-		_model->getPorts( refObj->getComponent(), ports );
-
-		for( int i = 0; i < ports.size(); i++ )
-		{
-			if( ports[i].get()->getIsFacet() && (ports[i]->getType()->getFullName() == type->getFullName()) )
-			{
-				return ports[i].get();
-			}
-		}
-		return NULL;
 	}
 
 	void fillServiceValues( int id, co::IService* service, int revision )
@@ -730,14 +761,16 @@ private:
 				co::Any refId;
 				_serializer.fromString( strValue, co::typeOf<co::int32>::get(), refId );
 				
-				int refIdInt = refId.get<co::int32>();
-				co::IObject* ref = static_cast<co::IObject*>( getObject( refIdInt, revision ) );
+				co::uint32 refIdInt = refId.get<co::uint32>();
+				co::uint32 providerRefId = _spaceStore->getServiceProvider( refIdInt, revision );
+
+				co::IObject* ref = static_cast<co::IObject*>( getObject( providerRefId, revision ) ); //assure the provider was loaded
 				if( ref == NULL )
 				{
 					throw co::IllegalStateException();
 				}
 
-				fieldValue.set(ref->getServiceAt( getFirstFacet(ref, field->getType()) ));
+				fieldValue.set( getObject( refIdInt ) );
 			}
 
 		}
@@ -784,16 +817,16 @@ private:
 		co::IObject* ref;
 		for( int i = 0; i < vec.size(); i++ )
 		{
-			ref = static_cast<co::IObject*>( getObject( vec[i], revision ) );
+			co::uint32 providerId = _spaceStore->getServiceProvider( vec[i], revision );
+			
+			ref = static_cast<co::IObject*>( getObject( providerId, revision ) ); //assure the provider was loaded
 			if( ref == NULL )
 			{
 				throw co::IllegalStateException();
 			}
-			co::IPort* port = getFirstFacet(ref, arrayType->getElementType());	
-			co::IService* service = ref->getServiceAt(port);
 						
 			co::Any servicePtr;
-			servicePtr.setService(service);
+			servicePtr.setService( getObject( vec[i] ) );
 						
 			try
 			{
@@ -813,21 +846,20 @@ private:
 		return 1;
 	}
 
-	co::IObject* getObject( co::uint32 objectId, co::uint32 revision )
+	co::IService* getObject( co::uint32 objectId, co::uint32 revision )
 	{
-		co::IObject* object = static_cast<co::IObject*>( getObject( objectId ) );
+		co::IService* service = getObject( objectId );
 
-		if( object == NULL )
+		if( service == NULL )
 		{
 			restoreObject( objectId, revision );
-			co::IService* service = getObject( objectId );
+			service = getObject( objectId );
 			if(service == NULL)
 			{
 				throw co::IllegalStateException();
 			}
-			object = static_cast<co::IObject*>( service );
 		}
-		return object;
+		return service;
 	}
 
 	co::IType* getType( co::uint32 id )
@@ -996,12 +1028,24 @@ private:
 
 	typedef struct Change
 	{
+	public:
 		co::IMember* member;
 		co::Any newValue;
 
 		bool operator< ( const Change& change ) const
 		{
 			return member < change.member;
+		}
+
+		bool operator== ( const Change& change ) const
+		{
+			return member == change.member;
+		}
+
+		Change& operator=( const Change& change )
+		{
+			member = change.member;
+			newValue = change.newValue;
 		}
 	};
 
