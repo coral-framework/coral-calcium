@@ -181,26 +181,8 @@ public:
 				_addedObjects.insert( current->getAddedObjects()[j] );
 			}
 
-			for( int j = 0; j < current->getRemovedObjects().getSize(); j++ )
-			{
-				co::IObject* currentObject = current->getRemovedObjects()[j];
-				
-				// currentObject was removed from the space graph, if it was present on previous changes,
-				// these can be ignored
-
-				_addedObjects.erase( currentObject );
-				_changeCache.erase( currentObject );
-
-				co::Range<co::IPort* const> ports = currentObject->getComponent()->getPorts();
-
-				for( int k = 0; k < ports.getSize(); k++ )
-				{
-					_changeCache.erase( currentObject->getServiceAt( ports[k] ) );
-				}
-			}
-
 			Change change;
-			ChangeSet serviceChangeSet;
+			ChangeSet changeSet;
 
 			for( int j = 0; j < current->getChangedObjects().getSize(); j++ )
 			{
@@ -219,7 +201,8 @@ public:
 
 				bool objInserted = ( it != _changeCache.end() );
 
-				ChangeSet &objChangeSet = ( objInserted )?it->second:ChangeSet();
+				changeSet.clear();
+				ChangeSet &objChangeSet = ( objInserted ) ? it->second : changeSet;
 
 				for( int k = 0; k < objectChanges->getChangedConnections().getSize(); k++ )
 				{
@@ -243,7 +226,8 @@ public:
 
 					bool servInserted = ( it != _changeCache.end() );
 
-					ChangeSet &serviceChangeSet = ( servInserted ) ? it->second : ChangeSet();
+					changeSet.clear();
+					ChangeSet &serviceChangeSet = ( servInserted ) ? it->second : changeSet;
 
 					for( int l = 0; l < changedServ->getChangedValueFields().getSize(); l++ )
 					{
@@ -270,6 +254,24 @@ public:
 					if( !servInserted )
 					{
 						_changeCache.insert( ChangeSetCache::value_type( changedServ->getService(), serviceChangeSet ) );
+					}
+				}
+
+				for( int j = 0; j < current->getRemovedObjects().getSize(); j++ )
+				{
+					co::IObject* currentObject = current->getRemovedObjects()[j];
+
+					// currentObject was removed from the space graph, if it was present on previous changes,
+					// these can be ignored
+
+					_addedObjects.erase( currentObject );
+					_changeCache.erase( currentObject );
+
+					co::Range<co::IPort* const> ports = currentObject->getComponent()->getPorts();
+
+					for( int k = 0; k < ports.getSize(); k++ )
+					{
+						_changeCache.erase( currentObject->getServiceAt( ports[k] ) );
 					}
 				}
 			}
