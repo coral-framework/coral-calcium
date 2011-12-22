@@ -16,7 +16,7 @@ class SQLiteSpaceStoreTests : public ::testing::Test
 public:
 	void SetUp()
 	{
-		std::string fileName = "spaceStoreTest.db";
+		fileName = "spaceStoreTest.db";
 
 		remove( fileName.c_str() );
 
@@ -26,6 +26,8 @@ public:
 
 		spaceStore = spaceStoreObj->getService<ca::ISpaceStore>();
 	}
+
+	std::string fileName;
 	co::RefPtr<co::IObject> spaceStoreObj;
 	ca::ISpaceStore* spaceStore;
 };
@@ -101,7 +103,8 @@ TEST_F( SQLiteSpaceStoreTests, testGetOrAddType )
 	co::uint32 type2InsertedId;
 	EXPECT_NO_THROW( type2InsertedId = spaceStore->getOrAddType( "type2", 2 ) );
 
-	ASSERT_FALSE ( type1InsertedId == 0 );
+	ASSERT_FALSE ( type2InsertedId == 0 );
+	ASSERT_TRUE ( type1InsertedId != type2InsertedId );
 
 	spaceStore->commitChanges();
 
@@ -128,10 +131,13 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 
 	ASSERT_FALSE ( obj1InsertedId == 0 );
 	ASSERT_FALSE ( obj2InsertedId == 0 );
+	ASSERT_TRUE ( obj1InsertedId != obj2InsertedId );
 
 	EXPECT_THROW( spaceStore->addObject( 100 ), ca::IOException );
 
 	EXPECT_NO_THROW( spaceStore->commitChanges() );
+
+	EXPECT_EQ( 1, spaceStore->getLatestRevision() );
 
 	co::uint32 type1ConsultedId, type2ConsultedId;
 	EXPECT_NO_THROW( type1ConsultedId = spaceStore->getObjectType( obj1InsertedId ) );
@@ -165,6 +171,11 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 	spaceStore->commitChanges();
 
 	ca::StoredType type;
+
+	EXPECT_NO_THROW( spaceStore->getType( 82745683642, type ) ); //invalid id
+	EXPECT_TRUE( type.typeId == 0 );
+	EXPECT_TRUE( type.typeName.empty() );
+	EXPECT_TRUE( type.fields.empty() );
 
 	EXPECT_NO_THROW( spaceStore->getType( type1InsertedId, type ) );
 
@@ -225,6 +236,13 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 
 	ca::StoredFieldValue sfv;
 
+	sfv.fieldId = 82745632; //invalid fieldId
+	sfv.value = "invalid";
+	values.push_back( sfv );
+
+	EXPECT_THROW( spaceStore->addValues( objectId, values ), ca::IOException );
+	values.clear();
+
 	sfv.fieldId = field1;
 	sfv.value = "1";
 	
@@ -240,11 +258,16 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 
 	values.push_back( sfv );
 
+	EXPECT_THROW( spaceStore->addValues( 2987343, values ), ca::IOException ); //invalid object
+
 	EXPECT_NO_THROW( spaceStore->addValues( objectId, values ) );
 
 	spaceStore->commitChanges();
 
 	std::vector<ca::StoredFieldValue> valuesRestored;
+
+	ASSERT_NO_THROW( spaceStore->getValues( 287364873, spaceStore->getLatestRevision(), valuesRestored ) ); //invalid id
+	EXPECT_TRUE( valuesRestored.empty() );
 
 	ASSERT_NO_THROW( spaceStore->getValues( objectId, spaceStore->getLatestRevision(), valuesRestored ) );
 
@@ -257,4 +280,93 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 	}
 
 	spaceStore->close();
+}
+
+TEST_F( SQLiteSpaceStoreTests, testDiscardChanges )
+{
+	spaceStore->open();
+	spaceStore->beginChanges();
+
+	co::uint32 type1InsertedId, coint32InsertedId, stringInsertedId;
+	EXPECT_NO_THROW( type1InsertedId = spaceStore->getOrAddType( "type1", 1 ) );
+	EXPECT_NO_THROW( coint32InsertedId = spaceStore->getOrAddType( "co.int32", 1 ) );
+	EXPECT_NO_THROW( stringInsertedId = spaceStore->getOrAddType( "string", 1 ) );
+
+	co::uint32 field1, field2, field3;
+
+	EXPECT_NO_THROW( field1 = spaceStore->addField( type1InsertedId, "field", coint32InsertedId ) );
+	EXPECT_NO_THROW( field2 = spaceStore->addField( type1InsertedId, "field2", stringInsertedId ) );
+	EXPECT_NO_THROW( field3 = spaceStore->addField( type1InsertedId, "parent", type1InsertedId ) );
+
+	co::uint32 objectId;
+	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId ) );
+
+	std::vector<ca::StoredFieldValue> values;
+
+	ca::StoredFieldValue sfv;
+
+	sfv.fieldId = field1;
+	sfv.value = "1";
+
+	values.push_back( sfv );
+
+	sfv.fieldId = field2;
+	sfv.value = "'stringValue'";
+
+	values.push_back( sfv );
+
+	sfv.fieldId = field3;
+	sfv.value = "nil";
+
+	values.push_back( sfv );
+
+	EXPECT_NO_THROW( spaceStore->addValues( objectId, values ) );
+
+	EXPECT_NO_THROW( spaceStore->discardChanges() );
+
+	ca::SQLiteConnection conn;
+	conn.open( fileName );
+
+	ca::SQLiteStatement stmtSpace = conn.prepare( "SELECT * FROM SPACE" );
+
+	ca::SQLiteResult rsSpace = stmtSpace.query();
+
+	ASSERT_FALSE( rsSpace.next() );
+
+	stmtSpace.finalize();
+
+	ca::SQLiteStatement stmtObject = conn.prepare( "SELECT * FROM OBJECT" );
+
+	ca::SQLiteResult rsObject = stmtObject.query();
+
+	ASSERT_FALSE( rsObject.next() );
+
+	stmtObject.finalize();
+
+	ca::SQLiteStatement stmtType = conn.prepare( "SELECT * FROM TYPE" );
+
+	ca::SQLiteResult rsType = stmtType.query();
+
+	ASSERT_FALSE( rsType.next() );
+
+	stmtType.finalize();
+
+	ca::SQLiteStatement stmtFields = conn.prepare( "SELECT * FROM FIELD" );
+
+	ca::SQLiteResult rsFields = stmtFields.query();
+
+	ASSERT_FALSE( rsFields.next() );
+
+	stmtFields.finalize();
+
+	ca::SQLiteStatement stmtValues = conn.prepare( "SELECT * FROM FIELD_VALUE" );
+
+	ca::SQLiteResult rsValues = stmtValues.query();
+
+	ASSERT_FALSE( rsValues.next() );
+
+	stmtValues.finalize();
+
+	conn.close();
+
 }

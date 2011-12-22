@@ -213,9 +213,7 @@ public:
 		else
 		{
 			stmt.finalize();
-			std::stringstream ss;
-			ss << "Not such object, id=" << objectId;
-			throw IOException( ss.str() );
+			CORAL_THROW( ca::IOException, "Not such object, id=" << objectId )
 		}
 					
 	}
@@ -308,7 +306,7 @@ public:
 		}
 
 		_rootObjectId = getRootObjectForRevision( currentRevision );
-			
+
 		_currentRevision = currentRevision;
 	}
 		
