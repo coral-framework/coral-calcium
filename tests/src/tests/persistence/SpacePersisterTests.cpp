@@ -99,7 +99,7 @@ void applyAddedObjectChange( ca::ISpace* spaceERM, erm::IEntity* entity )
 	co::IObject* objRest = spaceERM->getRootObject();
 	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
 	
-	co::IObject* newEntityParent = co::newInstance( "erm.Entity"); 
+	co::RefPtr<co::IObject> newEntityParent = co::newInstance( "erm.Entity");
 	erm::IEntity* newIEntityParent = newEntityParent->getService<erm::IEntity>();
 	newIEntityParent->setName( "newEntityParent" );
 	entity->setParent( newIEntityParent );
