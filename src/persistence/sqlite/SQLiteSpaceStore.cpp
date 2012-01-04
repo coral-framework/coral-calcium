@@ -62,7 +62,7 @@ public:
 			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )" );
 
 			stmt.bind( 1, _rootObjectId );
-			stmt.bind( 2, _currentRevision );
+			stmt.bind( 2, _latestRevision );
 
 			stmt.execute();
 			_startedRevision = false;
@@ -77,10 +77,14 @@ public:
 
 	void discardChanges()
 	{
-		if( _inTransaction )
+		checkBeginTransaction();
+		
+		_db.prepare("ROLLBACK TRANSACTION").execute();
+		_inTransaction = false;
+		if( _startedRevision )
 		{
-			_db.prepare("ROLLBACK TRANSACTION");
-			_inTransaction = false;
+			_latestRevision--;
+			_startedRevision = false;
 		}
 	}
 
@@ -128,14 +132,15 @@ public:
 		
 	}
 		
-	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId )
+	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId, bool isFacet )
 	{
 		checkBeginTransaction();
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID) VALUES ( ?, ?, ? );" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID, IS_FACET) VALUES ( ?, ?, ?, ? );" );
 
 		stmt.bind( 1, typeId );
 		stmt.bind( 2, fieldName );
 		stmt.bind( 3, fieldTypeId );
+		stmt.bind( 4, isFacet );
 
 		stmt.execute();
 		stmt.finalize();
@@ -187,7 +192,7 @@ public:
 			stmt.reset();
 			stmt.bind( 1, values[i].fieldId );
 			stmt.bind( 2, objId );
-			stmt.bind( 3, _currentRevision );
+			stmt.bind( 3, _latestRevision );
 			stmt.bind( 4, values[i].value );
 
 			stmt.execute();
@@ -292,33 +297,22 @@ public:
 	{
 		_fileName = fileName;
 	}
-
-	co::uint32 getCurrentRevision()
-	{
-		return _currentRevision;
-	}
-
-	void setCurrentRevision( co::uint32 currentRevision )
-	{
-		if( currentRevision > _latestRevision || currentRevision == 0 )
-		{
-			throw co::IllegalArgumentException( "invalid revision" );
-		}
-
-		_rootObjectId = getRootObjectForRevision( currentRevision );
-
-		_currentRevision = currentRevision;
-	}
-		
+	
 	co::uint32 getLatestRevision()
 	{
+		if( _startedRevision )
+		{
+			return _latestRevision-1;
+		}
 		return _latestRevision;
 	}
 
 	co::uint32 getServiceProvider( co::uint32 serviceId, co::uint32 revision )
 	{
 		co::uint32 object = 0;
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT OBJECT_ID FROM FIELD_VALUE WHERE VALUE = ? AND REVISION <= ? ORDER BY REVISION DESC LIMIT 1" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT OBJECT_ID FROM\
+												FIELD_VALUE LEFT OUTER JOIN FIELD ON FIELD_VALUE.FIELD_ID = FIELD.FIELD_ID\
+												WHERE VALUE = ? AND REVISION <= ? AND FIELD.IS_FACET = 1 ORDER BY REVISION DESC LIMIT 1" );
 
 		stmt.bind( 1, serviceId );
 		stmt.bind( 2, revision );
@@ -376,8 +370,7 @@ private:
 		if( !_startedRevision )
 		{
 			_latestRevision++;
-			_currentRevision = _latestRevision;
-			if( _currentRevision == 1 )
+			if( _latestRevision == 1 )
 			{
 				_firstObject = true;
 			}
@@ -412,6 +405,7 @@ private:
 						 [TYPE_ID] INTEGER  NOT NULL,\
 						 [FIELD_TYPE_ID] INTEGER NOT NULL,\
 						 [FIELD_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
+						 [IS_FACET] INTEGER  NOT NULL,\
 						 UNIQUE (FIELD_NAME, TYPE_ID),\
 						 FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID),\
 						 FOREIGN KEY (FIELD_TYPE_ID) REFERENCES TYPE(TYPE_ID)\
@@ -463,15 +457,15 @@ private:
 		{
 			_latestRevision = 0;
 		}
-		_currentRevision = _latestRevision;
 
 	}
 
 private:
-	std::string _fileName;
 	ca::SQLiteConnection _db;
-	co::uint32 _currentRevision;
+	std::string _fileName;
+	
 	co::uint32 _latestRevision;
+	
 	co::uint32 _rootObjectId;
 	bool _firstObject;
 	bool _inTransaction;
