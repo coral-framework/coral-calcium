@@ -87,21 +87,6 @@ public:
 			_spaceStore->beginChanges();
 			saveObject( rootObject );
 			_spaceStore->commitChanges();
-
-			co::IObject* spaceObj = co::newInstance( "ca.Space" );
-			_space = spaceObj->getService<ca::ISpace>();
-
-			spaceObj->setService( "universe", _universe.get() );
-
-			_space->setRootObject( rootObject );
-			_space->notifyChanges();
-
-			_trackedRevision = 1;
-
-			assert( _spaceStore->getLatestRevision() == 1 );
-
-			observe();
-
 		}
 		catch( ... )
 		{
@@ -109,6 +94,20 @@ public:
 			_spaceStore->close();
 			throw;
 		}
+		
+		co::IObject* spaceObj = co::newInstance( "ca.Space" );
+		_space = spaceObj->getService<ca::ISpace>();
+
+		spaceObj->setService( "universe", _universe.get() );
+		
+		_space->setRootObject( rootObject );
+		_space->notifyChanges();
+
+		_trackedRevision = 1;
+
+		assert( _spaceStore->getLatestRevision() == 1 );
+
+		_space->addSpaceObserver( this );
 
 		_spaceStore->close();
 
@@ -126,7 +125,12 @@ public:
 		{
 			throw co::IllegalStateException("space store was not set, can't restore a space");
 		}
-		restoreRevision( _spaceStore->getLatestRevision() );
+		_spaceStore->open();
+		co::uint32 latestRevision = _spaceStore->getLatestRevision();
+		_spaceStore->close();
+
+		restoreRevision( latestRevision );
+		
 	}
 
 	void restoreRevision( co::uint32 revision )
@@ -154,7 +158,7 @@ public:
 			restoreObject( rootObject );
 
 			co::IObject* object = static_cast<co::IObject*>( getObject( rootObject ) );
-		
+
 			co::IObject* spaceObj = co::newInstance( "ca.Space" );
 			_space = spaceObj->getService<ca::ISpace>();
 
@@ -164,7 +168,7 @@ public:
 			
 			_spaceStore->close();
 			
-			observe();
+			_space->addSpaceObserver( this );
 		}
 		catch( ... )
 		{
@@ -401,10 +405,6 @@ protected:
 	}
 
 private:
-	void observe()
-	{
-		_space->addSpaceObserver( this );
-	}
 
 	//save functions
 

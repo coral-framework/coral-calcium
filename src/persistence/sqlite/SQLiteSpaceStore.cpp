@@ -25,6 +25,7 @@ public:
 	{
 		_inTransaction = false;
 		_startedRevision = false;
+		_latestRevision = 0;
 	}
 
 	virtual ~SQLiteSpaceStore()

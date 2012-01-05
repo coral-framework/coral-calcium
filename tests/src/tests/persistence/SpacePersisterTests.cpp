@@ -261,7 +261,7 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 
 	co::RefPtr<ca::ISpacePersister> persiterRestore = createPersister( fileName );
 
-	ASSERT_NO_THROW( persiterRestore->restoreRevision( 2 ) );
+	ASSERT_NO_THROW( persiterRestore->restore() );
 
 	ca::ISpace * spaceRestored = persiterRestore->getSpace();
 
@@ -408,6 +408,10 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
 
+	applyValueFieldChange( spaceRestored );
+
+	EXPECT_THROW( persiterRestore->save(), ca::IOException ); //attempt to save when current revision is not the last
+
 	co::RefPtr<ca::ISpacePersister> persiterRestore2 = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore2->restoreRevision( 3 ) );
@@ -511,7 +515,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 
 	co::RefPtr<ca::ISpacePersister> persiterRestore4 = createPersister( fileName );
 
-	ASSERT_NO_THROW( persiterRestore4->restoreRevision( 5 ) );
+	ASSERT_NO_THROW( persiterRestore4->restore() );
 
 	spaceRestored = persiterRestore4->getSpace();
 
@@ -559,5 +563,10 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( 8, rel->getMultiplicityA().max );
 	EXPECT_EQ( 9, rel->getMultiplicityB().min );
 	EXPECT_EQ( 0, rel->getMultiplicityB().max );
+
+	erm->getEntities()[0]->setName( "another change" );
+	spaceRestored->addChange( erm->getEntities()[0] );
+	spaceRestored->notifyChanges();
+	ASSERT_NO_THROW( persiterRestore4->save() ); //it's ok to save new revision
 
 }
