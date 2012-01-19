@@ -53,7 +53,7 @@ public:
 		void* ptr = getArrayPtr( array ) + elementSize * index;
 		if( elementType->getKind() != co::TK_INTERFACE )
 		{
-			reflector->copyValue( element.getState().data.ptr, ptr );
+			reflector->copyValues( element.getState().data.ptr, ptr, 1 );
 		}
 		else
 		{

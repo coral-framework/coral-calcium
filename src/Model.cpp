@@ -228,7 +228,7 @@ struct ObjectCreationTraverser : public Traverser<ObjectCreationTraverser>
 
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
-		field.getTypeReflector()->createValue( valuePtr );
+		field.getTypeReflector()->createValues( valuePtr, 1 );
 	}
 };
 
@@ -285,7 +285,7 @@ struct ObjectDestructionTraverser : public Traverser<ObjectDestructionTraverser>
 
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
-		field.getTypeReflector()->destroyValue( valuePtr );
+		field.getTypeReflector()->destroyValues( valuePtr, 1 );
 	}
 };
 

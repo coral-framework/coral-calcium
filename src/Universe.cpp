@@ -141,7 +141,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 		co::TypeKind kind = any.getKind();
 		bool isPrimitive = ( ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE ) || kind == co::TK_ENUM );
 		const void* fromPtr = ( isPrimitive ? &any.getState().data : any.getState().data.ptr );
-		field.getTypeReflector()->copyValue( fromPtr, valuePtr );
+		field.getTypeReflector()->copyValues( fromPtr, valuePtr, 1 );
 	}
 };
 
@@ -352,12 +352,12 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		}
 		else
 		{
-			reflector->copyValue( valuePtr, cf.previous.createComplexValue( type ) );
-			reflector->copyValue( newValuePtr, cf.current.createComplexValue( type ) );
+			reflector->copyValues( valuePtr, cf.previous.createComplexValue( type ), 1 );
+			reflector->copyValues( newValuePtr, cf.current.createComplexValue( type ), 1 );
 		}
 
 		// update our internal value
-		reflector->copyValue( newValuePtr, valuePtr );
+		reflector->copyValues( newValuePtr, valuePtr, 1 );
 	}
 };
 
