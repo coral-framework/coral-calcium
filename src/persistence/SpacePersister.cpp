@@ -39,6 +39,7 @@
 #include <ca/IServiceChanges.h>
 
 #include "StringSerializer.h"
+#include "AnyArrayUtil.h"
 
 namespace ca {
 
