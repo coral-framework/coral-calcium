@@ -130,7 +130,6 @@ public:
 			return id;
 		}
 
-		
 	}
 		
 	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId, bool isFacet )
@@ -255,7 +254,7 @@ public:
 	void getType( co::uint32 typeId, ca::StoredType& storedType )
 	{
 		
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT T.TYPE_ID, T.TYPE_NAME, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = ?" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT T.TYPE_NAME, T.TYPE_VERSION, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = ?" );
 
 		stmt.bind( 1, typeId );
 
@@ -269,14 +268,15 @@ public:
 			{
 				storedType.fields.clear();
 				storedType.typeId = typeId;
-				storedType.typeName = rs.getString( 1 );
+				storedType.typeName = rs.getString( 0 );
+				storedType.version = rs.getUint32( 1 );
 				
 				//check if it has fields...
-				if( rs.getString( 3 ) == NULL )
+				if( rs.getString( 2 ) == NULL )
 				{
 					break;
 				}
-				
+
 				first = false;
 			}
 
@@ -337,7 +337,7 @@ private:
 		stmt.bind( 1, revision );
 
 		ca::SQLiteResult rs = stmt.query();
-		
+
 		if( rs.next() )
 		{
 			rootObject = rs.getUint32(0);
@@ -464,9 +464,9 @@ private:
 private:
 	ca::SQLiteConnection _db;
 	std::string _fileName;
-	
+
 	co::uint32 _latestRevision;
-	
+
 	co::uint32 _rootObjectId;
 	bool _firstObject;
 	bool _inTransaction;

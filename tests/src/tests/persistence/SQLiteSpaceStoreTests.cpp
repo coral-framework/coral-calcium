@@ -414,12 +414,20 @@ TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
 	//now we have a new revision
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 1 );
 
+	ASSERT_THROW( objectId = spaceStore->addObject( type1InsertedId ), ca::IOException );
+	ASSERT_TRUE( spaceStore->getLatestRevision() == 1 ); // revision is not updated without a begin/commit pair
+
+	spaceStore->beginChanges();
+	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId ));
+	spaceStore->commitChanges();
+	ASSERT_TRUE( spaceStore->getLatestRevision() == 2 ); // another revision
+
 	spaceStore->beginChanges();
 	ASSERT_NO_THROW( spaceStore->addObject( type1InsertedId ) );
 	spaceStore->discardChanges();
 
 	//discarded changes can't change revision
-	ASSERT_TRUE( spaceStore->getLatestRevision() == 1 );
+	ASSERT_TRUE( spaceStore->getLatestRevision() == 2 );
 
 	spaceStore->close();
 

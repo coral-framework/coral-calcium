@@ -18,6 +18,7 @@ set( REPLICATED_MODULE_FILES
 	${CA_SOURCE_DIR}/persistence/StringSerializer.cpp
 	${CA_SOURCE_DIR}/persistence/sqlite/sqlite3.c
 	${CA_SOURCE_DIR}/persistence/sqlite/SQLite.cpp
+	${CA_SOURCE_DIR}/persistence/SpaceUpdater.cpp
 )
 
 # Gather source files in the current directory
