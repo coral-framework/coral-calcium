@@ -56,7 +56,7 @@ namespace ca {
 			return false;
 		}
 
-		std::vector<const std::string> names;
+		std::vector<std::string> names;
 		std::vector<co::IType*> types;
 
 		if( tk == co::TK_COMPONENT )
