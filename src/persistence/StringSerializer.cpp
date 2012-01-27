@@ -279,7 +279,7 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 
 	char check = ss.peek();
 
-	std::vector<void*> result;
+	std::vector<co::int8*> result;
 
 	if( check == '}' )
 	{
@@ -291,33 +291,32 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 
 	co::TypeKind tk = elementType->getKind();
 
-	co::Any* complexAny;
+	char* element;
 	while(true)
 	{
 
 		if( tk == co::TK_ENUM )
 		{
-			co::int32* enumInt = new co::int32;
-			*enumInt = readEnum( ss, elementType );
-			result.push_back( enumInt );
+			element = new co::int8[elementType->getReflector()->getSize()];
+			*reinterpret_cast<co::int32*>(element) = readEnum( ss, elementType );
+			result.push_back( element );
 		}
 		else if( tk == co::TK_STRUCT || tk == co::TK_NATIVECLASS )
 		{
-			complexAny = new co::Any;
+			element = new co::int8[sizeof(co::Any)];
 
-			readComplexType( ss, *complexAny, elementType );
-			result.push_back( complexAny );
+			readComplexType( ss, *reinterpret_cast<co::Any*>(element), elementType );
+			result.push_back( element );
 		}
 		else if( tk == co::TK_STRING )
 		{
 			std::string* stringValue = new std::string;
-
 			extractStringValueWithoutQuotes( ss, *stringValue );
-			result.push_back( stringValue );
+			result.push_back( reinterpret_cast<co::int8*>(stringValue) );
 		} 
 		else
 		{
-			char* element = new char[elementType->getReflector()->getSize()];
+			element = new co::int8[elementType->getReflector()->getSize()];
 			readPrimitive( ss, elementType, element );
 			result.push_back( element );
 		}
@@ -341,22 +340,7 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 	for( int i = 0; i < result.size(); i++ )
 	{
 		setArrayElement( value, i, result[i] );
-		if( tk == co::TK_ENUM )
-		{
-			delete reinterpret_cast<co::int32*>(result[i]);
-		}
-		else if( tk == co::TK_STRUCT || tk == co::TK_NATIVECLASS )
-		{
-			delete reinterpret_cast<co::Any*>(result[i]);
-		}
-		else if( tk == co::TK_STRING )
-		{
-			delete reinterpret_cast<std::string*>(result[i]);
-		} 
-		else
-		{
-			delete [] reinterpret_cast<char*>(result[i]);
-		}
+		delete [] result[i];
 	}
 
 }
