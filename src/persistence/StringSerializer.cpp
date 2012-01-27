@@ -187,7 +187,8 @@ void* StringSerializer::readPrimitive( std::stringstream& ss, co::IType* type )
 	co::uint32 typeSize = type->getReflector()->getSize();
 
 	void* result = operator new( typeSize );
-	
+
+	int byte;
 
 	if( tk == co::TK_STRING )
 	{
@@ -202,10 +203,13 @@ void* StringSerializer::readPrimitive( std::stringstream& ss, co::IType* type )
 		*reinterpret_cast<bool*>(result) = readBoolean(ss);
 		break;
 	case co::TK_INT8:
-		ss >> *reinterpret_cast<int*>(result);
+
+		ss >> byte;
+		*reinterpret_cast<co::int8*>(result) = byte;
 		break;
 	case co::TK_UINT8:
-		ss >> *reinterpret_cast<int*>(result);
+		ss >> byte;
+		*reinterpret_cast<co::uint8*>(result) = byte;
 		break;
 	case co::TK_INT16:
 		ss >> *reinterpret_cast<co::int16*>(result);
