@@ -37,8 +37,6 @@ public:
 		void* ptr = getArrayPtr( array ) + elementSize * index;
 
 		elementType->getReflector()->copyValues( element, ptr, 1 );
-		elementType->getReflector()->destroyValues( element, 1 );
-
 	}
 
 	void setArrayComplexTypeElement( const co::Any& array, co::uint32 index, co::Any& element )
@@ -63,7 +61,6 @@ public:
 			co::RefPtr<co::IService>& refPtr = *reinterpret_cast<co::RefPtr<co::IService>*>( ptr );
 			refPtr = element.getState().data.service;
 		}
-		element.destroyObject();
 	}
 
 	void getArrayElement( const co::Any& array, co::uint32 index, co::Any& element )

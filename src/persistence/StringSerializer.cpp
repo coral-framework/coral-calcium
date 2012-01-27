@@ -279,8 +279,6 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 
 	char check = ss.peek();
 
-	std::vector<co::int8*> result;
-
 	if( check == '}' )
 	{
 		//emptyArray;
@@ -291,7 +289,9 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 
 	co::TypeKind tk = elementType->getKind();
 
-	char* element;
+	std::vector<co::int8*> result;
+	co::int8* element;
+
 	while(true)
 	{
 
@@ -303,7 +303,7 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 		}
 		else if( tk == co::TK_STRUCT || tk == co::TK_NATIVECLASS )
 		{
-			element = new co::int8[sizeof(co::Any)];
+			element = reinterpret_cast<co::int8*>(new co::Any);
 
 			readComplexType( ss, *reinterpret_cast<co::Any*>(element), elementType );
 			result.push_back( element );
@@ -341,6 +341,7 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 	{
 		setArrayElement( value, i, result[i] );
 		delete [] result[i];
+
 	}
 
 }
@@ -425,12 +426,12 @@ void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value,
 	} 
 	else
 	{
-		char* primitiveRead = new char[type->getReflector()->getSize()];
+		char* primitiveRead = new co::int8[type->getReflector()->getSize()];
 		readPrimitive( ss, type, primitiveRead );
 		value.setBasic( type->getKind(), co::Any::VarIsValue || co::Any::VarIsReference, primitiveRead );
 		delete[] primitiveRead;
 	}
-	
+
 }
 
 void StringSerializer::extractStringValueWithoutQuotes( std::stringstream& ss, std::string& str )
