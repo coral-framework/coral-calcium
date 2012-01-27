@@ -180,21 +180,17 @@ void StringSerializer::readComplexType( std::stringstream& ss, co::Any& value, c
 	}
 }
 
-void* StringSerializer::readPrimitive( std::stringstream& ss, co::IType* type )
+void StringSerializer::readPrimitive( std::stringstream& ss, co::IType* type, void* result )
 {
 	co::TypeKind tk = type->getKind();
 
 	co::uint32 typeSize = type->getReflector()->getSize();
 
-	void* result = operator new( typeSize );
-
 	int byte;
 
 	if( tk == co::TK_STRING )
 	{
-		std::string* stringRef = new std::string;
-		extractStringValueWithoutQuotes( ss, *stringRef );
-		return stringRef;
+		extractStringValueWithoutQuotes( ss, *reinterpret_cast<std::string*>(result) );
 	}
 
 	switch( tk )
@@ -240,7 +236,6 @@ void* StringSerializer::readPrimitive( std::stringstream& ss, co::IType* type )
 
 	}
 	assertNotFail( ss, " primitive type." );
-	return result;
 }
 
 bool StringSerializer::readBoolean( std::stringstream& ss )
@@ -322,7 +317,9 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 		} 
 		else
 		{
-			result.push_back( readPrimitive( ss, elementType ) );
+			void* element = new char[elementType->getReflector()->getSize()];
+			readPrimitive( ss, elementType, element );
+			result.push_back( element );
 		}
 
 
@@ -428,10 +425,10 @@ void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value,
 	} 
 	else
 	{
-		void* primitiveRead = readPrimitive( ss, type );
+		char* primitiveRead = new char[type->getReflector()->getSize()];
+		readPrimitive( ss, type, primitiveRead );
 		value.setBasic( type->getKind(), co::Any::VarIsValue || co::Any::VarIsReference, primitiveRead );
-		type->getReflector()->destroyValues( primitiveRead, 1 );
-		
+		delete[] primitiveRead;
 	}
 	
 }
