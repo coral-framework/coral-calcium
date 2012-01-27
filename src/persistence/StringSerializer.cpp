@@ -13,6 +13,7 @@
 #include <co/IllegalArgumentException.h>
 #include <limits>
 
+#include "AnyArrayUtil.h"
 
 #ifdef CORAL_OS_WIN
 #include <stdio.h>
@@ -95,19 +96,19 @@ void StringSerializer::fromStream( std::stringstream& ss, co::IType* type, co::A
 	}
 	else if( type->getKind() == co::TK_ENUM )
 	{
-		co::int32 enumIntValue = readEnum(ss, static_cast<co::IEnum*>(type));
-		value.set<co::int32>(enumIntValue);
+		co::int32 enumIntValue = readEnum ( ss, co::cast<co::IEnum>( type ) );
+		value.set<co::int32>( enumIntValue );
 	}
 	else
 	{
-		readPrimitiveType(ss, value, type->getKind());
+		readPrimitiveType( ss, value, type );
 	}
 }
 
 void StringSerializer::readComplexType( std::stringstream& ss, co::Any& value, co::IType* type )
 {
 			
-	co::IClassType* classType = static_cast<co::IClassType*>(type);
+	co::IRecordType* classType = co::cast<co::IRecordType>( type );
 
 	char check;
 	ss >> check;
@@ -116,14 +117,18 @@ void StringSerializer::readComplexType( std::stringstream& ss, co::Any& value, c
 		throw ca::FormatException("'{' expected to start complex type value.");
 	}
 
+	value.createComplexValue( type );
+
 	std::vector<co::IField*> fields; 
 	getFieldsToSerializeForType( classType, fields );
+
+
 	std::string fieldName;
 	co::Any fieldValue;
 
 	co::IReflector* reflector = type->getReflector();
-	value.createComplexValue(type);
 	std::stringstream msg;
+
 	for( int i = 0; i < fields.size(); i++ )
 	{
 		readLiteralFromStream( ss, fieldName );
@@ -136,14 +141,14 @@ void StringSerializer::readComplexType( std::stringstream& ss, co::Any& value, c
 		}
 
 		ss >> check;
-				
+
 		if( check != '=' )
 		{
 			throw ca::FormatException(" '=' expected after field name");
 		}
-				
+
 		fromStream( ss, fields[i]->getType(), fieldValue );
-				
+
 		try
 		{
 			reflector->setField(value, fields[i], fieldValue);
@@ -175,35 +180,63 @@ void StringSerializer::readComplexType( std::stringstream& ss, co::Any& value, c
 	}
 }
 
-template< typename T >
-T StringSerializer::readPrimitive( std::stringstream& ss, co::TypeKind tk )
+void* StringSerializer::readPrimitive( std::stringstream& ss, co::IType* type )
 {
-	int byte;
-	T resultT;
-	switch(tk)
+	co::TypeKind tk = type->getKind();
+
+	co::uint32 typeSize = type->getReflector()->getSize();
+
+	void* result = operator new( typeSize );
+	
+
+	if( tk == co::TK_STRING )
+	{
+		std::string* stringRef = new std::string;
+		extractStringValueWithoutQuotes( ss, *stringRef );
+		return stringRef;
+	}
+
+	switch( tk )
 	{
 	case co::TK_BOOLEAN:
-		return readBoolean(ss);
-	break;
+		*reinterpret_cast<bool*>(result) = readBoolean(ss);
+		break;
 	case co::TK_INT8:
+		ss >> *reinterpret_cast<int*>(result);
+		break;
 	case co::TK_UINT8:
-		ss >> byte;
-		resultT = byte;
-	break;
+		ss >> *reinterpret_cast<int*>(result);
+		break;
 	case co::TK_INT16:
+		ss >> *reinterpret_cast<co::int16*>(result);
+		break;
 	case co::TK_UINT16:
+		ss >> *reinterpret_cast<co::uint16*>(result);
+		break;		
 	case co::TK_INT32:
+		ss >> *reinterpret_cast<co::int32*>(result);
+		break;		
 	case co::TK_UINT32:
-	case co::TK_INT64:
-	case co::TK_UINT64:
+		ss >> *reinterpret_cast<co::uint32*>(result);
+		break;		
 	case co::TK_FLOAT:
+		ss >> *reinterpret_cast<float*>(result);
+		break;
+	case co::TK_INT64:
+		ss >> *reinterpret_cast<co::int64*>(result);
+		break;
+	case co::TK_UINT64:
+		ss >> *reinterpret_cast<co::uint64*>(result);
+		break;
 	case co::TK_DOUBLE:
-		ss >> resultT;
-	break;
+		ss >> *reinterpret_cast<double*>(result);
+		break;
+	default:
+		assert( false );
 
 	}
 	assertNotFail( ss, " primitive type." );
-	return resultT;
+	return result;
 }
 
 bool StringSerializer::readBoolean( std::stringstream& ss )
@@ -220,6 +253,19 @@ bool StringSerializer::readBoolean( std::stringstream& ss )
 	return (boolStr == "true");
 }
 
+void StringSerializer::setArrayElement( co::Any& value, co::uint32 index, void* element )
+{
+	AnyArrayUtil arrayUtil;
+	if( value.getType()->getKind() == co::TK_STRUCT || value.getType()->getKind() == co::TK_NATIVECLASS )
+	{
+		arrayUtil.setArrayComplexTypeElement( value, index, *reinterpret_cast<co::Any*>( element ) );
+	}
+	else
+	{
+		arrayUtil.setArrayElement( value, index, element );
+	}
+}
+
 void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::IType* type )
 {
 	char brackets;
@@ -230,91 +276,77 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 	{
 		throw ca::FormatException("'{' expected to start array value.");
 	}
+	co::IType* elementType = co::cast<co::IArray>( type )->getElementType();
 
-	co::IArray* arrayType = (co::IArray*)type;
-	co::IType* elementType = static_cast<co::IArray*>(type)->getElementType();
+	char check = ss.peek();
+
+	std::vector<void*> result;
+
+	if( check == '}' )
+	{
+		//emptyArray;
+		value.createArray( elementType );
+		ss.get(check);
+		return;
+	}
+
 	co::TypeKind tk = elementType->getKind();
 
-	switch(tk)
-	{
-		case co::TK_ENUM:
-			readEnumArrayFromStream(ss, elementType, value);
-		break;
-		case co::TK_BOOLEAN:
-			readPrimitiveArrayFromStream<bool>(ss, value, elementType);								
-		break;
-		case co::TK_INT8:
-			readPrimitiveArrayFromStream<co::int8>(ss, value, elementType);
-		break;
-		case co::TK_UINT8:
-			readPrimitiveArrayFromStream<co::uint8>(ss, value, elementType);
-		break;
-		case co::TK_INT16:
-			readPrimitiveArrayFromStream<co::int16>(ss, value, elementType);
-		break;
-		case co::TK_UINT16:
-			readPrimitiveArrayFromStream<co::uint16>(ss, value, elementType);
-		break;
-		case co::TK_INT32:
-			readPrimitiveArrayFromStream<co::int32>(ss, value, elementType);
-		break;
-		case co::TK_UINT32:
-			readPrimitiveArrayFromStream<co::uint32>(ss, value, elementType);
-		break;
-		case co::TK_INT64:
-			readPrimitiveArrayFromStream<co::int64>(ss, value, elementType);
-		break;
-		case co::TK_UINT64:
-			readPrimitiveArrayFromStream<co::uint64>(ss, value, elementType);
-		break;
-		case co::TK_FLOAT:
-			readPrimitiveArrayFromStream<float>(ss, value, elementType);
-		break;
-		case co::TK_DOUBLE:
-			readPrimitiveArrayFromStream<double>(ss, value, elementType);
-		break;
-		case co::TK_NATIVECLASS:
-		case co::TK_STRUCT:
-			readComplexTypeArrayFromStream( ss, elementType, value );
-		break;
-		case co::TK_STRING:
-			readStringArrayFromStream(ss, value);
-		break;
-	}
-}
-
-void StringSerializer::readComplexTypeArrayFromStream( std::stringstream& ss, co::IType* elementType, co::Any& value )
-{
-	std::vector<co::Any> result;
-	AnyArrayUtil arrayUtil;
-	std::string literalTmp;
-	char check;
-	co::Any arrayElement;
+	co::Any* complexAny;
 	while(true)
 	{
-		readComplexType( ss, arrayElement, elementType );
-		result.push_back(arrayElement);
+
+		if( tk == co::TK_ENUM )
+		{
+			co::int32* enumInt = new co::int32;
+			*enumInt = readEnum( ss, elementType );
+			result.push_back( enumInt );
+		}
+		else if( tk == co::TK_STRUCT || tk == co::TK_NATIVECLASS )
+		{
+			complexAny = new co::Any;
+
+			readComplexType( ss, *complexAny, elementType );
+			result.push_back( complexAny );
+		}
+		else if( tk == co::TK_STRING )
+		{
+			std::string* stringValue = new std::string;
+
+			extractStringValueWithoutQuotes( ss, *stringValue );
+			result.push_back( stringValue );
+		} 
+		else
+		{
+			result.push_back( readPrimitive( ss, elementType ) );
+		}
+
+
 		ss.get(check);
-		assertNotFail( ss, elementType->getFullName() );
+		assertNotFail( ss, "enum array" );
+
 		if( check == '}' )
 		{
 			break;
 		}
-
-		assertNotInvalidArrayChar( check );
-
+		if( check != ',' )
+		{
+			throw ca::FormatException("Array format not valid, ',' or '}' expected.");
+		}
 	}
 	value.clear();
-	value.createArray(elementType, result.size());
+	value.createArray( elementType, result.size() );
+
 	for( int i = 0; i < result.size(); i++ )
 	{
-		arrayUtil.setArrayComplexTypeElement(value, i, result[i]);
+		setArrayElement( value, i, result[i] );
 	}
+
 }
 
 void StringSerializer::assertNotFail( std::stringstream& ss, std::string additionalInfo )
 {
-	if(ss.fail())
+	if( ss.fail() )
 	{
 		std::stringstream msg;
 		msg << "Unexpected end of string on " << additionalInfo << ".";
@@ -330,71 +362,12 @@ void StringSerializer::assertNotInvalidArrayChar( char check )
 	} 
 }
 
-void StringSerializer::readStringArrayFromStream( std::stringstream& ss, co::Any& value)
-{
-	std::vector<std::string> result;
-	std::string literalTmp;
-
-	AnyArrayUtil arrayUtil;
-
-	char check;
-	while(true)
-	{
-		extractStringValueWithoutQuotes( ss, literalTmp );
-		result.push_back(literalTmp);
-		ss.get(check);
-		assertNotFail(ss, "string array");
-		if( check == '}' )
-		{
-			break;
-		}
-		assertNotInvalidArrayChar( check );
-	}
-	value.clear();
-	value.createArray(co::typeOf<std::string>::get(), result.size());
-			
-	for( int i = 0; i < result.size(); i++ )
-	{
-		arrayUtil.setArrayElement<std::string>(value, i, result[i]);
-	}
-}
-
-void StringSerializer::readEnumArrayFromStream( std::stringstream& ss, co::IType* type, co::Any& value )
-{
-	std::vector<co::int32> result;
-	std::string literalTmp;
-
-	AnyArrayUtil arrayUtil;
-
-	co::IEnum* enumType = static_cast<co::IEnum*>(type);
-	char check;
-	while(true)
-	{
-		result.push_back(readEnum(ss, enumType));
-		ss.get(check);
-		assertNotFail( ss, "enum array" );
-
-		if( check == '}' )
-		{
-			break;
-		}
-		if( check != ',' )
-		{
-			throw ca::FormatException("Array format not valid, ',' or '}' expected.");
-		}
-	}
-	value.clear();
-	value.createArray(type, result.size());
-	for( int i = 0; i < result.size(); i++ )
-	{
-		arrayUtil.setArrayElement<co::int32>(value, i, result[i]);
-	}
-}
-
-co::int32 StringSerializer::readEnum( std::stringstream& ss, co::IEnum* enumType )
+co::int32 StringSerializer::readEnum( std::stringstream& ss, co::IType* type )
 {
 	std::string literalTmp; 
 	readLiteralFromStream( ss, literalTmp );
+
+	co::IEnum* enumType = co::cast<co::IEnum>( type );
 	co::int32 enumValue = enumType->getValueOf( literalTmp );
 
 	if( enumValue == -1 )
@@ -414,10 +387,10 @@ void StringSerializer::readLiteralFromStream( std::stringstream& ss, std::string
 
 	str = "";
 
-	ss.get(buffer);
-	str.push_back(buffer);
+	ss.get( buffer );
+	str.push_back( buffer );
 
-	if(!isalpha(buffer))
+	if( !isalpha( buffer ) )
 	{
 		throw ca::FormatException( "Literal expected, but control char found." );
 	}
@@ -426,14 +399,14 @@ void StringSerializer::readLiteralFromStream( std::stringstream& ss, std::string
 	{
 		buffer = ss.peek();
 				
-		if(ss.fail())
+		if( ss.fail() )
 		{
 			break;
 		}
 				
-		if(isalnum(buffer))
+		if( isalnum( buffer ) )
 		{
-			str.push_back(buffer);
+			str.push_back( buffer );
 			ss.get( buffer );
 		}
 		else
@@ -443,93 +416,17 @@ void StringSerializer::readLiteralFromStream( std::stringstream& ss, std::string
 	}
 }
 
-template<typename T>
-void StringSerializer::readPrimitiveArrayFromStream( std::stringstream& ss, co::Any& value, co::IType* elementType )
+void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value, co::IType* type )
 {
-	char check = ss.peek();
-	std::vector<T> resultVector;
-
-	AnyArrayUtil arrayUtil;
-
-	if( check == '}' )
+	if( type->getKind() == co::TK_STRING )
 	{
-		//emptyArray;
-		value.createArray(elementType);
-		ss.get(check);
-		return;
-	}
-
-	T result;
-	std::stringstream errorMsg;
-	errorMsg << elementType->getFullName() << " array";
-	while(true)
-	{
-		result = readPrimitive<T>(ss, elementType->getKind());
-		resultVector.push_back(result);
-		ss.get(check);
-		assertNotFail( ss, errorMsg.str() );
-		if( check == '}' )
-		{
-			break;
-		}
-		assertNotInvalidArrayChar( check );
-	}
-	value.clear();
-	value.createArray(elementType, resultVector.size());
-	for( co::uint32 i = 0; i < resultVector.size(); i++)
-	{
-		arrayUtil.setArrayElement<T>(value, i, resultVector[i]);
-	}
-}
-
-template< typename T >
-void StringSerializer::applyPrimitiveToAny( std::stringstream& ss, co::Any& value, co::TypeKind tk )
-{
-	value.set<T>(readPrimitive<T>(ss, tk));
-}
-
-void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value, co::TypeKind tk )
-{
-	switch(tk)
-	{
-	case co::TK_BOOLEAN:
-		applyPrimitiveToAny<bool>(ss, value, tk);
-	break;
-	case co::TK_INT8:
-		applyPrimitiveToAny<co::int8>(ss, value, tk);
-	break;
-	case co::TK_UINT8:
-		applyPrimitiveToAny<co::uint8>(ss, value, tk);
-	break;
-	case co::TK_INT16:
-		applyPrimitiveToAny<co::int16>(ss, value, tk);
-	break;
-	case co::TK_UINT16:
-		applyPrimitiveToAny<co::uint16>(ss, value, tk);
-	break;
-	case co::TK_INT32:
-		applyPrimitiveToAny<co::int32>(ss, value, tk);
-	break;
-	case co::TK_UINT32:
-		applyPrimitiveToAny<co::uint32>(ss, value, tk);
-	break;
-	case co::TK_INT64:
-		applyPrimitiveToAny<co::int64>(ss, value, tk);
-	break;
-	case co::TK_UINT64:
-		applyPrimitiveToAny<co::uint64>(ss, value, tk);
-	break;
-	case co::TK_FLOAT:
-		applyPrimitiveToAny<float>(ss, value, tk);
-	break;
-	case co::TK_DOUBLE:
-		applyPrimitiveToAny<double>(ss, value, tk);
-	break;
-	case co::TK_STRING:
 		extractStringValueWithoutQuotes( ss, value.createString() );
-	break;
-
+	} 
+	else
+	{
+		value.setBasic( type->getKind(), co::Any::VarIsValue || co::Any::VarIsReference, readPrimitive( ss, type ) );
 	}
+	
 }
 
 void StringSerializer::extractStringValueWithoutQuotes( std::stringstream& ss, std::string& str )
@@ -625,7 +522,7 @@ void StringSerializer::toStream( const co::Any& value, std::stringstream& ss )
 
 void StringSerializer::writeEnum( const co::Any& value, std::stringstream& ss, co::IType* type )
 {
-	co::IEnum* enumType = static_cast<co::IEnum*>(type);
+	co::IEnum* enumType = co::cast<co::IEnum>( type );
 
 	co::int8 enumAsint8 = value.get<co::int32>();
 			
@@ -634,7 +531,7 @@ void StringSerializer::writeEnum( const co::Any& value, std::stringstream& ss, c
 
 void StringSerializer::writeComplexType( const co::Any& value, std::stringstream& ss, co::IType* type )
 {
-	co::IRecordType * recordType = static_cast<co::IRecordType*>(type);
+	co::IRecordType * recordType = co::cast<co::IRecordType>( type );
 	std::vector<co::IField*> fields; 
 	getFieldsToSerializeForType( recordType, fields );
 	co::IReflector * ref = type->getReflector();
@@ -673,8 +570,8 @@ void StringSerializer::writeArray(const co::Any& value, std::stringstream& ss, c
 
 	for( int i = 0; i < size; i++ )
 	{
-			arrayUtil.getArrayElement(value, i, arrayElement);
-			toStream(arrayElement, ss);
+			arrayUtil.getArrayElement( value, i, arrayElement );
+			toStream( arrayElement, ss );
 				 
 			if( i < size-1)
 			{
