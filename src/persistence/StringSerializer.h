@@ -35,7 +35,7 @@ private:
 
 	void readComplexType( std::stringstream& ss, co::Any& value, co::IType* type );
 
-	void* StringSerializer::readPrimitive( std::stringstream& ss, co::IType* type );
+	void* readPrimitive( std::stringstream& ss, co::IType* type );
 
 	bool readBoolean( std::stringstream& ss );
 
