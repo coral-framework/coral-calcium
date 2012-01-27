@@ -424,7 +424,10 @@ void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value,
 	} 
 	else
 	{
-		value.setBasic( type->getKind(), co::Any::VarIsValue || co::Any::VarIsReference, readPrimitive( ss, type ) );
+		void* primitiveRead = readPrimitive( ss, type );
+		value.setBasic( type->getKind(), co::Any::VarIsValue || co::Any::VarIsReference, primitiveRead );
+		type->getReflector()->destroyValues( primitiveRead, 1 );
+		
 	}
 	
 }
