@@ -24,7 +24,7 @@ void compareArray(T* staticArray, std::vector<T> resultArray, int size)
 	EXPECT_EQ(size, resultArray.size());
 	for(int i = 0; i < size; i++)
 	{
-		EXPECT_EQ( staticArray[i], resultArray[i] );
+		EXPECT_TRUE( staticArray[i] == resultArray[i] );
 	}
 }
 
@@ -630,20 +630,19 @@ TEST( StringSerializationTests, fromStringPrimitiveArrayTest )
 	EXPECT_NO_THROW(serializer.fromString( strOutput, co::typeOf<std::vector<co::int32>>::get(), result ));
 	EXPECT_EQ(0, result.get<const std::vector<co::int32>&>().size());
 
-	// does Any support array of complex type values?
-	//serialization::BasicTypesStruct arrayStruct[2];
-	//
-	//arrayStruct[0].intValue = 1;
-	//arrayStruct[0].strValue = "name"; 
-	//arrayStruct[0].doubleValue = 4.56;
-	//arrayStruct[0].byteValue = 123;
+	serialization::BasicTypesStruct arrayStruct[2];
+	
+	arrayStruct[0].intValue = 1;
+	arrayStruct[0].strValue = "name"; 
+	arrayStruct[0].doubleValue = 4.56;
+	arrayStruct[0].byteValue = 123;
 
-	//arrayStruct[1].intValue = 6;
-	//arrayStruct[1].strValue = "nameSecond"; 
-	//arrayStruct[1].doubleValue = 1.2E6;
-	//arrayStruct[1].byteValue = -100;
+	arrayStruct[1].intValue = 6;
+	arrayStruct[1].strValue = "nameSecond"; 
+	arrayStruct[1].doubleValue = 1.2E6;
+	arrayStruct[1].byteValue = -100;
 
-	//testArrayToAndFromString<serialization::BasicTypesStruct>(serializer, arrayStruct, 2);
+	testArrayToAndFromString<serialization::BasicTypesStruct>(serializer, arrayStruct, 2);
 
 }
 

@@ -759,9 +759,8 @@ private:
 		serviceAny.setService( service, service->getInterface() );
 
 		co::Any fieldValue;
-		co::TypeKind tk = type->getKind();
-		const std::string& typeName = field->getType()->getFullName();
-		if( tk == co::TK_ARRAY )
+
+		if( type->getKind() == co::TK_ARRAY )
 		{
 			co::IArray* arrayType = static_cast<co::IArray*>(type);
 
@@ -771,7 +770,7 @@ private:
 			}
 		
 		}
-		else if( tk == co::TK_INTERFACE )
+		if( type->getKind() == co::TK_INTERFACE )
 		{
 			if( strValue != "nil" )
 			{

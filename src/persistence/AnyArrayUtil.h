@@ -20,10 +20,8 @@ class AnyArrayUtil
 {
 
 public:
-
-	// the setArray*Element's methods copy the given element into the Any's array into the given index. destroying the given value after that.
-
-	void setArrayElement( const co::Any& array, co::uint32 index, void* element )
+	template< typename T>
+	void setArrayElement( const co::Any& array, co::uint32 index, T element )
 	{
 		co::IType* elementType = array.getType();
 		co::uint32 elementSize = elementType->getReflector()->getSize();
@@ -35,9 +33,9 @@ public:
 		co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
 
 		void* ptr = getArrayPtr( array ) + elementSize * index;
-
-		elementType->getReflector()->copyValues( element, ptr, 1 );
-		elementType->getReflector()->destroyValues( element, 1 );
+			
+		T* elementTypePointer = reinterpret_cast<T*>(ptr);
+		*elementTypePointer = element;
 	}
 
 	void setArrayComplexTypeElement( const co::Any& array, co::uint32 index, co::Any& element )
@@ -56,14 +54,12 @@ public:
 		if( elementType->getKind() != co::TK_INTERFACE )
 		{
 			reflector->copyValues( element.getState().data.ptr, ptr, 1 );
-			reflector->destroyValues( element.getState().data.ptr, 1 );
 		}
 		else
 		{
 			co::RefPtr<co::IService>& refPtr = *reinterpret_cast<co::RefPtr<co::IService>*>( ptr );
 			refPtr = element.getState().data.service;
 		}
-		
 	}
 
 	void getArrayElement( const co::Any& array, co::uint32 index, co::Any& element )

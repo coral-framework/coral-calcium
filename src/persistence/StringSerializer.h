@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <ca/IModel.h>
+#include "AnyArrayUtil.h"
 
 namespace ca {
 
@@ -25,6 +26,8 @@ public:
 	void setModel( ca::IModel* model );
 
 private:
+	ca::IModel* _model;
+
 	//determine which fields should be serialized. If a IModel is provided, it is used to tell the fields to be serialized.
 	//If not, all fields of the given type will be serialized.
 	void getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fields );
@@ -35,23 +38,37 @@ private:
 
 	void readComplexType( std::stringstream& ss, co::Any& value, co::IType* type );
 
-	void readPrimitive( std::stringstream& ss, co::IType* type, void* result );
+	template< typename T>
+	T readPrimitive( std::stringstream& ss, co::TypeKind tk );
 
 	bool readBoolean( std::stringstream& ss );
 
 	void readArray( std::stringstream &ss, co::Any& value, co::IType* type );
 
-	co::int32 readEnum( std::stringstream& ss, co::IType* type );
+	void readComplexTypeArrayFromStream( std::stringstream& ss, co::IType* elementType, co::Any& value );
+
+	void readStringArrayFromStream( std::stringstream& ss, co::Any& value);
+
+	void readEnumArrayFromStream( std::stringstream& ss, co::IType* type, co::Any& value);
+
+	co::int32 readEnum( std::stringstream& ss, co::IEnum* enumType );
 
 	void readLiteralFromStream( std::stringstream& ss, std::string& str );
+	
+	template<typename T>
+	void readPrimitiveArrayFromStream( std::stringstream& ss, co::Any& value, co::IType* elementType );
 
-	void readPrimitiveType( std::stringstream& ss, co::Any& value, co::IType* type );
+	void readPrimitiveType( std::stringstream& ss, co::Any& value, co::TypeKind tk );
+
+	//any helper function
+	template< typename T >
+	void applyPrimitiveToAny( std::stringstream& ss, co::Any& value, co::TypeKind tk );
 
 	//stream read error check functions
 	void assertNotFail( std::stringstream& ss, std::string additionalInfo );
 
 	void assertNotInvalidArrayChar( char check );
-
+	
 	//serialization functions
 	void toStream( const co::Any& value, std::stringstream& ss );
 
@@ -73,11 +90,6 @@ private:
 	bool mustBeEscaped( const std::string& str );
 
 	void escapeLuaString( const std::string& str, std::stringstream& ss );
-
-	void setArrayElement( co::Any& value, co::uint32 index, void* element );
-private:
-	ca::IModel* _model;
-
 };
 
 } // namespace ca
