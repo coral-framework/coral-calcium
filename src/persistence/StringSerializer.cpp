@@ -340,7 +340,22 @@ void StringSerializer::readArray( std::stringstream &ss, co::Any& value, co::ITy
 	for( int i = 0; i < result.size(); i++ )
 	{
 		setArrayElement( value, i, result[i] );
-		delete [] result[i];
+		if( tk == co::TK_ENUM )
+		{
+			delete reinterpret_cast<co::int32*>( result[i] );
+		}
+		else if( tk == co::TK_STRUCT || tk == co::TK_NATIVECLASS )
+		{
+			delete reinterpret_cast<co::Any*>( result[i] );
+		}
+		else if( tk == co::TK_STRING )
+		{
+			delete reinterpret_cast<std::string*>( result[i] );
+		} 
+		else
+		{
+			delete [] result[i];
+		}
 
 	}
 
@@ -426,7 +441,7 @@ void StringSerializer::readPrimitiveType( std::stringstream& ss, co::Any& value,
 	} 
 	else
 	{
-		char* primitiveRead = new co::int8[type->getReflector()->getSize()];
+		co::int8* primitiveRead = new co::int8[type->getReflector()->getSize()];
 		readPrimitive( ss, type, primitiveRead );
 		value.setBasic( type->getKind(), co::Any::VarIsValue || co::Any::VarIsReference, primitiveRead );
 		delete[] primitiveRead;
