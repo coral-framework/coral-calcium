@@ -89,8 +89,9 @@ public:
 			saveObject( rootObject );
 			_spaceStore->commitChanges();
 		}
-		catch( ... )
+		catch( ca::IOException& e )
 		{
+
 			_spaceStore->discardChanges();
 			_spaceStore->close();
 			throw;
@@ -166,13 +167,14 @@ public:
 			spaceObj->setService( "universe", _universe.get() );
 			_space->setRootObject( object );
 			_space->notifyChanges();
-			
+
 			_spaceStore->close();
-			
+
 			_space->addSpaceObserver( this );
 		}
-		catch( ... )
+		catch( ca::IOException& e )
 		{
+			CORAL_DLOG(INFO) << e.getMessage();
 			_spaceStore->close();
 			throw;
 		}
@@ -313,6 +315,7 @@ public:
 				{
 					ca::StoredFieldValue value;
 					value.fieldId = getMemberId( it2->member );
+					value.fieldName = it2->member->getName();
 					std::string valueStr;
 					if( it2->newValue.getKind() == co::TK_ARRAY )
 					{
@@ -357,6 +360,7 @@ public:
 					}
 
 					value.value = valueStr;
+					
 					values.push_back( value );
 				}
 
@@ -507,6 +511,7 @@ private:
 
 			ca::StoredFieldValue value;
 			value.fieldId = fieldId;
+			value.fieldName = field->getName();
 			value.value = fieldValueStr;
 			values.push_back( value );
 		}
@@ -627,6 +632,7 @@ private:
 			ca::StoredFieldValue value;
 			value.fieldId = fieldId;
 			value.value = refStr;
+			value.fieldName = port->getName();
 			values.push_back( value );
 			
 		}

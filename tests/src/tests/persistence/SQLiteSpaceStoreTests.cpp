@@ -244,16 +244,19 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 	values.clear();
 
 	sfv.fieldId = field1;
+	sfv.fieldName = "field";
 	sfv.value = "1";
 	
 	values.push_back( sfv );
 
 	sfv.fieldId = field2;
+	sfv.fieldName = "field2";
 	sfv.value = "'stringValue'";
 
 	values.push_back( sfv );
 
 	sfv.fieldId = field3;
+	sfv.fieldName = "parent";
 	sfv.value = "nil";
 
 	values.push_back( sfv );
@@ -276,6 +279,7 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 	for( unsigned int i = 0; i < values.size(); i++ )
 	{
 		EXPECT_EQ( values[i].fieldId, valuesRestored[i].fieldId );
+		EXPECT_EQ( values[i].fieldName, valuesRestored[i].fieldName );
 		EXPECT_EQ( values[i].value, valuesRestored[i].value );
 	}
 

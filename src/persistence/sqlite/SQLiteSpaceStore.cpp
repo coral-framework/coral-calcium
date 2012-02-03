@@ -184,16 +184,17 @@ public:
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD_VALUE (FIELD_ID, OBJECT_ID, REVISION, VALUE)\
-												VALUES (?, ?, ?, ?)" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD_VALUE (FIELD_ID, FIELD_NAME, OBJECT_ID, REVISION, VALUE)\
+												VALUES (?, ?, ?, ?, ?)" );
 
 		for( int i = 0; i < values.getSize(); i++ )
 		{
 			stmt.reset();
 			stmt.bind( 1, values[i].fieldId );
-			stmt.bind( 2, objId );
-			stmt.bind( 3, _latestRevision );
-			stmt.bind( 4, values[i].value );
+			stmt.bind( 2, values[i].fieldName );
+			stmt.bind( 3, objId );
+			stmt.bind( 4, _latestRevision );
+			stmt.bind( 5, values[i].value );
 
 			stmt.execute();
 		}
@@ -227,10 +228,10 @@ public:
 	{
 		values.clear();
 		
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT F.FIELD_ID, FV.VALUE FROM\
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT F.FIELD_ID, FV.FIELD_NAME, FV.VALUE FROM\
 								OBJECT OBJ LEFT OUTER JOIN TYPE T ON OBJ.TYPE_ID = T.TYPE_ID\
 								LEFT OUTER JOIN FIELD F ON F.TYPE_ID = T.TYPE_ID\
-								LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_ID, \
+								LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_ID, FIELD_NAME, \
 								VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_ID ) FV\
 								ON FV.OBJECT_ID = OBJ.OBJECT_ID AND F.FIELD_ID = FV.FIELD_ID\
 								WHERE OBJ.OBJECT_ID = ? GROUP BY FV.FIELD_ID, FV.OBJECT_ID \
@@ -245,7 +246,8 @@ public:
 		{
 			ca::StoredFieldValue sfv;
 			sfv.fieldId = rs.getUint32( 0 ); //fieldName;
-			sfv.value = rs.getString( 1 );
+			sfv.fieldName = rs.getString( 1 );
+			sfv.value = rs.getString( 2 );
 			values.push_back( sfv );
 		}
 		stmt.finalize();
@@ -420,6 +422,7 @@ private:
 
 			_db.prepare( "CREATE TABLE if not exists [FIELD_VALUE] (\
 						 [FIELD_ID] INTEGER  NOT NULL,\
+						 [FIELD_NAME] VARCHAR(128),\
 						 [VALUE] TEXT  NULL,\
 						 [REVISION] INTEGER NOT NULL,\
 						 [OBJECT_ID] INTEGER NOT NULL,\
