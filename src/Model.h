@@ -450,9 +450,9 @@ public:
 	const std::string& getName();
 	void setName( const std::string& name );
 	
-	co::int32 getVersion();
-	void setVersion(const co::int32 version);
-	
+	co::Range<std::string const> getUpdates();
+
+
 	bool alreadyContains( co::IType* type );
 	bool contains( co::IType* type );
 	void getFields( co::IRecordType* recordType, co::RefVector<co::IField>& fields );
@@ -463,6 +463,8 @@ public:
 	void addEnum( co::IEnum* enumType );
 	void addRecordType( co::IRecordType* recordType, co::Range<co::IField* const> fields );
 	void addComponent( co::IComponent* component, co::Range<co::IPort* const> ports );
+	void addUpdate( const std::string& update );
+
 
 protected:
 	TypeRecord* getType( co::IType* type );
@@ -486,8 +488,7 @@ private:
 	// --- permanent fields --- //
 
 	std::string _name;
-
-	co::int32 _version;
+	std::vector<std::string> _updates;
 
 	// sorted list of types in the object model
 	TypeList _types;

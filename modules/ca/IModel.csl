@@ -27,8 +27,15 @@ interface IModel
 {
 	// Name of this model. Must be set once, before using the service.
 	string name;
-
+	
 	//---------- Querying the Model ----------//
+	
+	/*
+		Returns a list of all script updates declared on loaded CaModels	
+	
+	*/
+	
+	readonly string[] updates;
 
 	/*
 		Returns whether a \a type is already in the model.
@@ -60,7 +67,7 @@ interface IModel
 	void getPorts( in co.IComponent type, out co.IPort[] ports )
 			raises co.IllegalStateException, ModelException;
 
-	//---------- Extending the Model ----------//
+	//---------- Defining the Model ----------//
 
 	/*
 		Starts a transaction to change the model.
@@ -121,4 +128,9 @@ interface IModel
 	 */
 	void addComponent( in co.IComponent type, in co.IPort[] ports )
 			raises co.IllegalStateException, co.IllegalArgumentException, ModelException;
+	
+	/*
+		Add an update script on updates list.
+	*/
+	void addUpdate( in string update );
 };

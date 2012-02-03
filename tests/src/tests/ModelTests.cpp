@@ -52,8 +52,12 @@ TEST( ModelTests, simpleValidModels )
 	co::RefPtr<ca::IModel> model = loadModel( "valid1" );
 	ASSERT_TRUE( model->contains( someEnum ) );
 	ASSERT_FALSE( model->contains( someInterface ) );
+	ASSERT_TRUE( model->getUpdates().getSize() == 0 );
 
 	model = loadModel( "valid2" );
+
+	ASSERT_TRUE( model->getUpdates().getSize() == 0 );
+
 	ASSERT_TRUE( model->contains( someInterface ) );
 	ASSERT_FALSE( model->contains( someStruct ) );
 
@@ -63,6 +67,9 @@ TEST( ModelTests, simpleValidModels )
 	EXPECT_FALSE( model->contains( co::getType( "camodels.SomeInterface[]" ) ) );
 
 	model = loadModel( "valid3" );
+	
+	ASSERT_TRUE( model->getUpdates().getSize() == 0 );
+
 	ASSERT_FALSE( model->alreadyContains( someEnum ) );
 	ASSERT_FALSE( model->alreadyContains( someInterface ) );
 	ASSERT_FALSE( model->alreadyContains( someStruct ) );
@@ -72,6 +79,8 @@ TEST( ModelTests, simpleValidModels )
 	ASSERT_TRUE( model->alreadyContains( someStruct ) );
 	ASSERT_TRUE( model->contains( someInterface ) );
 	ASSERT_TRUE( model->contains( someStruct ) );
+
+	
 
 	co::RefVector<co::IField> fields;
 
@@ -93,6 +102,28 @@ TEST( ModelTests, simpleValidModels )
 	EXPECT_FALSE( containsMemberOfType( fields, "interface1", "camodels.SomeInterface" ) );
 	EXPECT_FALSE( containsMemberOfType( fields, "whatever", "bool" ) );
 	EXPECT_THROW( containsMemberOfType( fields, "int1", "uint32" ), TypeMismatch );
+}
+
+TEST( ModelTests, testValidModelsWithUpdate )
+{
+	co::RefPtr<ca::IModel> model = loadModel( "valid4" );
+
+	ASSERT_NO_THROW( model->contains( co::getType( "camodels.SomeEnum") ) );
+	ASSERT_TRUE( model->getUpdates().getSize() == 1 );
+	ASSERT_EQ( "script1.lua", model->getUpdates()[0] );
+
+	model = loadModel( "valid5" );
+	ASSERT_NO_THROW( model->contains( co::getType( "camodels.SomeEnum") ) );
+
+	ASSERT_TRUE( model->getUpdates().getSize() == 4 );
+	ASSERT_EQ( "script1.lua", model->getUpdates()[0] );
+	ASSERT_EQ( "script2.lua", model->getUpdates()[1] );
+	ASSERT_EQ( "script3.lua", model->getUpdates()[2] );	
+	ASSERT_EQ( "script4.lua", model->getUpdates()[3] );
+
+
+	//assure order of declaration
+
 }
 
 TEST( ModelTests, simpleInvalidModels )
@@ -132,6 +163,9 @@ TEST( ModelTests, simpleInvalidModels )
 
 	ASSERT_MODEL_ERROR( "invalid14", someEnum, "illegal reference field 'interfaceArray' "
 							"in complex value type 'camodels.SomeStruct'" );
+
+	ASSERT_MODEL_ERROR( "invalid15", someEnum, "illegal script name" );
+
 }
 
 TEST( ModelTests, extraModuleDefinitions )

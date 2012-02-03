@@ -342,6 +342,11 @@ void Model::setName( const std::string& name )
 	_name = name;
 }
 
+co::Range<std::string const> Model::getUpdates()
+{
+	return _updates;
+}
+
 bool Model::alreadyContains( co::IType* type )
 {
 	assert( type );
@@ -532,6 +537,11 @@ void Model::addComponent( co::IComponent* component, co::Range<co::IPort* const>
 	}
 
 	_transaction.insert( rec );
+}
+
+void Model::addUpdate( const std::string& update )
+{
+	_updates.push_back( update );
 }
 
 TypeRecord* Model::getType( co::IType* type )

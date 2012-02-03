@@ -2,7 +2,6 @@
 -- Lua module for loading object model description files (CaModel_*.lua)
 -------------------------------------------------------------------------------
 
--- Loads a chunk from a file and sets its _ENV
 local function loadFileIn( filePath, env )
 	local file, err = io.open( filePath, 'rb' )
 	if file then
@@ -21,6 +20,7 @@ local coType = co.Type
 local caModelEnv = {}
 local caModelEnvMT = { __index = caModelEnv }
 local currentEnv = nil
+local updateList = {}
 
 local typeMT = { __call = function( typeDecl, entries )
 	typeDecl.entries = entries
@@ -34,6 +34,14 @@ function caModelEnv.Type( name )
 	local typeDecl = setmetatable( { type = type, name = name }, typeMT )
 	currentEnv[#currentEnv + 1] = typeDecl
 	return typeDecl
+end
+
+function caModelEnv.Update( updateScript )
+	if type( updateScript ) ~= 'string' then
+		error( "illegal script name '" .. tostring( updateScript ) .. "'", 0 )
+	end
+
+	updateList[#updateList + 1] = updateScript
 end
 
 -------------------------------------------------------------------------------
@@ -109,13 +117,18 @@ end
 
 local function loadModelFile( objModel, filePath )
 	currentEnv = setmetatable( {}, caModelEnvMT )
+	updateList = {}
 
 	local chunk, err = loadFileIn( filePath, currentEnv )
 	if not chunk then
 		error( err )
 	end
-
+	
 	chunk()
+	
+	for _, script in ipairs( updateList ) do
+		objModel:addUpdate( script )
+	end
 
 	processTypes( currentEnv, objModel )
 end
