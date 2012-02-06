@@ -121,7 +121,7 @@ public:
 			id = rs.getUint32(0);
 			typeStmt.finalize();
 			return id;
-			
+
 		}
 		else
 		{
@@ -203,9 +203,9 @@ public:
 		
 	}
 	
-	co::uint32 getObjectType( co::uint32 objectId )
+	co::uint32 getObjectType( co::uint32 objectId, std::string& typeName )
 	{
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_ID FROM OBJECT O WHERE O.OBJECT_ID = ?" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_ID, O.TYPE_NAME FROM OBJECT O WHERE O.OBJECT_ID = ?" );
 
 		stmt.bind( 1, objectId );
 
@@ -213,9 +213,10 @@ public:
 				
 		if( rs.next() )
 		{
-			co::uint32 id = rs.getUint32(0);
+			co::uint32 typeId = rs.getUint32( 0 );
+			typeName = rs.getString( 1 );
 			stmt.finalize();
-			return id;
+			return typeId;
 		}
 		else
 		{

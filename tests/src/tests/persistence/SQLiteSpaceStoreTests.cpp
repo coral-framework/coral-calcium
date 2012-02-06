@@ -61,7 +61,8 @@ TEST_F( SQLiteSpaceStoreTests, testOpsWithoutOpen )
 
 	EXPECT_THROW( spaceStore->getValues(1, 1, values), ca::IOException );
 
-	EXPECT_THROW( spaceStore->getObjectType(1), ca::IOException );
+	std::string typeName;
+	EXPECT_THROW( spaceStore->getObjectType( 1, typeName ), ca::IOException );
 }
 
 TEST_F( SQLiteSpaceStoreTests, testChangesWithoutBegin )
@@ -122,12 +123,15 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 	spaceStore->open();
 	co::uint32 type1InsertedId, type2InsertedId;
 	EXPECT_NO_THROW( spaceStore->beginChanges() );
-	EXPECT_NO_THROW( type1InsertedId = spaceStore->getOrAddType( "type1", 1 ) );
-	EXPECT_NO_THROW( type2InsertedId = spaceStore->getOrAddType( "type2", 2 ) );
+
+	const std::string typeNameInserted1 = "type1", typeNameInserted2 = "type2";
+
+	EXPECT_NO_THROW( type1InsertedId = spaceStore->getOrAddType( typeNameInserted1, 1 ) );
+	EXPECT_NO_THROW( type2InsertedId = spaceStore->getOrAddType( typeNameInserted2, 2 ) );
 
 	co::uint32 obj1InsertedId, obj2InsertedId;
-	EXPECT_NO_THROW( obj1InsertedId = spaceStore->addObject( type1InsertedId, "type1" ) );
-	EXPECT_NO_THROW( obj2InsertedId = spaceStore->addObject( type2InsertedId, "type2" ) );
+	EXPECT_NO_THROW( obj1InsertedId = spaceStore->addObject( type1InsertedId, typeNameInserted1 ) );
+	EXPECT_NO_THROW( obj2InsertedId = spaceStore->addObject( type2InsertedId, typeNameInserted2 ) );
 
 	ASSERT_FALSE ( obj1InsertedId == 0 );
 	ASSERT_FALSE ( obj2InsertedId == 0 );
@@ -139,12 +143,12 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 
 	EXPECT_EQ( 1, spaceStore->getLatestRevision() );
 
-	co::uint32 type1ConsultedId, type2ConsultedId;
-	EXPECT_NO_THROW( type1ConsultedId = spaceStore->getObjectType( obj1InsertedId ) );
-	EXPECT_NO_THROW( type2ConsultedId = spaceStore->getObjectType( obj2InsertedId ) );
+	std::string typeName1, typeName2;
+	EXPECT_NO_THROW( spaceStore->getObjectType( obj1InsertedId, typeName1 ) );
+	EXPECT_NO_THROW( spaceStore->getObjectType( obj2InsertedId, typeName2 ) );
 
-	ASSERT_EQ( type1InsertedId, type1ConsultedId );
-	ASSERT_EQ( type2InsertedId, type2ConsultedId );
+	ASSERT_EQ( typeNameInserted1, typeName1 );
+	ASSERT_EQ( typeNameInserted2, typeName2 );
 	spaceStore->close();
 }
 

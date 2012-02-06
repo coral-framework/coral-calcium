@@ -89,7 +89,7 @@ public:
 			saveObject( rootObject );
 			_spaceStore->commitChanges();
 		}
-		catch( ca::IOException& e )
+		catch( ... )
 		{
 
 			_spaceStore->discardChanges();
@@ -658,12 +658,12 @@ private:
 
 	void restoreObject( co::uint32 id )
 	{
-		co::uint32 typeId = _spaceStore->getObjectType( id );
+		std::string entity;
+
+		co::uint32 typeId = _spaceStore->getObjectType( id, entity );
 
 		co::IType* type = getType( typeId );
 
-		const std::string& entity = type->getFullName();
-		
 		co::IObject* object = co::newInstance( entity );
 		
 		co::Range<co::IPort* const> ports = object->getComponent()->getPorts();
@@ -741,7 +741,7 @@ private:
 		}
 
 		co::Range<co::IField* const> fields = service->getInterface()->getFields();
-		
+
 		co::IReflector* ref = service->getInterface()->getReflector();
 		for( int i = 0; i < fields.getSize(); i++)
 		{
@@ -806,7 +806,7 @@ private:
 			{
 				CORAL_THROW( ca::FormatException, "Invalid field value for field " << field->getName() );
 			}
-			
+
 		}
 		
 		try
