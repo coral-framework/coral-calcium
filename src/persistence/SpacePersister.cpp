@@ -433,7 +433,7 @@ private:
 
 		co::uint32 entityId = getTypeId( obj->getInterface() );
 
-		objId = _spaceStore->addObject( entityId );
+		objId = _spaceStore->addObject( entityId, type->getFullName() );
 		insertObjectCache(obj.get(), objId);
 
 		co::Range<co::IField* const> fields = type->getFields();
@@ -597,7 +597,7 @@ private:
 		saveEntity(component);
 
 		co::uint32 entityId = getTypeId( component );
-		co::uint32 objId = _spaceStore->addObject( entityId );
+		co::uint32 objId = _spaceStore->addObject( entityId, component->getFullName() );
 
 		insertObjectCache( object.get(), objId );
 

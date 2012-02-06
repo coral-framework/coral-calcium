@@ -149,13 +149,14 @@ public:
 		
 	}
 	
-	co::uint32 addObject( co::uint32 typeId )
+	co::uint32 addObject( co::uint32 typeId, const std::string& typeName )
 	{
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT (TYPE_ID) VALUES ( ? );" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT (TYPE_ID, TYPE_NAME) VALUES ( ?, ? );" );
 		stmt.bind( 1, typeId );
+		stmt.bind( 2, typeName );
 		stmt.execute();
 
 		ca::SQLiteStatement stmtMaxObj = _db.prepare( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
@@ -416,7 +417,8 @@ private:
 
 			_db.prepare( "CREATE TABLE if not exists [OBJECT] (\
 						 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
-						 [TYPE_ID] INTEGER  NULL,\
+						 [TYPE_ID] INTEGER NOT NULL,\
+						 [TYPE_NAME] TEXT NOT NULL,\
 						 FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID)\
 						 );" ).execute();
 

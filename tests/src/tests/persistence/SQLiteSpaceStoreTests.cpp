@@ -36,7 +36,7 @@ TEST_F( SQLiteSpaceStoreTests, testOpsWithoutOpen )
 {
 
 	EXPECT_THROW( spaceStore->getOrAddType( "type", 1 ), ca::IOException );
-	EXPECT_THROW( spaceStore->addObject( 1 ), ca::IOException );
+	EXPECT_THROW( spaceStore->addObject( 1, "type" ), ca::IOException );
 	EXPECT_THROW( spaceStore->addField( 1, "field", 1, false ), ca::IOException );
 	EXPECT_THROW( spaceStore->addField( 1, "field2", 1, false ), ca::IOException );
 
@@ -70,7 +70,7 @@ TEST_F( SQLiteSpaceStoreTests, testChangesWithoutBegin )
 	ASSERT_NO_THROW(spaceStore->open());
 
 	EXPECT_THROW( spaceStore->getOrAddType("type", 1), ca::IOException );
-	EXPECT_THROW( spaceStore->addObject(1), ca::IOException );
+	EXPECT_THROW( spaceStore->addObject( 1, "type" ), ca::IOException );
 	EXPECT_THROW( spaceStore->addField(1, "field", 1, false), ca::IOException );
 	EXPECT_THROW( spaceStore->addField(1, "field2", 1, false), ca::IOException );
 
@@ -126,14 +126,14 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 	EXPECT_NO_THROW( type2InsertedId = spaceStore->getOrAddType( "type2", 2 ) );
 
 	co::uint32 obj1InsertedId, obj2InsertedId;
-	EXPECT_NO_THROW( obj1InsertedId = spaceStore->addObject( type1InsertedId ) );
-	EXPECT_NO_THROW( obj2InsertedId = spaceStore->addObject( type2InsertedId ) );
+	EXPECT_NO_THROW( obj1InsertedId = spaceStore->addObject( type1InsertedId, "type1" ) );
+	EXPECT_NO_THROW( obj2InsertedId = spaceStore->addObject( type2InsertedId, "type2" ) );
 
 	ASSERT_FALSE ( obj1InsertedId == 0 );
 	ASSERT_FALSE ( obj2InsertedId == 0 );
 	ASSERT_TRUE ( obj1InsertedId != obj2InsertedId );
 
-	EXPECT_THROW( spaceStore->addObject( 100 ), ca::IOException );
+	EXPECT_THROW( spaceStore->addObject( 100, "typeInvalid" ), ca::IOException );
 
 	EXPECT_NO_THROW( spaceStore->commitChanges() );
 
@@ -230,7 +230,7 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 	EXPECT_NO_THROW( field3 = spaceStore->addField( type1InsertedId, "parent", type1InsertedId, false ) );
 
 	co::uint32 objectId;
-	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId ) );
+	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId, "type1" ) );
 
 	std::vector<ca::StoredFieldValue> values;
 
@@ -307,7 +307,7 @@ TEST_F( SQLiteSpaceStoreTests, testDiscardChanges )
 	EXPECT_NO_THROW( field3 = spaceStore->addField( type1InsertedId, "parent", type1InsertedId, false ) );
 
 	co::uint32 objectId;
-	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId ) );
+	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId, "type1" ) );
 
 	std::vector<ca::StoredFieldValue> values;
 
@@ -408,7 +408,7 @@ TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
 
 	spaceStore->beginChanges();
 	co::uint32 objectId;
-	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId ) );
+	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId, "type1" ) );
 
 	//do not increment revision until a change has been committed
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 0 );
@@ -418,16 +418,16 @@ TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
 	//now we have a new revision
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 1 );
 
-	ASSERT_THROW( objectId = spaceStore->addObject( type1InsertedId ), ca::IOException );
+	ASSERT_THROW( objectId = spaceStore->addObject( type1InsertedId, "type1" ), ca::IOException );
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 1 ); // revision is not updated without a begin/commit pair
 
 	spaceStore->beginChanges();
-	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId ));
+	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId, "type1" ));
 	spaceStore->commitChanges();
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 2 ); // another revision
 
 	spaceStore->beginChanges();
-	ASSERT_NO_THROW( spaceStore->addObject( type1InsertedId ) );
+	ASSERT_NO_THROW( spaceStore->addObject( type1InsertedId, "type1" ) );
 	spaceStore->discardChanges();
 
 	//discarded changes can't change revision
