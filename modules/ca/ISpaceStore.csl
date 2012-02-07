@@ -6,11 +6,12 @@ interface ISpaceStore
 	void close() raises ca.IOException;
 
 	void beginChanges();
-	void commitChanges();
+	void commitChanges( in string updates );
 	void discardChanges();
 	
 	//returns the root object's id for the current revision
 	uint32 getRootObject( in uint32 revision );
+	void getUpdates( in uint32 revision, out string updates );
 	
 	uint32 getOrAddType( in string typeName, in uint32 version ) raises ca.IOException;
 	uint32 addField( in uint32 typeId, in string fieldName, in uint32 fieldTypeId, in bool isFacet ) raises ca.IOException;

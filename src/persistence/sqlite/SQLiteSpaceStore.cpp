@@ -54,16 +54,17 @@ public:
 		_inTransaction = true;
 	}
 
-	void commitChanges()
+	void commitChanges( const std::string& updates )
 	{
 		checkBeginTransaction();
 
 		if( _startedRevision )
 		{
-			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO SPACE VALUES (?, ?, datetime('now') )" );
+			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO SPACE VALUES (?, ?, datetime('now'), ? )" );
 
 			stmt.bind( 1, _rootObjectId );
 			stmt.bind( 2, _latestRevision );
+			stmt.bind( 3, updates );
 
 			stmt.execute();
 			_startedRevision = false;
@@ -91,7 +92,34 @@ public:
 
 	co::uint32 getRootObject( co::uint32 revision )
 	{
-		return getRootObjectForRevision( revision );
+		co::uint32 rootObject = 0;
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION = ?" );
+
+		stmt.bind( 1, revision );
+
+		ca::SQLiteResult rs = stmt.query();
+
+		if( rs.next() )
+		{
+			rootObject = rs.getUint32(0);
+			stmt.finalize();
+		}
+		return rootObject;
+	}
+
+	void getUpdates( co::uint32 revision, std::string& updates )
+	{
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT UPDATES_APPLIED FROM SPACE WHERE REVISION = ?" );
+
+		stmt.bind( 1, revision );
+
+		ca::SQLiteResult rs = stmt.query();
+
+		if( rs.next() )
+		{
+			updates = rs.getString( 0 );
+			stmt.finalize();
+		}
 	}
 
 	co::uint32 getOrAddType( const std::string& typeName, co::uint32 version ) 
@@ -131,24 +159,24 @@ public:
 		}
 
 	}
-		
+
 	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId, bool isFacet )
 	{
 		checkBeginTransaction();
 		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID, IS_FACET) VALUES ( ?, ?, ?, ? );" );
-
+		
 		stmt.bind( 1, typeId );
 		stmt.bind( 2, fieldName );
 		stmt.bind( 3, fieldTypeId );
 		stmt.bind( 4, isFacet );
-
+		
 		stmt.execute();
 		stmt.finalize();
 
 		return getFieldIdByName(fieldName, typeId);
-		
-	}
 	
+	}
+
 	co::uint32 addObject( co::uint32 typeId, const std::string& typeName )
 	{
 		checkBeginTransaction();
@@ -163,7 +191,7 @@ public:
 
 		ca::SQLiteResult rs = stmtMaxObj.query();
 
-		if(!rs.next())
+		if( !rs.next() )
 		{
 			throw ca::IOException("Failed to add object");
 		}
@@ -200,9 +228,9 @@ public:
 			stmt.execute();
 		}
 		stmt.finalize();
-		
+
 	}
-	
+
 	co::uint32 getObjectType( co::uint32 objectId, std::string& typeName )
 	{
 		ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_ID, O.TYPE_NAME FROM OBJECT O WHERE O.OBJECT_ID = ?" );
@@ -333,23 +361,6 @@ public:
 	}
 
 private:
-	co::uint32 getRootObjectForRevision( co::uint32 revision )
-	{
-		co::uint32 rootObject = 0;
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT ROOT_OBJECT_ID FROM SPACE WHERE REVISION = ?" );
-
-		stmt.bind( 1, revision );
-
-		ca::SQLiteResult rs = stmt.query();
-
-		if( rs.next() )
-		{
-			rootObject = rs.getUint32(0);
-			stmt.finalize();
-		}
-		return rootObject;
-	}
-
 	co::uint32 getFieldIdByName( const std::string& fieldName, co::uint32 typeId )
 	{
 		
@@ -438,6 +449,7 @@ private:
 						 [ROOT_OBJECT_ID] INTEGER NOT NULL,\
 						 [REVISION] INTEGER  NOT NULL,\
 						 [TIME] TEXT NOT NULL,\
+						 [UPDATES_APPLIED] TEXT, \
 						 UNIQUE( REVISION ),\
 						 FOREIGN KEY (ROOT_OBJECT_ID) REFERENCES OBJECT(OBJECT_ID));" ).execute();
 

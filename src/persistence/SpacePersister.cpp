@@ -87,7 +87,7 @@ public:
 		{
 			_spaceStore->beginChanges();
 			saveObject( rootObject );
-			_spaceStore->commitChanges();
+			_spaceStore->commitChanges("");
 		}
 		catch( ... )
 		{
@@ -367,7 +367,7 @@ public:
 				_spaceStore->addValues( objectId, values );
 				values.clear();
 			}
-			_spaceStore->commitChanges();
+			_spaceStore->commitChanges("");
 			_spaceStore->close();
 			_trackedRevision++;
 		}

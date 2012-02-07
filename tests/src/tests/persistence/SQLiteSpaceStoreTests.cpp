@@ -107,7 +107,7 @@ TEST_F( SQLiteSpaceStoreTests, testGetOrAddType )
 	ASSERT_FALSE ( type2InsertedId == 0 );
 	ASSERT_TRUE ( type1InsertedId != type2InsertedId );
 
-	spaceStore->commitChanges();
+	spaceStore->commitChanges("");
 
 	co::uint32 type1ConsultedId, type2ConsultedId;
 	EXPECT_NO_THROW( type1ConsultedId = spaceStore->getOrAddType( "type1", 1 ) );
@@ -139,7 +139,7 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 
 	EXPECT_THROW( spaceStore->addObject( 100, "typeInvalid" ), ca::IOException );
 
-	EXPECT_NO_THROW( spaceStore->commitChanges() );
+	EXPECT_NO_THROW( spaceStore->commitChanges("") );
 
 	EXPECT_EQ( 1, spaceStore->getLatestRevision() );
 
@@ -172,7 +172,7 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 	EXPECT_THROW( spaceStore->addField( type1InsertedId, "invalid", 918723, false ), ca::IOException ); //field type id invalid
 	EXPECT_THROW( spaceStore->addField( 73462843, "invalid", 918723, false ), ca::IOException ); //both are invalid
 
-	spaceStore->commitChanges();
+	spaceStore->commitChanges("");
 
 	ca::StoredType type;
 
@@ -269,7 +269,7 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 
 	EXPECT_NO_THROW( spaceStore->addValues( objectId, values ) );
 
-	spaceStore->commitChanges();
+	spaceStore->commitChanges("");
 
 	std::vector<ca::StoredFieldValue> valuesRestored;
 
@@ -337,7 +337,7 @@ TEST_F( SQLiteSpaceStoreTests, testDiscardChanges )
 	EXPECT_NO_THROW( spaceStore->discardChanges() );
 
 	//you can't commit after a discardChanges
-	ASSERT_THROW( spaceStore->commitChanges(), ca::IOException );
+	ASSERT_THROW( spaceStore->commitChanges(""), ca::IOException );
 
 	ca::SQLiteConnection conn;
 	conn.open( fileName );
@@ -405,7 +405,7 @@ TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
 	EXPECT_NO_THROW( field2 = spaceStore->addField( type1InsertedId, "field2", stringInsertedId, false ) );
 	EXPECT_NO_THROW( field3 = spaceStore->addField( type1InsertedId, "parent", type1InsertedId, false ) );
 
-	spaceStore->commitChanges();
+	spaceStore->commitChanges("update1");
 
 	//type definitions do not alter revision
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 0 );
@@ -417,18 +417,26 @@ TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
 	//do not increment revision until a change has been committed
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 0 );
 
-	spaceStore->commitChanges();
+	spaceStore->commitChanges("update2");
 
 	//now we have a new revision
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 1 );
+
+	std::string updateStr;
+	spaceStore->getUpdates( 1, updateStr );
+
+	ASSERT_EQ( "update2", updateStr );
 
 	ASSERT_THROW( objectId = spaceStore->addObject( type1InsertedId, "type1" ), ca::IOException );
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 1 ); // revision is not updated without a begin/commit pair
 
 	spaceStore->beginChanges();
 	ASSERT_NO_THROW( objectId = spaceStore->addObject( type1InsertedId, "type1" ));
-	spaceStore->commitChanges();
+	spaceStore->commitChanges("update3");
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 2 ); // another revision
+
+	spaceStore->getUpdates( 2, updateStr );
+	ASSERT_EQ( "update3", updateStr );
 
 	spaceStore->beginChanges();
 	ASSERT_NO_THROW( spaceStore->addObject( type1InsertedId, "type1" ) );
