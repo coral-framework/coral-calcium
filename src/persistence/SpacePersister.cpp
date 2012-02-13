@@ -38,6 +38,9 @@
 #include <ca/ChangedValueField.h>
 #include <ca/IServiceChanges.h>
 
+#include <lua/IState.h>
+
+
 #include "StringSerializer.h"
 #include "AnyArrayUtil.h"
 
@@ -179,6 +182,33 @@ public:
 			throw;
 		}
 		
+	}
+
+	void restoreLua( co::uint32 revision )
+	{
+		const std::string& script = "ca.SpaceLoader";
+		const std::string& function = "";
+
+		co::Range<const co::Any> results;
+
+		co::IObject* spaceObj = co::newInstance( "ca.Space" );
+		spaceObj->setService( "universe", _universe.get() );
+		_space = spaceObj->getService<ca::ISpace>();
+
+		co::Any args[4];
+		args[0].set<ca::ISpace*>( _space.get() );
+		args[1].set<ca::ISpaceStore*>( _spaceStore.get() );
+		args[2].set<ca::IModel*>( _model );
+		args[3].set<co::uint32>( revision );
+
+		co::getService<lua::IState>()->callFunction( script, function,
+			co::Range<const co::Any>( args, CORAL_ARRAY_LENGTH( args ) ),
+			results );
+
+		_space->addSpaceObserver( this );
+		_space->notifyChanges();
+
+
 	}
 
 	void save()
@@ -336,6 +366,7 @@ public:
 							serviceIdsAny.set< const std::vector< co::uint32 >& >( serviceIds );
 
 							_serializer.toString( serviceIdsAny, valueStr );
+							valueStr.insert( 0, "#" );
 						}
 						else
 						{
@@ -352,6 +383,7 @@ public:
 						else
 						{
 							_serializer.toString( getObjectId( service ), valueStr );
+							valueStr.insert( 0, "#" );
 						}
 					}
 					else
@@ -483,6 +515,7 @@ private:
 					co::Any refsValue;
 					refsValue.set<const std::vector<co::int32>&>( refs );
 					_serializer.toString( refsValue, fieldValueStr );
+					fieldValueStr.insert(0, "#");
 				}
 				else
 				{
@@ -501,6 +534,7 @@ private:
 				{
 					saveObject( service->getProvider() );
 					_serializer.toString( getObjectId(service), fieldValueStr );
+					fieldValueStr.insert(0, "#");
 				}
 				
 			}
@@ -623,11 +657,15 @@ private:
 				saveService(service, port);
 				
 				_serializer.toString( getObjectId( service ), refStr);
+
+				refStr.insert(0, "#");
+
 			}
 			else
 			{
 				saveObject( service->getProvider() );
 				_serializer.toString( getObjectId( service ), refStr);
+				refStr.insert(0, "#");
 			}
 			ca::StoredFieldValue value;
 			value.fieldId = fieldId;
@@ -691,8 +729,9 @@ private:
 			{
 				continue;
 			}
-
-			co::uint32 idService = atoi( mapFieldValue.find(fieldId)->second.c_str() );
+			std::string idServiceStr = mapFieldValue.find(fieldId)->second;
+			idServiceStr = idServiceStr.substr( 1 );
+			co::uint32 idService = atoi( idServiceStr.c_str() );
 
 			if( port->getIsFacet() )
 			{
@@ -752,11 +791,11 @@ private:
 				continue;
 			}
 
-			fillFieldValue( service, field, id, mapFieldValue.find(fieldId)->second, _trackedRevision );
+			fillFieldValue( service, field, id, mapFieldValue.find( fieldId )->second, _trackedRevision );
 		}
 	}
 
-	void fillFieldValue( co::IService* service, co::IField* field, co::uint32 id, std::string strValue, co::uint32 _trackedRevision )
+	void fillFieldValue( co::IService* service, co::IField* field, co::uint32 id, std::string& strValue, co::uint32 _trackedRevision )
 	{
 		co::IType* type = field->getType();
 		co::IReflector* reflector = service->getInterface()->getReflector();
@@ -781,6 +820,7 @@ private:
 			if( strValue != "nil" )
 			{
 				co::Any refId;
+				strValue = strValue.substr(1);
 				_serializer.fromString( strValue, co::typeOf<co::int32>::get(), refId );
 				
 				co::uint32 refIdInt = refId.get<co::uint32>();
@@ -824,9 +864,11 @@ private:
 
 	}
 
-	void fillInterfaceArrayValue( std::string strValue, co::IArray* arrayType, co::Any& arrayValue )
+	void fillInterfaceArrayValue( std::string& strValue, co::IArray* arrayType, co::Any& arrayValue )
 	{
 		assert( arrayType->getElementType()->getKind() == co::TK_INTERFACE );
+
+		strValue = strValue.substr(1);
 
 		co::Any refs;
 		_serializer.fromString(strValue, co::typeOf<std::vector<co::int32>>::get(), refs);

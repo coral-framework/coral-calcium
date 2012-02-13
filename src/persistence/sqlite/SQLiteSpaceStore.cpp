@@ -347,7 +347,11 @@ public:
 												FIELD_VALUE LEFT OUTER JOIN FIELD ON FIELD_VALUE.FIELD_ID = FIELD.FIELD_ID\
 												WHERE VALUE = ? AND REVISION <= ? AND FIELD.IS_FACET = 1 ORDER BY REVISION DESC LIMIT 1" );
 
-		stmt.bind( 1, serviceId );
+		std::stringstream serviceIdStr; 
+		serviceIdStr << "#" << serviceId;
+		std::string str = serviceIdStr.str();
+
+		stmt.bind( 1, str );
 		stmt.bind( 2, revision );
 
 		ca::SQLiteResult rs = stmt.query();
@@ -400,7 +404,7 @@ private:
 	{
 		if( !_inTransaction )
 		{
-			CORAL_THROW(ca::IOException, "Attempt to call a store modification routine without calling 'beginChanges' before.");
+			CORAL_THROW( ca::IOException, "Attempt to call a store modification routine without calling 'beginChanges' before." );
 		}
 	}
 
