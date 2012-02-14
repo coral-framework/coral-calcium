@@ -7,7 +7,6 @@
 #include <ca/INamed.h>
 #include <co/reserved/OS.h>
 #include <ca/IOException.h>
-#include "ca/StoredFieldValue.h"
 
 
 class SQLiteSpaceStoreTests : public ::testing::Test
@@ -37,22 +36,20 @@ TEST_F( SQLiteSpaceStoreTests, testOpsWithoutOpen )
 	EXPECT_THROW( spaceStore->addObject( "type" ), ca::IOException );
 	
 	
-	std::vector<ca::StoredFieldValue> values;
+	std::vector<std::string> fieldNames;
+	std::vector<std::string> values;
 
-	ca::StoredFieldValue sfv;
-	sfv.fieldName = "fieldName";
-	sfv.value = "value";
-	values.push_back(sfv);
+	fieldNames.push_back( "fieldName" );
+	values.push_back("value");
 
-	sfv.fieldName = "fieldName2";
-	sfv.value = "value2";
-	values.push_back(sfv);
+	fieldNames.push_back( "fieldName2" );
+	values.push_back("value2");
 
-	EXPECT_THROW( spaceStore->addValues(1, values), ca::IOException );
+	EXPECT_THROW( spaceStore->addValues(1, fieldNames, values), ca::IOException );
 
 	EXPECT_THROW( spaceStore->getRootObject(1), ca::IOException );
 
-	EXPECT_THROW( spaceStore->getValues(1, 1, values), ca::IOException );
+	EXPECT_THROW( spaceStore->getValues(1, 1, fieldNames, values), ca::IOException );
 
 	std::string typeName;
 	EXPECT_THROW( spaceStore->getObjectType( 1, typeName ), ca::IOException );
@@ -65,18 +62,16 @@ TEST_F( SQLiteSpaceStoreTests, testChangesWithoutBegin )
 
 	EXPECT_THROW( spaceStore->addObject( "type" ), ca::IOException );
 	
-	std::vector<ca::StoredFieldValue> values;
+	std::vector<std::string> fieldNames;
+	std::vector<std::string> values;
 
-	ca::StoredFieldValue sfv;
-	sfv.fieldName = "fieldName";
-	sfv.value = "value";
-	values.push_back(sfv);
+	fieldNames.push_back( "fieldName" );
+	values.push_back("value");
 
-	sfv.fieldName = "fieldName2";
-	sfv.value = "value2";
-	values.push_back(sfv);
+	fieldNames.push_back( "fieldName2" );
+	values.push_back("value2");
 
-	EXPECT_THROW( spaceStore->addValues(1, values), ca::IOException );
+	EXPECT_THROW( spaceStore->addValues(1, fieldNames, values), ca::IOException );
 
 	spaceStore->close();
 
@@ -121,46 +116,38 @@ TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 	co::uint32 objectId;
 	ASSERT_NO_THROW( objectId = spaceStore->addObject( "type1" ) );
 
-	std::vector<ca::StoredFieldValue> values;
+	std::vector<std::string> fieldNames;
+	std::vector<std::string> values;
 
-	ca::StoredFieldValue sfv;
-
-	values.clear();
-
-	sfv.fieldName = "field";
-	sfv.value = "1";
+	fieldNames.push_back( "field" );
+	values.push_back( "1" );
 	
-	values.push_back( sfv );
+	fieldNames.push_back( "field2" );
+	values.push_back( "stringValue" );
 
-	sfv.fieldName = "field2";
-	sfv.value = "'stringValue'";
+	fieldNames.push_back( "parent" );
+	values.push_back( "nil" );
 
-	values.push_back( sfv );
+	EXPECT_THROW( spaceStore->addValues( 2987343, fieldNames, values ), ca::IOException ); //invalid object
 
-	sfv.fieldName = "parent";
-	sfv.value = "nil";
-
-	values.push_back( sfv );
-
-	EXPECT_THROW( spaceStore->addValues( 2987343, values ), ca::IOException ); //invalid object
-
-	EXPECT_NO_THROW( spaceStore->addValues( objectId, values ) );
+	EXPECT_NO_THROW( spaceStore->addValues( objectId, fieldNames, values ) );
 
 	spaceStore->commitChanges("");
 
-	std::vector<ca::StoredFieldValue> valuesRestored;
+	std::vector<std::string> fieldNamesRestored;
+	std::vector<std::string> valuesRestored;
 
-	ASSERT_NO_THROW( spaceStore->getValues( 287364873, spaceStore->getLatestRevision(), valuesRestored ) ); //invalid id
+	ASSERT_NO_THROW( spaceStore->getValues( 287364873, spaceStore->getLatestRevision(), fieldNamesRestored, valuesRestored ) ); //invalid id
 	EXPECT_TRUE( valuesRestored.empty() );
 
-	ASSERT_NO_THROW( spaceStore->getValues( objectId, spaceStore->getLatestRevision(), valuesRestored ) );
+	ASSERT_NO_THROW( spaceStore->getValues( objectId, spaceStore->getLatestRevision(), fieldNamesRestored, valuesRestored ) );
 
 	ASSERT_EQ( values.size(), valuesRestored.size() );
 
 	for( unsigned int i = 0; i < values.size(); i++ )
 	{
-		EXPECT_EQ( values[i].fieldName, valuesRestored[i].fieldName );
-		EXPECT_EQ( values[i].value, valuesRestored[i].value );
+		EXPECT_EQ( fieldNames[i], fieldNamesRestored[i] );
+		EXPECT_EQ( values[i], valuesRestored[i]);
 	}
 
 	spaceStore->close();
@@ -178,26 +165,21 @@ TEST_F( SQLiteSpaceStoreTests, testDiscardChanges )
 	co::uint32 objectId;
 	ASSERT_NO_THROW( objectId = spaceStore->addObject( "type1" ) );
 
-	std::vector<ca::StoredFieldValue> values;
+	
+	std::vector<std::string> fieldNames;
+	std::vector<std::string> values;
 
-	ca::StoredFieldValue sfv;
+	fieldNames.push_back( "field1" );
+	values.push_back( "1" );
 
-	sfv.fieldName = "field1";
-	sfv.value = "1";
 
-	values.push_back( sfv );
+	fieldNames.push_back( "field2" );
+	values.push_back( "stringValue" );
 
-	sfv.fieldName = "field2";
-	sfv.value = "'stringValue'";
+	fieldNames.push_back( "field3" );
+	values.push_back( "nil" );
 
-	values.push_back( sfv );
-
-	sfv.fieldName = "field3";
-	sfv.value = "nil";
-
-	values.push_back( sfv );
-
-	EXPECT_NO_THROW( spaceStore->addValues( objectId, values ) );
+	EXPECT_NO_THROW( spaceStore->addValues( objectId, fieldNames, values ) );
 
 	EXPECT_NO_THROW( spaceStore->discardChanges() );
 

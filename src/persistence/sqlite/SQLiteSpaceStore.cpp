@@ -9,8 +9,6 @@
 #include <co/RefPtr.h>
 #include <co/IllegalArgumentException.h>
 
-#include <ca/StoredFieldValue.h>
-
 #include <ca/IOException.h>
 
 
@@ -156,7 +154,7 @@ public:
 
 	}
 
-	void addValues( co::uint32 objId, co::Range<const ca::StoredFieldValue> values )
+	void addValues( co::uint32 objId, co::Range<const std::string> fieldNames, co::Range<const std::string> values )
 	{
 		checkBeginTransaction();
 		checkGenerateRevision();
@@ -167,10 +165,10 @@ public:
 		for( int i = 0; i < values.getSize(); i++ )
 		{
 			stmt.reset();
-			stmt.bind( 1, values[i].fieldName );
+			stmt.bind( 1, fieldNames[i] );
 			stmt.bind( 2, objId );
 			stmt.bind( 3, _latestRevision );
-			stmt.bind( 4, values[i].value );
+			stmt.bind( 4, values[i] );
 
 			stmt.execute();
 		}
@@ -199,8 +197,9 @@ public:
 					
 	}
 		
-	void getValues( co::uint32 objectId, co::uint32 revision, std::vector<ca::StoredFieldValue>& values )
+	void getValues( co::uint32 objectId, co::uint32 revision, std::vector<std::string>& fieldNames, std::vector<std::string>& values )
 	{
+		fieldNames.clear();
 		values.clear();
 		
 		ca::SQLiteStatement stmt = _db.prepare( "SELECT FV.FIELD_NAME, FV.VALUE FROM\
@@ -217,10 +216,8 @@ public:
 				
 		while( rs.next() )
 		{
-			ca::StoredFieldValue sfv;
-			sfv.fieldName = rs.getString( 0 );
-			sfv.value = rs.getString( 1 );
-			values.push_back( sfv );
+			fieldNames.push_back( rs.getString( 0 ) );
+			values.push_back( rs.getString( 1 ) );
 		}
 		stmt.finalize();
 	}

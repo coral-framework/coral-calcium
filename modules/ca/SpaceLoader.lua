@@ -24,33 +24,34 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		local luaObjectTable = { _type = typeName, _id = serviceId }
 		idCache[ serviceId ] = luaObjectTable
 		
+		local fieldNames = {}
 		local values = {}
-		values = spaceStore:getValues( serviceId, revision )
+		fieldNames, values = spaceStore:getValues( serviceId, revision )
 		
 		for i, value in ipairs( values ) do
-			if  refKind( value.value ) == 1 then
-				local idServiceStr = value.value:sub( 2 )
+			print( value .. " " .. fieldNames[i] .. " " .. i )
+			if  refKind( value ) == 1 then
+				local idServiceStr = value:sub( 2 )
 				local chunk = load( "return " .. idServiceStr )
 				local idServiceFieldValue = chunk()
 				
 				if idServiceFieldValue == nil then
-					luaObjectTable[ value.fieldName ] = nil			
+					luaObjectTable[ fieldNames[i] ] = nil			
 				else
 					local objProvider = spaceStore:getServiceProvider( idServiceFieldValue )
 					
 					restoreObject( spaceStore, objModel, objProvider, revision )
 					
-					luaObjectTable[ value.fieldName ] = idCache[ idServiceFieldValue ]
+					luaObjectTable[ fieldNames[i] ] = idCache[ idServiceFieldValue ]
 				end
-			elseif refKind( value.value ) == 2 then
-				local idServiceListStr = value.value:sub( 2 )
+			elseif refKind( value ) == 2 then
+				local idServiceListStr = value:sub( 2 )
 				local chunk = load( "return " .. idServiceListStr )
 				local idServiceList = chunk()
 				
 				local serviceList = {}
 				
 				for i, idService in ipairs( idServiceList ) do
-					
 					local objProvider = spaceStore:getServiceProvider( idService )
 				
 					restoreObject( spaceStore, objModel, objProvider, revision )
@@ -58,11 +59,11 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 					serviceList[ #serviceList + 1 ] = idCache[ idService ]
 				end
 				
-				luaObjectTable[ value.fieldName ] = serviceList
+				luaObjectTable[ fieldNames[i] ] = serviceList
 				
 			else
-				local chunk = load( "return " .. value.value )
-				luaObjectTable[ value.fieldName ] = chunk()
+				local chunk = load( "return " .. value )
+				luaObjectTable[ fieldNames[i] ] = chunk()
 			end
 		end
 		luaObjectTable._provider = objectId
@@ -73,8 +74,6 @@ end
 
 function restoreObject( spaceStore, objModel, objectId, revision )
 	if idCache[objectId] == nil then
-		local typeName
-		
 		local typeName = spaceStore:getObjectType( objectId )
 		
 		local luaObjectTable = { _type = typeName, _id = objectId }
@@ -82,16 +81,17 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 		
 		objModel:contains( co.getType( typeName ) )
 		
+		local fieldNames = {}
 		local values = {}
-		values = spaceStore:getValues( objectId, revision )
+		fieldNames, values = spaceStore:getValues( objectId, revision )
 		
 		for i, value in ipairs( values ) do
-			serviceIdStr = value.value:sub(2)
+			serviceIdStr = value:sub(2)
 			local chunk = load( "return " .. serviceIdStr )
 			local serviceId = chunk()
 			local service = restoreService( spaceStore, objModel, objectId, serviceId, revision )
 			
-			luaObjectTable[ value.fieldName ] = service
+			luaObjectTable[ fieldNames[i] ] = service
 		end
 		
 	end
@@ -194,6 +194,7 @@ local coRaise = co.raise
 local function protectedRestoreSpace( space, spaceStore, objModel, revision )
 	local ok, result = pcall( restore, spaceStore, objModel, revision )
 	if not ok then
+		print( result )
 		coRaise( "ca.ModelException", result )
 	end
 	space:setRootObject( result )

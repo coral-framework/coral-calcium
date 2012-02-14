@@ -27,8 +27,6 @@
 #include <set>
 #include <map>
 
-#include <ca/StoredFieldValue.h>
-
 #include <ca/IObjectChanges.h>
 #include <ca/ChangedConnection.h>
 #include <ca/ChangedRefVecField.h>
@@ -323,7 +321,9 @@ public:
 				}
 			}
 		}
-		std::vector<ca::StoredFieldValue> values;
+
+		std::vector<std::string> fieldNames;
+		std::vector<std::string> values;
 		
 		_spaceStore->open();
 		try
@@ -341,8 +341,7 @@ public:
 
 				for( ChangeSet::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++ )
 				{
-					ca::StoredFieldValue value;
-					value.fieldName = it2->member->getName();
+					
 					std::string valueStr;
 					if( it2->newValue.getKind() == co::TK_ARRAY )
 					{
@@ -388,12 +387,13 @@ public:
 						_serializer.toString( it2->newValue, valueStr );
 					}
 
-					value.value = valueStr;
+					fieldNames.push_back( it2->member->getName() );
+					values.push_back( valueStr );
 
-					values.push_back( value );
 				}
 
-				_spaceStore->addValues( objectId, values );
+				_spaceStore->addValues( objectId, fieldNames, values );
+				fieldNames.clear();
 				values.clear();
 			}
 			_spaceStore->commitChanges("");
@@ -459,9 +459,11 @@ private:
 		_model->getFields(type, fields);
 						
 		int j = 0;
-		std::vector<ca::StoredFieldValue> values;
+		std::vector<std::string> fieldNames;
+		std::vector<std::string> values;
 		std::string fieldValueStr;
 		std::vector<co::int32> refs;
+
 		for( int i = 0; i < fields.size(); i++ ) 
 		{
 			co::IField* field = fields[i].get();
@@ -524,12 +526,10 @@ private:
 				_serializer.toString( fieldValue, fieldValueStr );
 			}
 
-			ca::StoredFieldValue value;
-			value.fieldName = field->getName();
-			value.value = fieldValueStr;
-			values.push_back( value );
+			fieldNames.push_back( field->getName() );
+			values.push_back( fieldValueStr );
 		}
-		_spaceStore->addValues( objId, values );
+		_spaceStore->addValues( objId, fieldNames, values );
 	}
 
 	void saveObject(co::RefPtr<co::IObject> object)
@@ -547,7 +547,9 @@ private:
 
 		co::Range<co::IPort* const> ports = component->getPorts();
 
-		std::vector<ca::StoredFieldValue> values;
+		std::vector<std::string> values;
+		std::vector<std::string> fieldNames;
+
 		for( int i = 0; i < ports.getSize(); i++ )
 		{
 			co::IPort* port = (ports[i]);
@@ -570,13 +572,12 @@ private:
 				_serializer.toString( getObjectId( service ), refStr);
 				refStr.insert(0, "#");
 			}
-			ca::StoredFieldValue value;
-			value.value = refStr;
-			value.fieldName = port->getName();
-			values.push_back( value );
+			
+			values.push_back( refStr );
+			fieldNames.push_back( port->getName() );
 			
 		}
-		_spaceStore->addValues( objId, values );
+		_spaceStore->addValues( objId, fieldNames, values );
 
 	}
 
@@ -593,15 +594,15 @@ private:
 		co::RefVector<co::IPort> ports;
 		_model->getPorts( object->getComponent(), ports );
 
-		std::vector<ca::StoredFieldValue> fieldValues;
-		_spaceStore->getValues( id, _trackedRevision, fieldValues );
+		std::vector<std::string> fieldValues;
+		std::vector<std::string> fieldNames;
+		_spaceStore->getValues( id, _trackedRevision, fieldNames, fieldValues );
 		
 		FieldValueMap mapFieldValue;
 
 		for( int i = 0; i < fieldValues.size(); i++ )
 		{
-			ca::StoredFieldValue fieldValue = fieldValues[i];
-			mapFieldValue.insert( FieldValueMap::value_type( fieldValue.fieldName, fieldValue.value ) );
+			mapFieldValue.insert( FieldValueMap::value_type( fieldNames[i], fieldValues[i] ) );
 		}
 
 		insertObjectCache( object, id );
@@ -645,17 +646,17 @@ private:
 	void fillServiceValues( co::uint32 id, co::IService* service )
 	{
 
-		std::vector<ca::StoredFieldValue> fieldValues;
+		std::vector<std::string> fieldNames;
+		std::vector<std::string> values;
 
-		_spaceStore->getValues( id, _trackedRevision, fieldValues );
+		_spaceStore->getValues( id, _trackedRevision, fieldNames, values );
 		FieldValueMap mapFieldValue;
 
 		insertObjectCache( service, id );
 
-		for( int i = 0; i < fieldValues.size(); i++ )
+		for( int i = 0; i < fieldNames.size(); i++ )
 		{
-			ca::StoredFieldValue fieldValue = fieldValues[i];
-			mapFieldValue.insert( FieldValueMap::value_type( fieldValue.fieldName, fieldValue.value ) );
+			mapFieldValue.insert( FieldValueMap::value_type( fieldNames[i], values[i] ) );
 		}
 
 		co::Range<co::IField* const> fields = service->getInterface()->getFields();
