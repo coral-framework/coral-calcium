@@ -17,12 +17,13 @@ interface ISpaceStore
 	uint32 addField( in uint32 typeId, in string fieldName, in uint32 fieldTypeId, in bool isFacet ) raises ca.IOException;
 	
 	uint32 addObject( in uint32 typeId, in string typeName ) raises ca.IOException;
-	void addValues( in uint32 objectId, in StoredFieldValue[] values ) raises ca.IOException;
+	uint32 addService( in uint32 typeId, in string typeName, in uint32 providerId ) raises ca.IOException;
 	
+	void addValues( in uint32 objectId, in StoredFieldValue[] values ) raises ca.IOException;
 	uint32 getObjectType( in uint32 objectId, out string typeName ) raises ca.IOException;
 	
 	void getType( in uint32 typeId, out StoredType storedType ) raises ca.IOException;
 	void getValues( in uint32 objectId, in uint32 revision, out ca.StoredFieldValue[] values ) raises ca.IOException;
 	
-	uint32 getServiceProvider( in uint32 serviceId, in uint32 revision );
+	uint32 getServiceProvider( in uint32 serviceId );
 };

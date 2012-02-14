@@ -1,3 +1,5 @@
+#if 0
+
 #include "../ERMSpace.h"
 #include "persistence/SpaceUpdater.h"
 
@@ -95,3 +97,5 @@ TEST_F( SpaceUpdaterTests, testCheckModel )
 	store->close();
 
 }
+
+#endif

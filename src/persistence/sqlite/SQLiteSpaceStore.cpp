@@ -179,12 +179,18 @@ public:
 
 	co::uint32 addObject( co::uint32 typeId, const std::string& typeName )
 	{
+		return addService( typeId, typeName, 0 );
+	}
+
+	co::uint32 addService( co::uint32 typeId, const std::string& typeName, co::uint32 providerId )
+	{
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT (TYPE_ID, TYPE_NAME) VALUES ( ?, ? );" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT (TYPE_ID, TYPE_NAME, PROVIDER_ID) VALUES ( ?, ?, ? );" );
 		stmt.bind( 1, typeId );
 		stmt.bind( 2, typeName );
+		stmt.bind( 3, providerId );
 		stmt.execute();
 
 		ca::SQLiteStatement stmtMaxObj = _db.prepare( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
@@ -205,7 +211,7 @@ public:
 
 		stmt.finalize();
 		return resultId;
-		
+
 	}
 
 	void addValues( co::uint32 objId, co::Range<const ca::StoredFieldValue> values )
@@ -258,13 +264,13 @@ public:
 	{
 		values.clear();
 		
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT F.FIELD_ID, FV.FIELD_NAME, FV.VALUE FROM\
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT FV.FIELD_NAME, FV.VALUE FROM\
 								OBJECT OBJ LEFT OUTER JOIN TYPE T ON OBJ.TYPE_ID = T.TYPE_ID\
 								LEFT OUTER JOIN FIELD F ON F.TYPE_ID = T.TYPE_ID\
-								LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_ID, FIELD_NAME, \
-								VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_ID ) FV\
-								ON FV.OBJECT_ID = OBJ.OBJECT_ID AND F.FIELD_ID = FV.FIELD_ID\
-								WHERE OBJ.OBJECT_ID = ? GROUP BY FV.FIELD_ID, FV.OBJECT_ID \
+								LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_NAME, \
+								VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_NAME ) FV\
+								ON FV.OBJECT_ID = OBJ.OBJECT_ID\
+								WHERE OBJ.OBJECT_ID = ? GROUP BY FV.FIELD_NAME, FV.OBJECT_ID \
 								ORDER BY OBJ.OBJECT_ID" );
 
 		
@@ -275,9 +281,9 @@ public:
 		while( rs.next() )
 		{
 			ca::StoredFieldValue sfv;
-			sfv.fieldId = rs.getUint32( 0 ); //fieldName;
-			sfv.fieldName = rs.getString( 1 );
-			sfv.value = rs.getString( 2 );
+			sfv.fieldId = 0; //fieldName;
+			sfv.fieldName = rs.getString( 0 );
+			sfv.value = rs.getString( 1 );
 			values.push_back( sfv );
 		}
 		stmt.finalize();
@@ -340,19 +346,12 @@ public:
 		return _latestRevision;
 	}
 
-	co::uint32 getServiceProvider( co::uint32 serviceId, co::uint32 revision )
+	co::uint32 getServiceProvider( co::uint32 serviceId )
 	{
 		co::uint32 object = 0;
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT OBJECT_ID FROM\
-												FIELD_VALUE LEFT OUTER JOIN FIELD ON FIELD_VALUE.FIELD_ID = FIELD.FIELD_ID\
-												WHERE VALUE = ? AND REVISION <= ? AND FIELD.IS_FACET = 1 ORDER BY REVISION DESC LIMIT 1" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT PROVIDER_ID FROM OBJECT WHERE OBJECT_ID = ?" );
 
-		std::stringstream serviceIdStr; 
-		serviceIdStr << "#" << serviceId;
-		std::string str = serviceIdStr.str();
-
-		stmt.bind( 1, str );
-		stmt.bind( 2, revision );
+		stmt.bind( 1, serviceId );
 
 		ca::SQLiteResult rs = stmt.query();
 
@@ -367,7 +366,7 @@ public:
 private:
 	co::uint32 getFieldIdByName( const std::string& fieldName, co::uint32 typeId )
 	{
-		
+
 		ca::SQLiteStatement stmt = _db.prepare( "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = ? AND TYPE_ID = ?" );
 		stmt.bind( 1, fieldName );
 		stmt.bind( 2, typeId );
@@ -435,7 +434,7 @@ private:
 						 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
 						 [TYPE_ID] INTEGER NOT NULL,\
 						 [TYPE_NAME] TEXT NOT NULL,\
-						 FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID)\
+						 [PROVIDER_ID] INTEGER NOT NULL\
 						 );" ).execute();
 
 			_db.prepare( "CREATE TABLE if not exists [FIELD_VALUE] (\
@@ -444,8 +443,7 @@ private:
 						 [VALUE] TEXT  NULL,\
 						 [REVISION] INTEGER NOT NULL,\
 						 [OBJECT_ID] INTEGER NOT NULL,\
-						 PRIMARY KEY (FIELD_ID, REVISION, OBJECT_ID),\
-						 FOREIGN KEY (FIELD_ID) REFERENCES FIELD(FIELD_ID),\
+						 PRIMARY KEY (REVISION, OBJECT_ID, FIELD_NAME),\
 						 FOREIGN KEY (OBJECT_ID) REFERENCES OBJECT(OBJECT_ID)\
 						 );" ).execute();
 
