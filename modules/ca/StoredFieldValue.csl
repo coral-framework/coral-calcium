@@ -1,5 +1,0 @@
-struct StoredFieldValue
-{
-	string fieldName;
-	string value;
-};

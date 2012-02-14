@@ -29,7 +29,6 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		fieldNames, values = spaceStore:getValues( serviceId, revision )
 		
 		for i, value in ipairs( values ) do
-			print( value .. " " .. fieldNames[i] .. " " .. i )
 			if  refKind( value ) == 1 then
 				local idServiceStr = value:sub( 2 )
 				local chunk = load( "return " .. idServiceStr )
@@ -117,7 +116,7 @@ function restore( spaceStore, objModel, revision )
 	
 	for _, script in ipairs( availableUpdates ) do
 		if not hasApplied[script] then
-		   print( script )
+		   --- applyUpdate
 		end
 	end
 	
@@ -194,7 +193,6 @@ local coRaise = co.raise
 local function protectedRestoreSpace( space, spaceStore, objModel, revision )
 	local ok, result = pcall( restore, spaceStore, objModel, revision )
 	if not ok then
-		print( result )
 		coRaise( "ca.ModelException", result )
 	end
 	space:setRootObject( result )
