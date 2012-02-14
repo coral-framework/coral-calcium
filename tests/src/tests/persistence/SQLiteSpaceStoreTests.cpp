@@ -8,7 +8,6 @@
 #include <co/reserved/OS.h>
 #include <ca/IOException.h>
 #include "ca/StoredFieldValue.h"
-#include "ca/StoredType.h"
 
 
 class SQLiteSpaceStoreTests : public ::testing::Test

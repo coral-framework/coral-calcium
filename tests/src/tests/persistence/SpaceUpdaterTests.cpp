@@ -11,7 +11,6 @@
 #include <ca/INamed.h>
 #include <ca/ISpacePersister.h>
 #include <ca/ISpaceStore.h>
-#include <ca/StoredType.h>
 
 
 class SpaceUpdaterTests : public ERMSpace

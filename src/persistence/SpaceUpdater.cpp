@@ -15,7 +15,6 @@
 #include <co/IArray.h>
 
 
-#include <ca/StoredType.h>
 #include <ca/IModel.h>
 
 #include <vector>

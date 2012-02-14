@@ -27,9 +27,7 @@
 #include <set>
 #include <map>
 
-#include <ca/StoredType.h>
 #include <ca/StoredFieldValue.h>
-#include <ca/StoredField.h>
 
 #include <ca/IObjectChanges.h>
 #include <ca/ChangedConnection.h>

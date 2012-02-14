@@ -10,8 +10,6 @@
 #include <co/IllegalArgumentException.h>
 
 #include <ca/StoredFieldValue.h>
-#include <ca/StoredType.h>
-#include <ca/StoredField.h>
 
 #include <ca/IOException.h>
 
