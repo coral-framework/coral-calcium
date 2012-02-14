@@ -19,7 +19,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 	
 		local typeName
 		
-		local typeId, typeName = spaceStore:getObjectType( serviceId )
+		local typeName = spaceStore:getObjectType( serviceId )
 		
 		local luaObjectTable = { _type = typeName, _id = serviceId }
 		idCache[ serviceId ] = luaObjectTable
@@ -36,7 +36,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				if idServiceFieldValue == nil then
 					luaObjectTable[ value.fieldName ] = nil			
 				else
-					local objProvider = spaceStore:getServiceProvider( idServiceFieldValue, revision )
+					local objProvider = spaceStore:getServiceProvider( idServiceFieldValue )
 					
 					restoreObject( spaceStore, objModel, objProvider, revision )
 					
@@ -51,7 +51,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				
 				for i, idService in ipairs( idServiceList ) do
 					
-					local objProvider = spaceStore:getServiceProvider( idService, revision )
+					local objProvider = spaceStore:getServiceProvider( idService )
 				
 					restoreObject( spaceStore, objModel, objProvider, revision )
 					
@@ -75,7 +75,7 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 	if idCache[objectId] == nil then
 		local typeName
 		
-		local typeId, typeName = spaceStore:getObjectType( objectId )
+		local typeName = spaceStore:getObjectType( objectId )
 		
 		local luaObjectTable = { _type = typeName, _id = objectId }
 		idCache[ objectId ] = luaObjectTable

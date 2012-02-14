@@ -1,7 +1,0 @@
-struct StoredType
-{
-	uint32 typeId;
-	string typeName;
-	uint32 version;
-	StoredField[] fields;
-};

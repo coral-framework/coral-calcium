@@ -1,6 +1,0 @@
-struct StoredField
-{
-	uint32 fieldId;
-	string fieldName;
-	uint32 typeId;
-};

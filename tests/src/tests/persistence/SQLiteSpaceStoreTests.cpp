@@ -31,7 +31,7 @@ public:
 	co::RefPtr<co::IObject> spaceStoreObj;
 	ca::ISpaceStore* spaceStore;
 };
-
+#if 0
 TEST_F( SQLiteSpaceStoreTests, testOpsWithoutOpen )
 {
 
@@ -217,7 +217,7 @@ TEST_F( SQLiteSpaceStoreTests, testTypeAndFields )
 	spaceStore->close();
 }
 
-#if 0
+
 TEST_F( SQLiteSpaceStoreTests, testAddAndGetValues )
 {
 	spaceStore->open();
@@ -386,7 +386,7 @@ TEST_F( SQLiteSpaceStoreTests, testDiscardChanges )
 	conn.close();
 
 }
-#endif
+
 
 
 TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
@@ -452,3 +452,4 @@ TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
 
 
 }
+#endif

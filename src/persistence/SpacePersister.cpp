@@ -92,8 +92,9 @@ public:
 			saveObject( rootObject );
 			_spaceStore->commitChanges("");
 		}
-		catch( ... )
+		catch( ca::IOException& e )
 		{
+			CORAL_DLOG(INFO) << e.getMessage();
 			_spaceStore->discardChanges();
 			_spaceStore->close();
 			throw;
@@ -343,7 +344,6 @@ public:
 				for( ChangeSet::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++ )
 				{
 					ca::StoredFieldValue value;
-					value.fieldId = 0;
 					value.fieldName = it2->member->getName();
 					std::string valueStr;
 					if( it2->newValue.getKind() == co::TK_ARRAY )
@@ -454,7 +454,7 @@ private:
 
 		co::IInterface* type = port->getType();
 
-		objId = _spaceStore->addService( 0, type->getFullName(), providerId );
+		objId = _spaceStore->addService( type->getFullName(), providerId );
 		insertObjectCache(obj.get(), objId);
 
 		co::RefVector<co::IField> fields;
@@ -543,8 +543,7 @@ private:
 
 		co::IComponent* component = object->getComponent();
 
-		co::uint32 entityId = 0;
-		co::uint32 objId = _spaceStore->addObject( entityId, component->getFullName() );
+		co::uint32 objId = _spaceStore->addObject( component->getFullName() );
 
 		insertObjectCache( object.get(), objId );
 
@@ -589,7 +588,7 @@ private:
 	{
 		std::string entity;
 
-		co::uint32 typeId = _spaceStore->getObjectType( id, entity );
+		_spaceStore->getObjectType( id, entity );
 
 		co::IObject* object = co::newInstance( entity );
 		

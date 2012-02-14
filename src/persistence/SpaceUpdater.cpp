@@ -1,3 +1,4 @@
+#if 0
 #include "SpaceUpdater.h"
 
 #include <co/Coral.h>
@@ -124,3 +125,4 @@ namespace ca {
 
 
 } // namespace ca
+#endif

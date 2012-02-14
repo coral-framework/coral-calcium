@@ -122,75 +122,19 @@ public:
 		}
 	}
 
-	co::uint32 getOrAddType( const std::string& typeName, co::uint32 version ) 
+	co::uint32 addObject( const std::string& typeName )
 	{
-		ca::SQLiteStatement typeStmt = _db.prepare( "SELECT TYPE_ID FROM TYPE WHERE TYPE_NAME = ?  AND TYPE_VERSION = ?" );
-
-		typeStmt.bind( 1, typeName );
-		typeStmt.bind( 2, version );
-
-		ca::SQLiteResult rs = typeStmt.query();
-		co::uint32 id;
-		if( !rs.next() )
-		{
-			checkBeginTransaction();
-
-			typeStmt.reset();
-
-			ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO TYPE (TYPE_NAME, TYPE_VERSION) VALUES (?, ?)" );
-			stmt.bind( 1, typeName );
-			stmt.bind( 2, version );
-
-			stmt.execute();
-			stmt.finalize();
-
-			ca::SQLiteResult rs = typeStmt.query();
-			rs.next();
-			id = rs.getUint32(0);
-			typeStmt.finalize();
-			return id;
-
-		}
-		else
-		{
-			id = rs.getUint32(0);
-			typeStmt.finalize();
-			return id;
-		}
-
+		return addService( typeName, 0 );
 	}
 
-	co::uint32 addField( co::uint32 typeId, const std::string& fieldName, co::uint32 fieldTypeId, bool isFacet )
-	{
-		checkBeginTransaction();
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD (TYPE_ID, FIELD_NAME, FIELD_TYPE_ID, IS_FACET) VALUES ( ?, ?, ?, ? );" );
-		
-		stmt.bind( 1, typeId );
-		stmt.bind( 2, fieldName );
-		stmt.bind( 3, fieldTypeId );
-		stmt.bind( 4, isFacet );
-		
-		stmt.execute();
-		stmt.finalize();
-
-		return getFieldIdByName(fieldName, typeId);
-	
-	}
-
-	co::uint32 addObject( co::uint32 typeId, const std::string& typeName )
-	{
-		return addService( typeId, typeName, 0 );
-	}
-
-	co::uint32 addService( co::uint32 typeId, const std::string& typeName, co::uint32 providerId )
+	co::uint32 addService( const std::string& typeName, co::uint32 providerId )
 	{
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT (TYPE_ID, TYPE_NAME, PROVIDER_ID) VALUES ( ?, ?, ? );" );
-		stmt.bind( 1, typeId );
-		stmt.bind( 2, typeName );
-		stmt.bind( 3, providerId );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT ( TYPE_NAME, PROVIDER_ID) VALUES ( ?, ? );" );
+		stmt.bind( 1, typeName );
+		stmt.bind( 2, providerId );
 		stmt.execute();
 
 		ca::SQLiteStatement stmtMaxObj = _db.prepare( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
@@ -219,17 +163,16 @@ public:
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD_VALUE (FIELD_ID, FIELD_NAME, OBJECT_ID, REVISION, VALUE)\
-												VALUES (?, ?, ?, ?, ?)" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO FIELD_VALUE (FIELD_NAME, OBJECT_ID, REVISION, VALUE)\
+												VALUES (?, ?, ?, ?)" );
 
 		for( int i = 0; i < values.getSize(); i++ )
 		{
 			stmt.reset();
-			stmt.bind( 1, values[i].fieldId );
-			stmt.bind( 2, values[i].fieldName );
-			stmt.bind( 3, objId );
-			stmt.bind( 4, _latestRevision );
-			stmt.bind( 5, values[i].value );
+			stmt.bind( 1, values[i].fieldName );
+			stmt.bind( 2, objId );
+			stmt.bind( 3, _latestRevision );
+			stmt.bind( 4, values[i].value );
 
 			stmt.execute();
 		}
@@ -237,9 +180,9 @@ public:
 
 	}
 
-	co::uint32 getObjectType( co::uint32 objectId, std::string& typeName )
+	void getObjectType( co::uint32 objectId, std::string& typeName )
 	{
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_ID, O.TYPE_NAME FROM OBJECT O WHERE O.OBJECT_ID = ?" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_NAME FROM OBJECT O WHERE O.OBJECT_ID = ?" );
 
 		stmt.bind( 1, objectId );
 
@@ -247,10 +190,8 @@ public:
 				
 		if( rs.next() )
 		{
-			co::uint32 typeId = rs.getUint32( 0 );
-			typeName = rs.getString( 1 );
+			typeName = rs.getString( 0 );
 			stmt.finalize();
-			return typeId;
 		}
 		else
 		{
@@ -265,9 +206,7 @@ public:
 		values.clear();
 		
 		ca::SQLiteStatement stmt = _db.prepare( "SELECT FV.FIELD_NAME, FV.VALUE FROM\
-								OBJECT OBJ LEFT OUTER JOIN TYPE T ON OBJ.TYPE_ID = T.TYPE_ID\
-								LEFT OUTER JOIN FIELD F ON F.TYPE_ID = T.TYPE_ID\
-								LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_NAME, \
+								OBJECT OBJ LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_NAME, \
 								VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_NAME ) FV\
 								ON FV.OBJECT_ID = OBJ.OBJECT_ID\
 								WHERE OBJ.OBJECT_ID = ? GROUP BY FV.FIELD_NAME, FV.OBJECT_ID \
@@ -281,52 +220,13 @@ public:
 		while( rs.next() )
 		{
 			ca::StoredFieldValue sfv;
-			sfv.fieldId = 0; //fieldName;
 			sfv.fieldName = rs.getString( 0 );
 			sfv.value = rs.getString( 1 );
 			values.push_back( sfv );
 		}
 		stmt.finalize();
 	}
-
-	void getType( co::uint32 typeId, ca::StoredType& storedType )
-	{
-		
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT T.TYPE_NAME, T.TYPE_VERSION, F.FIELD_ID, F.FIELD_NAME, F.FIELD_TYPE_ID FROM TYPE T OUTER LEFT JOIN FIELD F ON T.TYPE_ID = F.TYPE_ID WHERE T.TYPE_ID = ?" );
-
-		stmt.bind( 1, typeId );
-
-		ca::SQLiteResult rs = stmt.query();
-		
-		bool first = true;
-		StoredField sf;
-		while( rs.next() )
-		{
-			if( first )
-			{
-				storedType.fields.clear();
-				storedType.typeId = typeId;
-				storedType.typeName = rs.getString( 0 );
-				storedType.version = rs.getUint32( 1 );
-				
-				//check if it has fields...
-				if( rs.getString( 2 ) == NULL )
-				{
-					break;
-				}
-
-				first = false;
-			}
-
-			sf.fieldName = rs.getString( 3 );
-			sf.fieldId = rs.getUint32( 2 );
-			sf.typeId = rs.getUint32( 4 );
-
-			storedType.fields.push_back( sf );
-		}
-		stmt.finalize();
-	}
-
+	
 	const std::string& getName() 
 	{
 		return _fileName;
@@ -364,25 +264,6 @@ public:
 	}
 
 private:
-	co::uint32 getFieldIdByName( const std::string& fieldName, co::uint32 typeId )
-	{
-
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT FIELD_ID FROM FIELD WHERE FIELD_NAME = ? AND TYPE_ID = ?" );
-		stmt.bind( 1, fieldName );
-		stmt.bind( 2, typeId );
-
-		ca::SQLiteResult rs = stmt.query();
-
-		co::uint32 result = 0;
-
-		if( rs.next() )
-		{
-			result = rs.getUint32(0);
-		}
-		stmt.finalize();
-
-		return result;
-	}
 
 	void checkGenerateRevision()
 	{
@@ -412,33 +293,13 @@ private:
 		try{
 			_db.prepare("BEGIN TRANSACTION").execute();
 
-			_db.prepare( "CREATE TABLE if not exists [TYPE] (\
-						 [TYPE_ID] INTEGER  PRIMARY KEY AUTOINCREMENT NOT NULL,\
-						 [TYPE_NAME] VARCHAR(128)  NOT NULL,\
-						 [TYPE_VERSION] INTEGER  NOT NULL,\
-						 UNIQUE (TYPE_NAME, TYPE_VERSION)\
-						 );" ).execute();
-
-			_db.prepare( "CREATE TABLE if not exists [FIELD] (\
-						 [FIELD_NAME] VARCHAR(128) NOT NULL,\
-						 [TYPE_ID] INTEGER  NOT NULL,\
-						 [FIELD_TYPE_ID] INTEGER NOT NULL,\
-						 [FIELD_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
-						 [IS_FACET] INTEGER  NOT NULL,\
-						 UNIQUE (FIELD_NAME, TYPE_ID),\
-						 FOREIGN KEY (TYPE_ID) REFERENCES TYPE(TYPE_ID),\
-						 FOREIGN KEY (FIELD_TYPE_ID) REFERENCES TYPE(TYPE_ID)\
-						 );" ).execute();
-
 			_db.prepare( "CREATE TABLE if not exists [OBJECT] (\
 						 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
-						 [TYPE_ID] INTEGER NOT NULL,\
 						 [TYPE_NAME] TEXT NOT NULL,\
 						 [PROVIDER_ID] INTEGER NOT NULL\
 						 );" ).execute();
 
 			_db.prepare( "CREATE TABLE if not exists [FIELD_VALUE] (\
-						 [FIELD_ID] INTEGER  NOT NULL,\
 						 [FIELD_NAME] VARCHAR(128),\
 						 [VALUE] TEXT  NULL,\
 						 [REVISION] INTEGER NOT NULL,\
