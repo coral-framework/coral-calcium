@@ -8,7 +8,5 @@ interface ISpacePersister
 	void restore();
 	void restoreRevision( in uint32 revision );
 	
-	void restoreLua( in uint32 revision );
-	
 	void save();
 };

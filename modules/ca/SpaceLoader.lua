@@ -97,7 +97,7 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 	return idCache[ objectId ]
 end
 
-function restore( spaceStore, objModel, revision )
+function restore( space, spaceStore, objModel, revision, spaceLoader )
 	spaceStore:open()
 	
 	local rootId = spaceStore:getRootObject( revision )
@@ -124,7 +124,11 @@ function restore( spaceStore, objModel, revision )
 	
 	coralObj = convertToCoral( obj )
 	
-	return coralObj
+	space:setRootObject( coralObj )
+	
+	for k,v in pairs( coralCache ) do
+		spaceLoader:insertObjectCache( v, k )
+	end
 end
 
 local coNew = co.new
@@ -157,7 +161,7 @@ function convertToCoral( obj )
 	return coralCache[ obj._id ]
 end
 
-function isFacet( service )
+function isFacet( k )
 	return true
 end
 
@@ -190,12 +194,13 @@ function fillServiceValues( service, serviceValues )
 end
 
 local coRaise = co.raise
-local function protectedRestoreSpace( space, spaceStore, objModel, revision )
-	local ok, result = pcall( restore, spaceStore, objModel, revision )
+local function protectedRestoreSpace( space, spaceStore, objModel, revision, spaceLoader )
+	idCache = {}
+	coralCache = {}
+	local ok, result = pcall( restore, space, spaceStore, objModel, revision, spaceLoader )
 	if not ok then
 		coRaise( "ca.ModelException", result )
 	end
-	space:setRootObject( result )
 end
 
 return protectedRestoreSpace

@@ -2,6 +2,7 @@ component SpacePersister
 {
 	provides ISpaceObserver spaceObserver;
 	provides ISpacePersister persister;
+	provides ISpaceLoader spaceLoader;
 	receives ISpaceStore store; 
 	receives IUniverse universe;
 };

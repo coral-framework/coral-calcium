@@ -70,6 +70,12 @@ public:
 		_spaceChanges.push_back( changes );
 	}
 
+	void insertObjectCache( co::IService* obj, co::uint32 id )
+	{
+		_objectIdCache.insert(ObjectIdMap::value_type( obj, id ));
+		_objectCache.insert(IdObjectMap::value_type( id, obj ));
+	}
+
 	// ------ ca.ISpacePersister Methods ------ //
 
 	void initialize( co::IObject* rootObject )
@@ -88,9 +94,8 @@ public:
 			saveObject( rootObject );
 			_spaceStore->commitChanges("");
 		}
-		catch( ca::IOException& e )
+		catch( ... )
 		{
-			CORAL_DLOG(INFO) << e.getMessage();
 			_spaceStore->discardChanges();
 			_spaceStore->close();
 			throw;
@@ -149,27 +154,15 @@ public:
 			_spaceStore->close();
 			throw co::IllegalArgumentException("empty space store");
 		}
+		_spaceStore->close();
 
 		try
 		{
 			clear();
 			_trackedRevision = revision;
 
-			co::uint32 rootObject = _spaceStore->getRootObject( _trackedRevision );
-			restoreObject( rootObject );
+			restoreLua( _trackedRevision );
 
-			co::IObject* object = static_cast<co::IObject*>( getObject( rootObject ) );
-
-			co::IObject* spaceObj = co::newInstance( "ca.Space" );
-			_space = spaceObj->getService<ca::ISpace>();
-
-			spaceObj->setService( "universe", _universe.get() );
-			_space->setRootObject( object );
-			_space->notifyChanges();
-
-			_spaceStore->close();
-
-			_space->addSpaceObserver( this );
 		}
 		catch( ca::IOException& e )
 		{
@@ -178,33 +171,6 @@ public:
 			throw;
 		}
 		
-	}
-
-	void restoreLua( co::uint32 revision )
-	{
-		const std::string& script = "ca.SpaceLoader";
-		const std::string& function = "";
-
-		co::Range<const co::Any> results;
-
-		co::IObject* spaceObj = co::newInstance( "ca.Space" );
-		spaceObj->setService( "universe", _universe.get() );
-		_space = spaceObj->getService<ca::ISpace>();
-
-		co::Any args[4];
-		args[0].set<ca::ISpace*>( _space.get() );
-		args[1].set<ca::ISpaceStore*>( _spaceStore.get() );
-		args[2].set<ca::IModel*>( _model );
-		args[3].set<co::uint32>( revision );
-
-		co::getService<lua::IState>()->callFunction( script, function,
-			co::Range<const co::Any>( args, CORAL_ARRAY_LENGTH( args ) ),
-			results );
-
-		_space->addSpaceObserver( this );
-		_space->notifyChanges();
-
-
 	}
 
 	void save()
@@ -439,6 +405,34 @@ protected:
 	}
 
 private:
+
+	void restoreLua( co::uint32 revision )
+	{
+		const std::string& script = "ca.SpaceLoader";
+		const std::string& function = "";
+
+		co::Range<const co::Any> results;
+
+		co::IObject* spaceObj = co::newInstance( "ca.Space" );
+		spaceObj->setService( "universe", _universe.get() );
+		_space = spaceObj->getService<ca::ISpace>();
+
+		co::Any args[5];
+		args[0].set<ca::ISpace*>( getSpace() );
+		args[1].set<ca::ISpaceStore*>( _spaceStore.get() );
+		args[2].set<ca::IModel*>( _model );
+		args[3].set<co::uint32>( revision );
+		args[4].set<ca::ISpaceLoader*>( this );
+
+		co::getService<lua::IState>()->callFunction( script, function,
+			co::Range<const co::Any>( args, CORAL_ARRAY_LENGTH( args ) ),
+			results );
+
+		_space->addSpaceObserver( this );
+		_space->notifyChanges();
+
+
+	}
 
 	//save functions
 
@@ -830,13 +824,6 @@ private:
 		}
 
 		return 0;
-	}
-
-	//generates two way mapping
-	void insertObjectCache( co::IService* obj, co::uint32 id )
-	{
-		_objectIdCache.insert(ObjectIdMap::value_type( obj, id ));
-		_objectCache.insert(IdObjectMap::value_type( id, obj ));
 	}
 
 	void clear()
