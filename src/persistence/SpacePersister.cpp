@@ -73,7 +73,6 @@ public:
 	void insertObjectCache( co::IService* obj, co::uint32 id )
 	{
 		_objectIdCache.insert(ObjectIdMap::value_type( obj, id ));
-		_objectCache.insert(IdObjectMap::value_type( id, obj ));
 	}
 
 	// ------ ca.ISpacePersister Methods ------ //
@@ -164,9 +163,8 @@ public:
 			restoreLua( _trackedRevision );
 
 		}
-		catch( ca::IOException& e )
+		catch( ... )
 		{
-			CORAL_DLOG(INFO) << e.getMessage();
 			_spaceStore->close();
 			throw;
 		}
@@ -575,246 +573,7 @@ private:
 
 	}
 
-	//restore functions
-
-	void restoreObject( co::uint32 id )
-	{
-		std::string entity;
-
-		_spaceStore->getObjectType( id, entity );
-
-		co::IObject* object = co::newInstance( entity );
-		
-		co::RefVector<co::IPort> ports;
-		_model->getPorts( object->getComponent(), ports );
-
-		std::vector<std::string> fieldValues;
-		std::vector<std::string> fieldNames;
-		_spaceStore->getValues( id, _trackedRevision, fieldNames, fieldValues );
-		
-		FieldValueMap mapFieldValue;
-
-		for( int i = 0; i < fieldValues.size(); i++ )
-		{
-			mapFieldValue.insert( FieldValueMap::value_type( fieldNames[i], fieldValues[i] ) );
-		}
-
-		insertObjectCache( object, id );
-
-		co::IPort* port;
-		for( int i = 0; i < ports.size(); i++ )
-		{
-			port = ports[i].get();
-			
-			std::string idServiceStr = mapFieldValue.find(port->getName())->second;
-			idServiceStr = idServiceStr.substr( 1 );
-			co::uint32 idService = atoi( idServiceStr.c_str() );
-
-			if( port->getIsFacet() )
-			{
-				co::IService* service = object->getServiceAt( port );
-				fillServiceValues( idService, service );
-			}
-			else 
-			{
-				co::uint32 idServiceProvider = _spaceStore->getServiceProvider( idService );
-				co::IObject* refObj = static_cast<co::IObject*>( getObject( idServiceProvider ) );
-				if( refObj == NULL )
-				{
-					throw co::IllegalStateException();
-				}
-				try
-				{
-					object->setServiceAt( port, getObject( idService ) );
-				}
-				catch( co::IllegalCastException& )
-				{
-					CORAL_THROW( ca::IOException, "Could not restore object, invalid value type for port " << port->getName() << "on entity " << entity );
-				}
-			}
-
-		}
-		
-	}
-
-	void fillServiceValues( co::uint32 id, co::IService* service )
-	{
-
-		std::vector<std::string> fieldNames;
-		std::vector<std::string> values;
-
-		_spaceStore->getValues( id, _trackedRevision, fieldNames, values );
-		FieldValueMap mapFieldValue;
-
-		insertObjectCache( service, id );
-
-		for( int i = 0; i < fieldNames.size(); i++ )
-		{
-			mapFieldValue.insert( FieldValueMap::value_type( fieldNames[i], values[i] ) );
-		}
-
-		co::Range<co::IField* const> fields = service->getInterface()->getFields();
-
-		co::IReflector* ref = service->getInterface()->getReflector();
-		for( int i = 0; i < fields.getSize(); i++)
-		{
-			co::IField* field = fields[i];
-
-			FieldValueMap::iterator it = mapFieldValue.find( field->getName() );
-			if( it != mapFieldValue.end() )
-			{
-				fillFieldValue( service, field, id, it->second, _trackedRevision );
-			}
-			
-		}
-	}
-
-	void fillFieldValue( co::IService* service, co::IField* field, co::uint32 id, std::string& strValue, co::uint32 _trackedRevision )
-	{
-		co::IType* type = field->getType();
-		co::IReflector* reflector = service->getInterface()->getReflector();
-
-		co::Any serviceAny;
-		serviceAny.setService( service, service->getInterface() );
-
-		co::Any fieldValue;
-
-		if( type->getKind() == co::TK_ARRAY )
-		{
-			co::IArray* arrayType = static_cast<co::IArray*>(type);
-
-			if( arrayType->getElementType()->getKind() == co::TK_INTERFACE )
-			{
-				fillInterfaceArrayValue( strValue, arrayType, fieldValue );
-			}
-		
-		}
-		if( type->getKind() == co::TK_INTERFACE )
-		{
-			if( strValue != "nil" )
-			{
-				co::Any refId;
-				strValue = strValue.substr(1);
-				_serializer.fromString( strValue, co::typeOf<co::int32>::get(), refId );
-				
-				co::uint32 refIdInt = refId.get<co::uint32>();
-				co::uint32 providerRefId = _spaceStore->getServiceProvider( refIdInt );
-
-				co::IObject* ref = static_cast<co::IObject*>( getObject( providerRefId ) ); //assure the provider was loaded
-				if( ref == NULL )
-				{
-					throw co::IllegalStateException();
-				}
-
-				fieldValue.set( getObject( refIdInt ) );
-			}
-
-		}
-		else
-		{
-			try
-			{
-				_serializer.fromString(strValue, field->getType(), fieldValue);
-			}
-			catch( ca::FormatException& )
-			{
-				CORAL_THROW( ca::FormatException, "Invalid field value for field " << field->getName() );
-			}
-
-		}
-		
-		try
-		{
-			if( fieldValue.getKind() != co::TK_NONE )
-			{
-				reflector->setField( serviceAny, field, fieldValue );
-			}
-
-		}
-		catch ( co::IllegalCastException& )
-		{
-			CORAL_THROW( ca::IOException, "Invalid field value type for field " << field->getName() << "; type expected: " << field->getType()->getFullName() );
-		}
-
-	}
-
-	void fillInterfaceArrayValue( std::string& strValue, co::IArray* arrayType, co::Any& arrayValue )
-	{
-		assert( arrayType->getElementType()->getKind() == co::TK_INTERFACE );
-
-		strValue = strValue.substr(1);
-
-		co::Any refs;
-		_serializer.fromString(strValue, co::typeOf<std::vector<co::int32>>::get(), refs);
-
-		std::vector<co::int32> vec = refs.get<const std::vector<co::int32>&>();
-		co::RefVector<co::IService> services;
-
-		arrayValue.createArray( arrayType->getElementType(), vec.size() );
-
-		co::IObject* ref;
-		for( int i = 0; i < vec.size(); i++ )
-		{
-			co::uint32 providerId = _spaceStore->getServiceProvider( vec[i] );
-			
-			ref = static_cast<co::IObject*>( getObject( providerId ) ); //assure the provider was loaded
-			if( ref == NULL )
-			{
-				throw co::IllegalStateException();
-			}
-						
-			co::Any servicePtr;
-			servicePtr.setService( getObject( vec[i] ) );
-						
-			try
-			{
-				AnyArrayUtil arrayUtil;
-				arrayUtil.setArrayComplexTypeElement( arrayValue, i, servicePtr );
-			}
-			catch ( co::NotSupportedException& )
-			{
-				throw ca::IOException( "Could not restore array" );
-			}
-		}
-
-	}
-
-	co::uint32 getTypeVersionId()
-	{
-		return 1;
-	}
-
-	co::IService* getObject( co::uint32 objectId )
-	{
-		co::IService* service = getCachedObject( objectId );
-
-		if( service == NULL )
-		{
-			restoreObject( objectId );
-			service = getObject( objectId );
-			if(service == NULL)
-			{
-				throw co::IllegalStateException();
-			}
-		}
-		return service;
-	}
-
-
-	co::IService* getCachedObject( co::uint32 id )
-	{
-		IdObjectMap::iterator it = _objectCache.find(id);
-
-		if(it != _objectCache.end())
-		{
-			return it->second;
-		}
-
-		return NULL;
-
-	}
-
-	co::uint32 getObjectId(co::IService* obj)
+	co::uint32 getObjectId( co::IService* obj )
 	{
 		ObjectIdMap::iterator it = _objectIdCache.find(obj);
 
@@ -828,7 +587,6 @@ private:
 
 	void clear()
 	{
-		_objectCache.clear();
 		_objectIdCache.clear();
 
 		if( _space != NULL )
@@ -840,7 +598,6 @@ private:
 private:
 	typedef std::map<const std::string, std::string> FieldValueMap;
 	typedef std::map<co::IService*, co::uint32> ObjectIdMap;
-	typedef std::map<co::uint32, co::IService*> IdObjectMap;
 
 	typedef struct Change
 	{
@@ -884,7 +641,6 @@ private:
 	co::uint32 _trackedRevision;
 
 	ObjectIdMap _objectIdCache;
-	IdObjectMap _objectCache;
 
 	ChangeSetCache _changeCache;
 	ObjectSet _addedObjects;
