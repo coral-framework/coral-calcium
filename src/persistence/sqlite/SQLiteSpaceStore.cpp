@@ -130,7 +130,10 @@ public:
 
 		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT ( TYPE_NAME, PROVIDER_ID) VALUES ( ?, ? );" );
 		stmt.bind( 1, typeName );
-		stmt.bind( 2, providerId );
+		if( providerId > 0 )
+		{
+			stmt.bind( 2, providerId );		
+		}
 		stmt.execute();
 
 		ca::SQLiteStatement stmtMaxObj = _db.prepare( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
@@ -291,7 +294,8 @@ private:
 			_db.prepare( "CREATE TABLE if not exists [OBJECT] (\
 						 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
 						 [TYPE_NAME] TEXT NOT NULL,\
-						 [PROVIDER_ID] INTEGER NOT NULL\
+						 [PROVIDER_ID] INTEGER NULL,\
+						 FOREIGN KEY (PROVIDER_ID) REFERENCES OBJECT(OBJECT_ID));\
 						 );" ).execute();
 
 			_db.prepare( "CREATE TABLE if not exists [FIELD_VALUE] (\
