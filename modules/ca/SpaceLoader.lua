@@ -146,7 +146,7 @@ function convertToCoral( obj )
 			
 			if k ~= "_type" and k ~= "_id" then
 				currentService = root[k]
-				if isFacet( k ) and currentService ~= nil then
+				if currentService ~= nil then
 					fillServiceValues( currentService, obj[k] )
 				else
 					if coralCache[ v._id ] == nil then
@@ -159,10 +159,6 @@ function convertToCoral( obj )
 		end
 	end
 	return coralCache[ obj._id ]
-end
-
-function isFacet( k )
-	return true
 end
 
 function fillServiceValues( service, serviceValues )

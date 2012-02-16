@@ -34,8 +34,8 @@ TEST_F( SQLiteSpaceStoreTests, testOpsWithoutOpen )
 {
 
 	EXPECT_THROW( spaceStore->addObject( "type" ), ca::IOException );
-	
-	
+
+
 	std::vector<std::string> fieldNames;
 	std::vector<std::string> values;
 

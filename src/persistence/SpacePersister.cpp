@@ -400,6 +400,7 @@ protected:
 		assert( universe );
 		_universe = universe;
 		_model = static_cast<ca::IModel*>( _universe->getProvider()->getService( "model" ) );
+		_serializer.setModel( _model );
 	}
 
 private:
