@@ -8,6 +8,8 @@
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
 #include <lua/IState.h>
+#include <co/ITypeManager.h>
+#include <co/ISystem.h>
 #include <algorithm>
 #include <sstream>
 
@@ -544,6 +546,50 @@ void Model::addUpdate( const std::string& update )
 	_updates.push_back( update );
 }
 
+bool Model::loadDefinitionsFor( const std::string& moduleName )
+{
+	co::RefPtr<co::ITypeManager> typeManager = co::getSystem()->getTypes();
+
+	co::INamespace* ns = typeManager->getNamespace( moduleName );
+	if( ns == NULL || ( _visitedNamespaces.find( ns ) != _visitedNamespaces.end() ) )
+	{
+		return false;
+	}
+
+	_visitedNamespaces.insert( ns );
+
+	std::string filePath;
+	std::string fileName;
+	fileName.reserve( 64 );
+	fileName += "CaModel_";
+	fileName += _name;
+	fileName += ".lua";
+	if( !co::findFile( moduleName, fileName, filePath ) )
+		return false;
+
+	co::Any args[2];
+	args[0].set<ca::IModel*>( this );
+	args[1].set<const std::string&>( filePath );
+
+	beginChanges();
+
+	try
+	{
+		co::getService<lua::IState>()->callFunction( "ca.ModelLoader", std::string(),
+			co::Range<const co::Any>( args, CORAL_ARRAY_LENGTH( args ) ),
+			co::Range<const co::Any>() );
+		applyChanges();
+	}
+	catch( co::Exception& e )
+	{
+		discardChanges();
+		CORAL_THROW( ca::ModelException, "error in CaModel file '" << filePath
+			<< "': " << e.getMessage() );
+	}
+	return true;
+
+}
+
 TypeRecord* Model::getType( co::IType* type )
 {
 	TypeRecord* res = findType( _types, type );
@@ -587,7 +633,7 @@ bool Model::loadCaModelFor( co::IType* type )
 	fileName += ".lua";
 	if( !co::findFile( ns->getFullName(), fileName, filePath ) )
 		return false;
-
+	
 	co::Any args[2];
 	args[0].set<ca::IModel*>( this );
 	args[1].set<const std::string&>( filePath );

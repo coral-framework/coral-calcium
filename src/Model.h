@@ -465,12 +465,15 @@ public:
 	void addComponent( co::IComponent* component, co::Range<co::IPort* const> ports );
 	void addUpdate( const std::string& update );
 
+	bool loadDefinitionsFor( const std::string& ns );
+
 
 protected:
 	TypeRecord* getType( co::IType* type );
 	TypeRecord* getTypeOrThrow( co::IType* type );
 
 	bool loadCaModelFor( co::IType* type );
+	
 	void checkCanAddType( co::IType* type );
 
 	TypeRecord* findTransactionType( co::IType* type )

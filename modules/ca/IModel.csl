@@ -133,4 +133,6 @@ interface IModel
 		Add an update script on updates list.
 	*/
 	void addUpdate( in string update );
+	
+	bool loadDefinitionsFor( in string moduleName );
 };
