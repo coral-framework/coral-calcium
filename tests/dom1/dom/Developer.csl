@@ -1,0 +1,4 @@
+component Developer
+{
+	provides IDeveloper developer;
+};

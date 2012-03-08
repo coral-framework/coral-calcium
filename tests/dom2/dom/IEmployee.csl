@@ -1,0 +1,11 @@
+interface IEmployee
+{
+	string name;
+	
+	string role;
+	
+	double salary;
+	
+	IProduct product;
+	IService service;
+};

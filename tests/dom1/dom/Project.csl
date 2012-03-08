@@ -1,0 +1,4 @@
+component Project
+{
+	provides IProject project;
+};

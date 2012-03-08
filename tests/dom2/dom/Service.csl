@@ -1,0 +1,4 @@
+component Service
+{
+	provides IService service;
+};

@@ -1,0 +1,10 @@
+interface IManager
+{
+	string name;
+
+	double salary;	
+	
+	IProject project;
+	
+	IDeveloper[] workers;
+};

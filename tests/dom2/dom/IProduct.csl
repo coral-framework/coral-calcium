@@ -1,0 +1,9 @@
+interface IProduct
+{
+	string name;
+	
+	double value;
+	
+	IEmployee leader;
+	IEmployee[] developers;
+};

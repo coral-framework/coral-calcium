@@ -1,0 +1,4 @@
+component Company
+{
+	provides ICompany company;
+};

@@ -1,0 +1,11 @@
+interface IProject
+{
+	string name;
+	
+	bool isService;
+	
+	double earnings;
+	
+	IManager manager;
+	IDeveloper[] developers;
+};

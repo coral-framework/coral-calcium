@@ -1,0 +1,6 @@
+interface ICompany
+{
+	IEmployee[] employees;
+	IProduct[] products;	
+	IService[] services;	
+};

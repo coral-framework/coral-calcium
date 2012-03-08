@@ -17,6 +17,8 @@ if( GTEST_FOUND )
 	endif()
 
 	add_subdirectory( src )
+	add_subdirectory( dom1 )
+	add_subdirectory( dom2 )
 
 else()
 	message( "WARNING: gtest not found - all tests have been disabled!" )

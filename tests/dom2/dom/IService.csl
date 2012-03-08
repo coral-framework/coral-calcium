@@ -1,0 +1,8 @@
+interface IService
+{
+	string name;
+	
+	double monthlyIncome;
+	
+	IEmployee[] mantainers;
+};

@@ -1,0 +1,4 @@
+component Employee
+{
+	provides IEmployee employee;
+};

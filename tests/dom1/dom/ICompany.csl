@@ -1,0 +1,10 @@
+interface ICompany
+{
+	IDeveloper[] developers;
+	IManager[] managers;
+	IProject[] projects;
+	
+	void addDeveloper( in IDeveloper dev );
+	void addManager( in IManager manager );
+	void addProject( in IProject project );
+};

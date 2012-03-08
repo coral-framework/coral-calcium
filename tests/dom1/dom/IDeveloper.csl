@@ -1,0 +1,8 @@
+interface IDeveloper
+{
+	string name;
+	
+	double salary;
+	
+	IProject project;
+};
