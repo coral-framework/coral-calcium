@@ -25,27 +25,27 @@ set( REPLICATED_MODULE_FILES
 file( GLOB _HEADERS *.h )
 file( GLOB _SOURCES *.cpp persistence/*.cpp )
 
-add_executable( tests EXCLUDE_FROM_ALL ${REPLICATED_MODULE_FILES} ${_HEADERS} ${_SOURCES} )
+add_executable( testsCore EXCLUDE_FROM_ALL ${REPLICATED_MODULE_FILES} ${_HEADERS} ${_SOURCES} )
 
-add_dependencies( tests camodels erm serialization )
+add_dependencies( testsCore camodels erm serialization )
 
-CORAL_TARGET( tests )
+CORAL_TARGET( testsCore )
 
-set_target_properties( tests PROPERTIES
+set_target_properties( testsCore PROPERTIES
 	PROJECT_LABEL "Tests"
 )
 
-target_link_libraries( tests ${GTEST_LIBRARIES} )
+target_link_libraries( testsCore ${GTEST_LIBRARIES} )
 
 ################################################################################
 # Register the test
 ################################################################################
 file( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
 add_test(
-	NAME tests
-	COMMAND $<TARGET_FILE:tests> --gtest_output=xml:../../output/Tests$<CONFIGURATION>.xml
+	NAME testsCore
+	COMMAND $<TARGET_FILE:testsCore> --gtest_output=xml:../../output/testsCore$<CONFIGURATION>.xml
 )
-CORAL_TEST_ENVIRONMENT( tests )
+CORAL_TEST_ENVIRONMENT( testsCore )
 
 ################################################################################
 # If Valgrind is available, repeat the test checking for memory leaks
@@ -55,9 +55,9 @@ if( VALGRIND_COMMAND )
 		NAME tests_MemoryCheck
 		COMMAND ${VALGRIND_COMMAND} --leak-check=full --show-reachable=yes --num-callers=30 --dsymutil=yes
 			--log-file=${CMAKE_BINARY_DIR}/Valgrind$<CONFIGURATION>.log --error-exitcode=13
-			--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp $<TARGET_FILE:tests>
+			--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp $<TARGET_FILE:testsCore>
 	)
-	CORAL_TEST_ENVIRONMENT( tests_MemoryCheck )
+	CORAL_TEST_ENVIRONMENT( testsCore_MemoryCheck )
 endif()
 
 ################################################################################
