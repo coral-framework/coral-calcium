@@ -11,7 +11,6 @@ PROJECT( TESTS_DOM1 )
 
 SET( CORAL_PATH
 	"${CORAL_ROOT}/modules"
-	"${CORAL_ROOT}/lib"
 	"${CMAKE_SOURCE_DIR}/modules"
     "${CMAKE_BINARY_DIR}/modules"
 	"${CMAKE_BINARY_DIR}/modules/dom1"
@@ -76,7 +75,7 @@ ADD_TEST(
 	NAME tests_dom1
 	COMMAND $<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1$<CONFIGURATION>.xml
 )
-
+CORAL_TEST_ENVIRONMENT( tests_dom1 )
 ################################################################################
 # If Valgrind is available, repeat the test checking for memory leaks
 ################################################################################
@@ -87,4 +86,5 @@ IF( VALGRIND_COMMAND )
 		--log-file=${CMAKE_BINARY_DIR}/ValgrindDom1$<CONFIGURATION>.log --error-exitcode=13
 		--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp $<TARGET_FILE:tests_dom1>
 	)
+	CORAL_TEST_ENVIRONMENT( tests_dom1_MemoryCheck )
 ENDIF()
