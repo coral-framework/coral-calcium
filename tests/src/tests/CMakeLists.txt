@@ -52,7 +52,7 @@ CORAL_TEST_ENVIRONMENT( testsCore )
 ################################################################################
 if( VALGRIND_COMMAND )
 	add_test(
-		NAME tests_MemoryCheck
+		NAME testsCore_MemoryCheck
 		COMMAND ${VALGRIND_COMMAND} --leak-check=full --show-reachable=yes --num-callers=30 --dsymutil=yes
 			--log-file=${CMAKE_BINARY_DIR}/Valgrind$<CONFIGURATION>.log --error-exitcode=13
 			--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp $<TARGET_FILE:testsCore>
