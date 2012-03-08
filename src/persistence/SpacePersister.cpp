@@ -75,6 +75,11 @@ public:
 		_objectIdCache.insert(ObjectIdMap::value_type( obj, id ));
 	}
 
+	void setUpdateList( const std::string& updateList )
+	{
+		_updateList = updateList;
+	}
+
 	// ------ ca.ISpacePersister Methods ------ //
 
 	void initialize( co::IObject* rootObject )
@@ -91,7 +96,17 @@ public:
 		{
 			_spaceStore->beginChanges();
 			saveObject( rootObject );
-			_spaceStore->commitChanges("");
+
+			co::Range<const std::string> updates = _model->getUpdates();
+			std::stringstream updateList;
+
+			for( int i = 0; i < updates.getSize(); i++)
+			{
+				updateList << updates[0] << ";";
+			}
+
+			_updateList = updateList.str();
+			_spaceStore->commitChanges( _updateList );
 		}
 		catch( ... )
 		{
@@ -159,7 +174,6 @@ public:
 		{
 			clear();
 			_trackedRevision = revision;
-
 			restoreLua( _trackedRevision );
 
 		}
@@ -360,7 +374,7 @@ public:
 				fieldNames.clear();
 				values.clear();
 			}
-			_spaceStore->commitChanges("");
+			_spaceStore->commitChanges( _updateList );
 			_spaceStore->close();
 			_trackedRevision++;
 		}
@@ -548,12 +562,12 @@ private:
 			co::IPort* port = (ports[i]);
 			
 			co::IService* service = object->getServiceAt( port );
-			
+
 			std::string refStr;
 			if(port->getIsFacet())
 			{
 				saveService( service, port, objId );
-				
+
 				_serializer.toString( getObjectId( service ), refStr);
 
 				refStr.insert(0, "#");
@@ -640,6 +654,7 @@ private:
 	co::RefVector<ca::ISpaceChanges> _spaceChanges;
 
 	co::uint32 _trackedRevision;
+	std::string _updateList;
 
 	ObjectIdMap _objectIdCache;
 

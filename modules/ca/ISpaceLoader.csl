@@ -1,4 +1,5 @@
 interface ISpaceLoader
 {
 	void insertObjectCache( in co.IService obj, in uint32 id );
+	void setUpdateList( in string updateList );
 };

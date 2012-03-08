@@ -1,6 +1,18 @@
 local idCache = {}
 local coralCache = {}
 
+local namespaces = {}
+
+local coNew = co.new
+local coType = co.Type
+local coRaise = co.raise
+
+function extractNamespaceFullName( typeName )
+	for ns in typeName:gmatch( "([%w%.]+)%.%w+" ) do
+		return ns
+	end
+end
+
 function refKind( fieldValue )
 	
 	if fieldValue:sub(1,1) == '#' then
@@ -17,9 +29,9 @@ end
 function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 	if idCache[serviceId] == nil then
 	
-		local typeName
-		
 		local typeName = spaceStore:getObjectType( serviceId )
+		
+		namespaces[ extractNamespaceFullName( typeName ) ] = true
 		
 		local luaObjectTable = { _type = typeName, _id = serviceId }
 		idCache[ serviceId ] = luaObjectTable
@@ -29,8 +41,8 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		fieldNames, values = spaceStore:getValues( serviceId, revision )
 		
 		for i, value in ipairs( values ) do
-			if  refKind( value ) == 1 then
 				local idServiceStr = value:sub( 2 )
+			if  refKind( value ) == 1 then
 				local chunk = load( "return " .. idServiceStr )
 				local idServiceFieldValue = chunk()
 				
@@ -65,7 +77,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				luaObjectTable[ fieldNames[i] ] = chunk()
 			end
 		end
-		luaObjectTable._provider = objectId
+		luaObjectTable._providerTable = idCache[ objectId ]
 	end
 	
 	return idCache[ serviceId ]
@@ -77,8 +89,6 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 		
 		local luaObjectTable = { _type = typeName, _id = objectId }
 		idCache[ objectId ] = luaObjectTable
-		
-		objModel:contains( co.getType( typeName ) )
 		
 		local fieldNames = {}
 		local values = {}
@@ -103,8 +113,10 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	local rootId = spaceStore:getRootObject( revision )
 	
 	local obj = restoreObject( spaceStore, objModel, rootId, revision )
-	
+
 	local appliedUpdates = spaceStore:getUpdates( revision )
+
+	loadCaModels( objModel )
 	local availableUpdates = objModel.updates
 	
 	local hasApplied = {}
@@ -113,15 +125,15 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 		   hasApplied[script] = true
 	end
 
-	
 	for _, script in ipairs( availableUpdates ) do
 		if not hasApplied[script] then
-		   --- applyUpdate
+			applyUpdate( script, obj, spaceLoader )
+			appliedUpdates = appliedUpdates .. script ..";"
 		end
 	end
 	
 	spaceStore:close()
-	
+
 	coralObj = convertToCoral( obj )
 	
 	space:setRootObject( coralObj )
@@ -129,10 +141,39 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	for k,v in pairs( coralCache ) do
 		spaceLoader:insertObjectCache( v, k )
 	end
+	spaceLoader:setUpdateList( appliedUpdates )
 end
 
-local coNew = co.new
-local coType = co.Type
+function loadCaModels( objModel )
+	for ns, _ in pairs( namespaces ) do
+		objModel:loadDefinitionsFor( ns )
+	end
+
+end
+
+function applyUpdate( updateScript, coralGraph, spaceLoader )
+	local path = co.findScript( updateScript )
+	
+	local file, err = io.open( path, 'rb' )
+	if file then
+		local chunk, err = load( file:lines( 4096 ), path, 't' )
+		
+		if ( chunk ) then
+			file:close()
+			chunk()
+			local ok, result = pcall( update, coralGraph, spaceLoader )
+			
+			if not ok then
+				coRaise( "ca.IOException", result )
+			end
+			return result
+		else
+			coRaise( "ca.IOException", err )
+		end
+    end
+	return nil
+    
+end
 
 function convertToCoral( obj )
 	if coralCache[obj._id] == nil then
@@ -150,7 +191,7 @@ function convertToCoral( obj )
 					fillServiceValues( currentService, obj[k] )
 				else
 					if coralCache[ v._id ] == nil then
-						convertToCoral( idCache[ v._provider ] )
+						convertToCoral( v._providerTable )
 						currentService = coralCache[ v._id ]
 					end
 					currentService = coralCache
@@ -162,15 +203,16 @@ function convertToCoral( obj )
 end
 
 function fillServiceValues( service, serviceValues )
+	coralCache[serviceValues._id] = service
 	for sk, sv in pairs( serviceValues ) do
-		if sk ~= "_type" and sk ~= "_id" and sk ~= "_provider" then
+		if sk ~= "_type" and sk ~= "_id" and sk ~= "_providerTable" and sv ~= nil then
 			if type( sv ) == 'table' and sv._type ~= nil then -- ref
-				local objProvider = convertToCoral( idCache[sv._provider] )
+				local objProvider = convertToCoral( sv._providerTable )
 				service[sk] = coralCache[sv._id]
 			elseif type( sv ) == 'table' and #sv > 0 then -- refVec
 				local serviceArray = {}
 				for _, svInd in ipairs( sv ) do
-					convertToCoral( idCache[svInd._provider] )
+					convertToCoral( svInd._providerTable )
 					serviceArray[ #serviceArray + 1 ] = coralCache[ svInd._id ]
 				end
 				service[sk] = serviceArray
@@ -186,16 +228,16 @@ function fillServiceValues( service, serviceValues )
 		end
 	end
 	
-	coralCache[serviceValues._id] = service
 end
 
-local coRaise = co.raise
+
 local function protectedRestoreSpace( space, spaceStore, objModel, revision, spaceLoader )
 	idCache = {}
 	coralCache = {}
+
 	local ok, result = pcall( restore, space, spaceStore, objModel, revision, spaceLoader )
 	if not ok then
-		coRaise( "ca.ModelException", result )
+		coRaise( "ca.IOException", result )
 	end
 end
 
