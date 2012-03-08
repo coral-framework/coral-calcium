@@ -2,7 +2,7 @@
 # The 'tests' executable
 ################################################################################
 
-project( TESTS )
+project( TESTSCORE )
 
 include_directories(
 	${GTEST_INCLUDE_DIRS}
@@ -32,7 +32,7 @@ add_dependencies( testsCore camodels erm serialization )
 CORAL_TARGET( testsCore )
 
 set_target_properties( testsCore PROPERTIES
-	PROJECT_LABEL "Tests"
+	PROJECT_LABEL "Tests Core"
 )
 
 target_link_libraries( testsCore ${GTEST_LIBRARIES} )

@@ -10,6 +10,7 @@ PROJECT( TESTS_DOM2 )
 
 SET( CORAL_PATH
 	"${CORAL_ROOT}/modules"
+	"${CORAL_ROOT}/lib"
 	"${CMAKE_SOURCE_DIR}/modules"
     "${CMAKE_BINARY_DIR}/modules"
 	"${CMAKE_BINARY_DIR}/modules/dom2"
