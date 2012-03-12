@@ -20,6 +20,7 @@ public:
 	SQLiteSpaceStore()
 	{
 		_inTransaction = false;
+		_firstObject = false;
 		_startedRevision = false;
 		_latestRevision = 0;
 	}
@@ -103,6 +104,12 @@ public:
 		return rootObject;
 	}
 
+	void setRootObject( co::uint32 objectId )
+	{
+		checkBeginTransaction();
+		_rootObjectId = objectId;
+	}
+
 	void getUpdates( co::uint32 revision, std::string& updates )
 	{
 		ca::SQLiteStatement stmt = _db.prepare( "SELECT UPDATES_APPLIED FROM SPACE WHERE REVISION = ?" );
@@ -128,7 +135,7 @@ public:
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT ( TYPE_NAME, PROVIDER_ID) VALUES ( ?, ? );" );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT ( TYPE_NAME, PROVIDER_ID ) VALUES ( ?, ? );" );
 		stmt.bind( 1, typeName );
 		if( providerId > 0 )
 		{

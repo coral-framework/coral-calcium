@@ -1,11 +1,8 @@
 
 function companyUpdate( node, spaceLoader )
-	local companyFacet = node.company
+	local company = node.company
 	
-	local projects = companyFacet.projects
-	
-	node.company.projects = nil
-	
+	local projects = company.projects
 	local serviceList = {}
 	local productList = {}
 	
@@ -18,9 +15,10 @@ function companyUpdate( node, spaceLoader )
 			productList[ #productList + 1 ] = projectUpdated.product
 		end
 	end
-	
-	node.company.services = serviceList
-	node.company.products = productList
+	company._id = nil
+	company.services = serviceList
+	company.products = productList
+	company.projects = nil
 end
 
 function projectUpdate( node, spaceLoader )
@@ -33,7 +31,7 @@ function projectUpdate( node, spaceLoader )
 		update( devProvider, spaceLoader )
 		devs[ #devs + 1 ] = devProvider.employee
 	end
-		
+	node._id = nil
 	if ( project.isService ) then
 
 		node._type = "dom.Service"
@@ -48,7 +46,6 @@ function projectUpdate( node, spaceLoader )
 						monthlyIncome = project.earnings,
 						mantainers = devs,
 						_providerTable = node,
-						_id = node.project._id,
 					}
 		
 		node.project = nil
@@ -61,7 +58,6 @@ function projectUpdate( node, spaceLoader )
 						value = project.earnings,
 						developers = devs,
 						_providerTable = node,
-						_id = node.project._id,
 					}
 		leaderObj = project.manager._providerTable
 		update( leaderObj, spaceLoader )
@@ -73,7 +69,6 @@ function projectUpdate( node, spaceLoader )
 end
 
 function convertToEmployee( node, spaceLoader )
-
 	if( node._type == "dom.Manager" ) then
 		node.employee = node.manager
 		node.employee.role = "Manager"
@@ -83,25 +78,22 @@ function convertToEmployee( node, spaceLoader )
 		node.employee.role = "Developer"
 		node.developer = nil
 	end
-	
+	node._id = nil
+	node.employee._id = nil
 	node.employee._type = "dom.IEmployee"
 	node._type = "dom.Employee"
 		
 end
 
+local updateFunctions
+updateFunctions = { ["dom.Company"] = companyUpdate, ["dom.Manager"] = convertToEmployee, ["dom.Developer"] = convertToEmployee, ["dom.Project"] = projectUpdate,}
+		
 function update( node, spaceLoader )
-	if( node ~= nil ) then
-		local updateFunctions = {} 
-		
-		updateFunctions[ "dom.Company" ] = companyUpdate
-		updateFunctions[ "dom.Manager" ] = convertToEmployee
-		updateFunctions[ "dom.Developer" ] = convertToEmployee
-		updateFunctions[ "dom.Project" ] = projectUpdate
-		
+	
+	if node ~= nil then
 		local updateFunc = updateFunctions[ node._type ]
 		
 		updateFunc( node, spaceLoader )
-		
 	end
 	
 end

@@ -11,6 +11,10 @@ interface ISpaceStore
 	
 	//returns the root object's id for the current revision
 	uint32 getRootObject( in uint32 revision );
+	
+	//set the root object's id for the current revision
+	void setRootObject( in uint32 objectId );
+	
 	void getUpdates( in uint32 revision, out string updates );
 	
 	uint32 addObject( in string typeName ) raises ca.IOException;

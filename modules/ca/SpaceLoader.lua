@@ -1,5 +1,6 @@
 local idCache = {}
 local coralCache = {}
+local conversionCache = {}
 
 local namespaces = {}
 
@@ -122,7 +123,7 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	local hasApplied = {}
 
 	for script in appliedUpdates:gmatch( "[^;]+" ) do
-		   hasApplied[script] = true
+	   hasApplied[script] = true
 	end
 
 	for _, script in ipairs( availableUpdates ) do
@@ -137,10 +138,19 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	coralObj = convertToCoral( obj )
 	
 	space:setRootObject( coralObj )
+	space:notifyChanges()
 	
-	for k,v in pairs( coralCache ) do
-		spaceLoader:insertObjectCache( v, k )
+	-- for k,v in pairs( coralCache ) do
+		-- spaceLoader:insertObjectCache( v, k )
+	-- end
+	for k, v in pairs( conversionCache ) do
+		if k._id == nil then
+			spaceLoader:insertNewObject( v )
+		else
+			spaceLoader:insertObjectCache( v, k._id )
+		end
 	end
+	
 	spaceLoader:setUpdateList( appliedUpdates )
 end
 
@@ -176,12 +186,12 @@ function applyUpdate( updateScript, coralGraph, spaceLoader )
 end
 
 function convertToCoral( obj )
-	if coralCache[obj._id] == nil then
+	if conversionCache[obj] == nil then
 		local root = coNew( obj._type )
 		
 		local currentService
 		
-		coralCache[ obj._id ] = root
+		conversionCache[ obj ] = root
 		
 		for k,v in pairs( obj ) do
 			
@@ -190,30 +200,30 @@ function convertToCoral( obj )
 				if currentService ~= nil then
 					fillServiceValues( currentService, obj[k] )
 				else
-					if coralCache[ v._id ] == nil then
-						convertToCoral( v._providerTable )
-						currentService = coralCache[ v._id ]
+					if conversionCache[ v ] == nil then
+						local providerObj = convertToCoral( v._providerTable )
+						currentService = conversionCache[ v ]
+						root[k] = currentService
 					end
-					currentService = coralCache
 				end
 			end
 		end
 	end
-	return coralCache[ obj._id ]
+	return conversionCache[ obj ]
 end
 
 function fillServiceValues( service, serviceValues )
-	coralCache[serviceValues._id] = service
+	conversionCache[serviceValues] = service
 	for sk, sv in pairs( serviceValues ) do
 		if sk ~= "_type" and sk ~= "_id" and sk ~= "_providerTable" and sv ~= nil then
 			if type( sv ) == 'table' and sv._type ~= nil then -- ref
 				local objProvider = convertToCoral( sv._providerTable )
-				service[sk] = coralCache[sv._id]
+				service[sk] = conversionCache[sv]
 			elseif type( sv ) == 'table' and #sv > 0 then -- refVec
 				local serviceArray = {}
 				for _, svInd in ipairs( sv ) do
 					convertToCoral( svInd._providerTable )
-					serviceArray[ #serviceArray + 1 ] = coralCache[ svInd._id ]
+					serviceArray[ #serviceArray + 1 ] = conversionCache[ svInd ]
 				end
 				service[sk] = serviceArray
 			elseif type( sv ) == 'table' then --struct
@@ -227,9 +237,7 @@ function fillServiceValues( service, serviceValues )
 			end
 		end
 	end
-	
 end
-
 
 local function protectedRestoreSpace( space, spaceStore, objModel, revision, spaceLoader )
 	idCache = {}

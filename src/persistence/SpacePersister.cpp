@@ -72,7 +72,12 @@ public:
 
 	void insertObjectCache( co::IService* obj, co::uint32 id )
 	{
-		_objectIdCache.insert(ObjectIdMap::value_type( obj, id ));
+		_objectIdCache.insert( ObjectIdMap::value_type( obj, id ) );
+	}
+
+	void insertNewObject( co::IService* obj )
+	{
+		_addedObjects.insert( obj );
 	}
 
 	void setUpdateList( const std::string& updateList )
@@ -96,6 +101,7 @@ public:
 		{
 			_spaceStore->beginChanges();
 			saveObject( rootObject );
+			_spaceStore->setRootObject( getObjectId(rootObject) );
 
 			co::Range<const std::string> updates = _model->getUpdates();
 			std::stringstream updateList;
@@ -175,6 +181,7 @@ public:
 			clear();
 			_trackedRevision = revision;
 			restoreLua( _trackedRevision );
+			_space->addSpaceObserver( this );
 
 		}
 		catch( ... )
@@ -197,107 +204,7 @@ public:
 		{
 			current = _spaceChanges[ i ];
 
-			int addedObjectsSize = current->getAddedObjects().getSize();
-
-			for( int j = 0; j < addedObjectsSize; j++ )
-			{
-				_addedObjects.insert( current->getAddedObjects()[j] );
-			}
-
-			Change change;
-			ChangeSet changeSet;
-
-			for( int j = 0; j < current->getChangedObjects().getSize(); j++ )
-			{
-				ca::IObjectChanges * objectChanges = current->getChangedObjects()[j];
-
-				// changes have been made on an added object, there's no need to register these changes.
-				// updating the object is enough
-				ObjectSet::iterator objIt = _addedObjects.find( objectChanges->getObject() );
-				if( objIt != _addedObjects.end() )
-				{
-					_addedObjects.insert( objIt, objectChanges->getObject() );
-					continue;
-				}
-
-				ChangeSetCache::iterator it = _changeCache.find( objectChanges->getObject() );
-
-				bool objInserted = ( it != _changeCache.end() );
-
-				changeSet.clear();
-				ChangeSet &objChangeSet = ( objInserted ) ? it->second : changeSet;
-
-				for( int k = 0; k < objectChanges->getChangedConnections().getSize(); k++ )
-				{
-					ca::ChangedConnection changedConn = objectChanges->getChangedConnections()[k];
-
-					change.member = changedConn.receptacle.get();
-					change.newValue = changedConn.current.get();
-					objChangeSet.insert( change );
-				}
-
-				if( !objInserted )
-				{
-					_changeCache.insert( ChangeSetCache::value_type( objectChanges->getObject(), objChangeSet ) );
-				}
-
-				for( int k = 0; k < objectChanges->getChangedServices().getSize(); k++ )
-				{
-					ca::IServiceChanges* changedServ = objectChanges->getChangedServices()[k];
-
-					ChangeSetCache::iterator it = _changeCache.find( changedServ->getService() );
-
-					bool servInserted = ( it != _changeCache.end() );
-
-					changeSet.clear();
-					ChangeSet &serviceChangeSet = ( servInserted ) ? it->second : changeSet;
-
-					for( int l = 0; l < changedServ->getChangedValueFields().getSize(); l++ )
-					{
-						change.member = changedServ->getChangedValueFields()[l].field.get();
-						change.newValue =  changedServ->getChangedValueFields()[l].current;
-						serviceChangeSet.insert( change );
-					}
-
-					for( int l = 0; l < changedServ->getChangedRefFields().getSize(); l++ )
-					{
-						change.member = changedServ->getChangedRefFields()[l].field.get();
-						change.newValue =  changedServ->getChangedRefFields()[l].current.get();
-						serviceChangeSet.insert( change );
-					}
-
-					for( int l = 0; l < changedServ->getChangedRefVecFields().getSize(); l++ )
-					{
-						change.member = changedServ->getChangedRefVecFields()[l].field.get();
-
-						change.newValue.set< const co::RefVector<co::IService>& >( changedServ->getChangedRefVecFields()[l].current );
-						serviceChangeSet.insert( change );
-					}
-
-					if( !servInserted )
-					{
-						_changeCache.insert( ChangeSetCache::value_type( changedServ->getService(), serviceChangeSet ) );
-					}
-				}
-
-				for( int j = 0; j < current->getRemovedObjects().getSize(); j++ )
-				{
-					co::IObject* currentObject = current->getRemovedObjects()[j];
-
-					// currentObject was removed from the space graph, if it was present on previous changes,
-					// these can be ignored
-
-					_addedObjects.erase( currentObject );
-					_changeCache.erase( currentObject );
-
-					co::Range<co::IPort* const> ports = currentObject->getComponent()->getPorts();
-
-					for( int k = 0; k < ports.getSize(); k++ )
-					{
-						_changeCache.erase( currentObject->getServiceAt( ports[k] ) );
-					}
-				}
-			}
+			cacheChanges( current.get() );
 		}
 
 		std::vector<std::string> fieldNames;
@@ -310,7 +217,44 @@ public:
 
 			for( ObjectSet::iterator it = _addedObjects.begin(); it != _addedObjects.end(); it++ )
 			{
-				saveObject( *it );
+				co::IService* service = *it;
+				IObject* object = service->getProvider();
+
+				if( static_cast<IObject*>( service ) == object )
+				{
+					saveObject( object );
+
+					if( object == _space->getRootObject() )
+					{
+						_spaceStore->setRootObject( getObjectId( object ) );
+					}
+				}
+				else
+				{
+					if( getObjectId( service ) == 0 )
+					{
+						co::IPort* facet = service->getFacet();
+						co::uint32 providerId = getObjectId( object );
+						saveService( service, facet, providerId );
+
+						ChangeSetCache::iterator itCache = _changeCache.find( object );
+
+						bool objInserted = ( itCache != _changeCache.end() );
+
+						ChangeSet &objChangeSet = ( objInserted ) ? itCache->second : ChangeSet();
+
+						Change change;
+						change.member = facet;
+						change.newValue = *it;
+						objChangeSet.insert(  change );
+
+						if( !objInserted )
+						{
+							_changeCache.insert( ChangeSetCache::value_type( object, objChangeSet ) );
+						}
+					}
+				}
+				
 			}
 
 			for( ChangeSetCache::iterator it = _changeCache.begin(); it != _changeCache.end(); it++ )
@@ -541,14 +485,15 @@ private:
 
 	void saveObject(co::RefPtr<co::IObject> object)
 	{
-		if( getObjectId(object.get()) != 0 )
+		co::uint32 objId = getObjectId( object.get() );
+		if( objId != 0 )
 		{
 			return;
 		}
 
 		co::IComponent* component = object->getComponent();
 
-		co::uint32 objId = _spaceStore->addObject( component->getFullName() );
+		objId = _spaceStore->addObject( component->getFullName() );
 
 		insertObjectCache( object.get(), objId );
 
@@ -610,6 +555,111 @@ private:
 		}
 	}
 
+	void cacheChanges( ca::ISpaceChanges* changes )
+	{
+		int addedObjectsSize = changes->getAddedObjects().getSize();
+
+		for( int j = 0; j < addedObjectsSize; j++ )
+		{
+			_addedObjects.insert( changes->getAddedObjects()[j] );
+		}
+
+		Change change;
+		ChangeSet changeSet;
+
+		for( int j = 0; j < changes->getChangedObjects().getSize(); j++ )
+		{
+			ca::IObjectChanges * objectChanges = changes->getChangedObjects()[j];
+
+			// changes have been made on an added object, there's no need to register these changes.
+			// updating the object is enough
+			ObjectSet::iterator objIt = _addedObjects.find( objectChanges->getObject() );
+			if( objIt != _addedObjects.end() )
+			{
+				_addedObjects.insert( objIt, objectChanges->getObject() );
+				continue;
+			}
+
+			ChangeSetCache::iterator it = _changeCache.find( objectChanges->getObject() );
+
+			bool objInserted = ( it != _changeCache.end() );
+
+			changeSet.clear();
+			ChangeSet &objChangeSet = ( objInserted ) ? it->second : changeSet;
+
+			for( int k = 0; k < objectChanges->getChangedConnections().getSize(); k++ )
+			{
+				ca::ChangedConnection changedConn = objectChanges->getChangedConnections()[k];
+
+				change.member = changedConn.receptacle.get();
+				change.newValue = changedConn.current.get();
+				objChangeSet.insert( change );
+			}
+
+			if( !objInserted )
+			{
+				_changeCache.insert( ChangeSetCache::value_type( objectChanges->getObject(), objChangeSet ) );
+			}
+
+			for( int k = 0; k < objectChanges->getChangedServices().getSize(); k++ )
+			{
+				ca::IServiceChanges* changedServ = objectChanges->getChangedServices()[k];
+
+				ChangeSetCache::iterator it = _changeCache.find( changedServ->getService() );
+
+				bool servInserted = ( it != _changeCache.end() );
+
+				changeSet.clear();
+				ChangeSet &serviceChangeSet = ( servInserted ) ? it->second : changeSet;
+
+				for( int l = 0; l < changedServ->getChangedValueFields().getSize(); l++ )
+				{
+					change.member = changedServ->getChangedValueFields()[l].field.get();
+					change.newValue =  changedServ->getChangedValueFields()[l].current;
+					serviceChangeSet.insert( change );
+				}
+
+				for( int l = 0; l < changedServ->getChangedRefFields().getSize(); l++ )
+				{
+					change.member = changedServ->getChangedRefFields()[l].field.get();
+					change.newValue =  changedServ->getChangedRefFields()[l].current.get();
+					serviceChangeSet.insert( change );
+				}
+
+				for( int l = 0; l < changedServ->getChangedRefVecFields().getSize(); l++ )
+				{
+					change.member = changedServ->getChangedRefVecFields()[l].field.get();
+
+					change.newValue.set< const co::RefVector<co::IService>& >( changedServ->getChangedRefVecFields()[l].current );
+					serviceChangeSet.insert( change );
+				}
+
+				if( !servInserted )
+				{
+					_changeCache.insert( ChangeSetCache::value_type( changedServ->getService(), serviceChangeSet ) );
+				}
+			}
+
+			for( int j = 0; j < changes->getRemovedObjects().getSize(); j++ )
+			{
+				co::IObject* currentObject = changes->getRemovedObjects()[j];
+
+				// currentObject was removed from the space graph, if it was present on previous changes,
+				// these can be ignored
+
+				_addedObjects.erase( currentObject );
+				_changeCache.erase( currentObject );
+
+				co::Range<co::IPort* const> ports = currentObject->getComponent()->getPorts();
+
+				for( int k = 0; k < ports.getSize(); k++ )
+				{
+					_changeCache.erase( currentObject->getServiceAt( ports[k] ) );
+				}
+			}
+		}
+	}
+
 private:
 	typedef std::map<const std::string, std::string> FieldValueMap;
 	typedef std::map<co::IService*, co::uint32> ObjectIdMap;
@@ -638,7 +688,7 @@ private:
 	};
 
 	typedef std::set<Change> ChangeSet;
-	typedef std::set<co::IObject*> ObjectSet;
+	typedef std::set<co::IService*> ObjectSet;
 
 	typedef std::map<co::IService*, ChangeSet> ChangeSetCache;
 
