@@ -214,7 +214,7 @@ public:
 		try
 		{
 			_spaceStore->beginChanges();
-
+			ChangeSet newChangeSet;
 			for( ObjectSet::iterator it = _addedObjects.begin(); it != _addedObjects.end(); it++ )
 			{
 				co::IService* service = *it;
@@ -241,7 +241,8 @@ public:
 
 						bool objInserted = ( itCache != _changeCache.end() );
 
-						ChangeSet &objChangeSet = ( objInserted ) ? itCache->second : ChangeSet();
+						newChangeSet.clear();
+						ChangeSet &objChangeSet = ( objInserted ) ? itCache->second : newChangeSet;
 
 						Change change;
 						change.member = facet;
