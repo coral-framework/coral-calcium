@@ -15,7 +15,6 @@ function companyUpdate( node, spaceLoader )
 			productList[ #productList + 1 ] = projectUpdated.product
 		end
 	end
-	company._id = nil
 	company.services = serviceList
 	company.products = productList
 	company.projects = nil
@@ -31,7 +30,6 @@ function projectUpdate( node, spaceLoader )
 		update( devProvider, spaceLoader )
 		devs[ #devs + 1 ] = devProvider.employee
 	end
-	node._id = nil
 	if ( project.isService ) then
 
 		node._type = "dom.Service"
@@ -78,8 +76,6 @@ function convertToEmployee( node, spaceLoader )
 		node.employee.role = "Developer"
 		node.developer = nil
 	end
-	node._id = nil
-	node.employee._id = nil
 	node.employee._type = "dom.IEmployee"
 	node._type = "dom.Employee"
 		
