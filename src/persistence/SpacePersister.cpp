@@ -129,6 +129,19 @@ public:
 
 		addChange( service, change );
 	}
+
+	void addTypeChange( co::IService* service, const std::string& newType )
+	{
+		Change change;
+		change.member = 0; //hack type
+		co::Any anyNewType;
+		anyNewType.set<const std::string&>( newType );
+		anyNewType.makeOut( co::typeOf<std::string>::get() );
+		valuePool.push_back( anyNewType );
+		change.newValuePtr.newValue = &valuePool.back();
+
+		addChange( service, change );
+	}
 	// ------ ca.ISpacePersister Methods ------ //
 
 	void initialize( co::IObject* rootObject )
@@ -264,6 +277,14 @@ public:
 					{
 						_spaceStore->setRootObject( getObjectId( object ) );
 					}
+				}
+				else
+				{
+					co::IPort* facet = service->getFacet();
+					co::uint32 providerId = getObjectId( service->getProvider() );
+					saveService( service, facet, providerId );
+
+					addRefChange( service->getProvider(), facet, service );
 				}
 			}
 
@@ -681,6 +702,18 @@ private:
 
 	void saveChange( const Change& change, std::vector<std::string>& fieldNames, std::vector<std::string>& values )
 	{
+
+		if( change.member == NULL )
+		{
+			fieldNames.push_back( "_type" );
+
+			const std::string& newType = change.newValuePtr.newValue->get<const std::string&>();
+
+			values.push_back( newType );
+
+			return;
+		}
+
 		co::IField* field = dynamic_cast<co::IField*>( change.member );
 
 		std::string valueStr;

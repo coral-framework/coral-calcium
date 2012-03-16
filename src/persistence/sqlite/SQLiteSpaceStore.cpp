@@ -135,12 +135,23 @@ public:
 		checkBeginTransaction();
 		checkGenerateRevision();
 
-		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT ( TYPE_NAME, PROVIDER_ID ) VALUES ( ?, ? );" );
-		stmt.bind( 1, typeName );
+		ca::SQLiteStatement stmt = _db.prepare( "INSERT INTO OBJECT ( PROVIDER_ID ) VALUES ( ? );" );
+
+		std::vector<std::string> fieldNames;
+		std::vector<std::string> values;
+
 		if( providerId > 0 )
 		{
-			stmt.bind( 2, providerId );		
+
+			std::stringstream ss;
+			ss << providerId;
+
+			fieldNames.push_back( "_provider" );
+			values.push_back( ss.str() );
+
+			stmt.bind( 1, providerId );
 		}
+
 		stmt.execute();
 
 		ca::SQLiteStatement stmtMaxObj = _db.prepare( "SELECT MAX(OBJECT_ID) FROM OBJECT" );
@@ -151,7 +162,14 @@ public:
 		{
 			throw ca::IOException("Failed to add object");
 		}
+
 		co::uint32 resultId = rs.getUint32(0);
+
+		fieldNames.push_back( "_type" );
+
+		values.push_back( typeName );
+
+		addValues( resultId, fieldNames, values );
 
 		if( _firstObject )
 		{
@@ -186,11 +204,18 @@ public:
 
 	}
 
-	void getObjectType( co::uint32 objectId, std::string& typeName )
+	void getObjectType( co::uint32 objectId, co::uint32 revision, std::string& typeName )
 	{
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_NAME FROM OBJECT O WHERE O.OBJECT_ID = ?" );
+		//ca::SQLiteStatement stmt = _db.prepare( "SELECT O.TYPE_NAME FROM OBJECT O WHERE O.OBJECT_ID = ?" );
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT FV.VALUE FROM\
+												OBJECT OBJ LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_NAME, \
+												VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_NAME ) FV\
+												ON FV.OBJECT_ID = OBJ.OBJECT_ID\
+												WHERE OBJ.OBJECT_ID = ? AND FV.FIELD_NAME = '_type' GROUP BY FV.FIELD_NAME, FV.OBJECT_ID \
+												ORDER BY OBJ.OBJECT_ID" );
 
-		stmt.bind( 1, objectId );
+		stmt.bind( 1, revision );
+		stmt.bind( 2, objectId );
 
 		ca::SQLiteResult rs = stmt.query();
 				
@@ -202,7 +227,7 @@ public:
 		else
 		{
 			stmt.finalize();
-			CORAL_THROW( ca::IOException, "Not such object, id=" << objectId )
+			CORAL_THROW( ca::IOException, "Not such object, id=" << objectId );
 		}
 					
 	}
@@ -216,7 +241,7 @@ public:
 								OBJECT OBJ LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_NAME, \
 								VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_NAME ) FV\
 								ON FV.OBJECT_ID = OBJ.OBJECT_ID\
-								WHERE OBJ.OBJECT_ID = ? GROUP BY FV.FIELD_NAME, FV.OBJECT_ID \
+								WHERE OBJ.OBJECT_ID = ? AND FV.FIELD_NAME <> '_type' AND FV.FIELD_NAME <> '_provider' GROUP BY FV.FIELD_NAME, FV.OBJECT_ID \
 								ORDER BY OBJ.OBJECT_ID" );
 
 		
@@ -251,12 +276,21 @@ public:
 		return _latestRevision;
 	}
 
-	co::uint32 getServiceProvider( co::uint32 serviceId )
+	co::uint32 getServiceProvider( co::uint32 serviceId, co::uint32 revision )
 	{
 		co::uint32 object = 0;
-		ca::SQLiteStatement stmt = _db.prepare( "SELECT PROVIDER_ID FROM OBJECT WHERE OBJECT_ID = ?" );
 
-		stmt.bind( 1, serviceId );
+		//ca::SQLiteStatement stmt = _db.prepare( "SELECT PROVIDER_ID FROM OBJECT WHERE OBJECT_ID = ?" );
+
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT FV.VALUE FROM\
+												OBJECT OBJ LEFT OUTER JOIN (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_NAME, \
+												VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_NAME ) FV\
+												ON FV.OBJECT_ID = OBJ.OBJECT_ID\
+												WHERE OBJ.OBJECT_ID = ? AND FV.FIELD_NAME = '_provider' GROUP BY FV.FIELD_NAME, FV.OBJECT_ID \
+												ORDER BY OBJ.OBJECT_ID" );
+
+		stmt.bind( 1, revision );
+		stmt.bind( 2, serviceId );
 
 		ca::SQLiteResult rs = stmt.query();
 
@@ -300,7 +334,6 @@ private:
 
 			_db.prepare( "CREATE TABLE if not exists [OBJECT] (\
 						 [OBJECT_ID] INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,\
-						 [TYPE_NAME] TEXT NOT NULL,\
 						 [PROVIDER_ID] INTEGER NULL,\
 						 FOREIGN KEY (PROVIDER_ID) REFERENCES OBJECT(OBJECT_ID));\
 						 );" ).execute();

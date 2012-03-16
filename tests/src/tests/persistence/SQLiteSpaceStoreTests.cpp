@@ -52,7 +52,7 @@ TEST_F( SQLiteSpaceStoreTests, testOpsWithoutOpen )
 	EXPECT_THROW( spaceStore->getValues(1, 1, fieldNames, values), ca::IOException );
 
 	std::string typeName;
-	EXPECT_THROW( spaceStore->getObjectType( 1, typeName ), ca::IOException );
+	EXPECT_THROW( spaceStore->getObjectType( 1, 1, typeName ), ca::IOException );
 }
 
 TEST_F( SQLiteSpaceStoreTests, testChangesWithoutBegin )
@@ -99,8 +99,8 @@ TEST_F( SQLiteSpaceStoreTests, testAddObjectGetObject )
 	EXPECT_EQ( 1, spaceStore->getLatestRevision() );
 
 	std::string typeName1, typeName2;
-	EXPECT_NO_THROW( spaceStore->getObjectType( obj1InsertedId, typeName1 ) );
-	EXPECT_NO_THROW( spaceStore->getObjectType( obj2InsertedId, typeName2 ) );
+	EXPECT_NO_THROW( spaceStore->getObjectType( obj1InsertedId, 1, typeName1 ) );
+	EXPECT_NO_THROW( spaceStore->getObjectType( obj2InsertedId, 1, typeName2 ) );
 
 	ASSERT_EQ( typeNameInserted1, typeName1 );
 	ASSERT_EQ( typeNameInserted2, typeName2 );
@@ -311,8 +311,8 @@ TEST_F( SQLiteSpaceStoreTests, addGetServiceTest )
 
 	spaceStore->commitChanges("");
 
-	co::uint32 retrievedProviderId = spaceStore->getServiceProvider( serviceId );
-	co::uint32 otherRetrievedProviderId = spaceStore->getServiceProvider( otherServiceId );
+	co::uint32 retrievedProviderId = spaceStore->getServiceProvider( serviceId, 1 );
+	co::uint32 otherRetrievedProviderId = spaceStore->getServiceProvider( otherServiceId, 1 );
 
 	EXPECT_EQ( objectId, retrievedProviderId );
 	EXPECT_EQ( objectId, otherRetrievedProviderId );

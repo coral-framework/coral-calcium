@@ -19,11 +19,11 @@ local mt = {
 		return returnValue
 	end,
 	__newindex = function (t,k,v)
-		if k == "_type" then
-			t[index]["_id"] = nil
-			assignmentCache[t] = nil -- no need to save changes for a new object
-			-- re-type then is a new object to be add
-		end
+		-- if k == "_type" then
+			-- t[index]["_id"] = nil
+			-- assignmentCache[t] = nil -- no need to save changes for a new object
+			-- -- re-type then is a new object to be add
+		-- end
 		
 		if t[index]["_id"] ~= nil then
 			if assignmentCache[t] == nil then
@@ -66,8 +66,12 @@ end
 
 function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 	if idCache[serviceId] == nil then
+		
+		print( "-" .. objectId .. " " .. serviceId )
 	
-		local typeName = spaceStore:getObjectType( serviceId )
+		local typeName = spaceStore:getObjectType( serviceId, revision )
+		
+		print( typeName )
 		
 		namespaces[ extractNamespaceFullName( typeName ) ] = true
 		
@@ -79,7 +83,8 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		fieldNames, values = spaceStore:getValues( serviceId, revision )
 		
 		for i, value in ipairs( values ) do
-				local idServiceStr = value:sub( 2 )
+			print( "values " .. fieldNames[i] .. " " .. values[i] )
+			local idServiceStr = value:sub( 2 )
 			if  refKind( value ) == 1 then
 				local chunk = load( "return " .. idServiceStr )
 				local idServiceFieldValue = chunk()
@@ -87,7 +92,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				if idServiceFieldValue == nil then
 					luaObjectTable[ fieldNames[i] ] = nil			
 				else
-					local objProvider = spaceStore:getServiceProvider( idServiceFieldValue )
+					local objProvider = spaceStore:getServiceProvider( idServiceFieldValue, revision )
 					
 					restoreObject( spaceStore, objModel, objProvider, revision )
 					
@@ -101,8 +106,8 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				local serviceList = {}
 				
 				for i, idService in ipairs( idServiceList ) do
-					local objProvider = spaceStore:getServiceProvider( idService )
-				
+					local objProvider = spaceStore:getServiceProvider( idService, revision )
+					print ( "objProvider " .. objProvider )
 					restoreObject( spaceStore, objModel, objProvider, revision )
 					
 					serviceList[ #serviceList + 1 ] = idCache[ idService ]
@@ -123,8 +128,9 @@ end
 
 function restoreObject( spaceStore, objModel, objectId, revision )
 	if idCache[objectId] == nil then
-		local typeName = spaceStore:getObjectType( objectId )
-		
+		print( objectId .. " " .. revision )
+		local typeName = spaceStore:getObjectType( objectId, revision )
+		print( typeName	)
 		local luaObjectTable = { _type = typeName, _id = objectId }
 		
 		idCache[ objectId ] = track( luaObjectTable )
@@ -134,6 +140,7 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 		fieldNames, values = spaceStore:getValues( objectId, revision )
 		
 		for i, value in ipairs( values ) do
+			print( i .. " " .. value )
 			serviceIdStr = value:sub(2)
 			local chunk = load( "return " .. serviceIdStr )
 			local serviceId = chunk()
@@ -147,6 +154,7 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 end
 
 function restore( space, spaceStore, objModel, revision, spaceLoader )
+print( '========================================================' )
 	spaceStore:open()
 	
 	local rootId = spaceStore:getRootObject( revision )
@@ -227,6 +235,11 @@ function convertToCoral( obj, objModel, spaceLoader )
 		local currentService
 		
 		conversionCache[ obj ] = root
+		
+		if (assignmentCache[ obj ] ~= nil) and (assignmentCache[ obj ]["_type"] ~= nil) then
+			spaceLoader:addTypeChange( root, obj._type )
+		end
+		
 		local ports = objModel:getPorts( root.component )
 		local portName
 		for i, port in ipairs( ports ) do
@@ -261,6 +274,11 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	
 	local hasChange
 	local refVec
+	
+	if (assignmentCache[ serviceValues ] ~= nil) and (assignmentCache[ serviceValues ]["_type"] ~= nil) then
+		spaceLoader:addTypeChange( service, service.interface.fullName )
+	end
+	
 	for i, field in ipairs( fields ) do
 		fieldKind = field.type.kind
 		fieldName = field.name
@@ -298,15 +316,6 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 			else
 				service[fieldName] = fieldValue
 				if hasChange then
-					spaceLoader:addChange( service, field, service[fieldName] )
-				end
-			end
-		end
-		if assignmentCache[ serviceValues ] ~= nil then
-			if assignmentCache[ serviceValues ][field.name] ~= nil then
-				if refVec then
-					spaceLoader:addRefVecChange( service, field, service[fieldName] )
-				else
 					spaceLoader:addChange( service, field, service[fieldName] )
 				end
 			end
