@@ -3,4 +3,8 @@ interface ISpaceLoader
 	void insertObjectCache( in co.IService obj, in uint32 id );
 	void insertNewObject( in co.IService obj );
 	void setUpdateList( in string updateList );
+	
+	void addChange( in co.IService service, in co.IMember member, in any newValue );
+	void addRefChange( in co.IService service, in co.IMember member, in co.IService ref );
+	void addRefVecChange( in co.IService service, in co.IMember member, inout co.IService[] refVec );
 };

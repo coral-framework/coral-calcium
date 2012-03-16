@@ -1,6 +1,8 @@
 local idCache = {}
 local conversionCache = {}
 
+local assignmentCache = {}
+
 local namespaces = {}
 
 local coNew = co.new
@@ -17,12 +19,20 @@ local mt = {
 		return returnValue
 	end,
 	__newindex = function (t,k,v)
-		if t[index][k] ~= nil and v == nil then
+		if k == "_type" then
 			t[index]["_id"] = nil
-		elseif k == "_type" then
-			t[index]["_id"] = nil
+			assignmentCache[t] = nil -- no need to save changes for a new object
 			-- re-type then is a new object to be add
 		end
+		
+		if t[index]["_id"] ~= nil then
+			if assignmentCache[t] == nil then
+				assignmentCache[t] = {}
+			end
+		
+			assignmentCache[t][k] = v
+		end
+		
 		t[index][k] = v   -- update original table
 	end
 }
@@ -62,8 +72,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		namespaces[ extractNamespaceFullName( typeName ) ] = true
 		
 		local luaObjectTable = { _type = typeName, _id = serviceId }
-		luaObjectTable = track( luaObjectTable )
-		idCache[ serviceId ] = luaObjectTable
+		idCache[ serviceId ] = track( luaObjectTable )
 		
 		local fieldNames = {}
 		local values = {}
@@ -117,8 +126,8 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 		local typeName = spaceStore:getObjectType( objectId )
 		
 		local luaObjectTable = { _type = typeName, _id = objectId }
-		luaObjectTable = track( luaObjectTable )
-		idCache[ objectId ] = luaObjectTable
+		
+		idCache[ objectId ] = track( luaObjectTable )
 		
 		local fieldNames = {}
 		local values = {}
@@ -164,7 +173,7 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	
 	spaceStore:close()
 
-	coralObj = convertToCoral( obj, objModel )
+	coralObj = convertToCoral( obj, objModel, spaceLoader )
 	
 	space:setRootObject( coralObj )
 	space:notifyChanges()
@@ -211,7 +220,7 @@ function applyUpdate( updateScript, coralGraph, spaceLoader )
     
 end
 
-function convertToCoral( obj, objModel )
+function convertToCoral( obj, objModel, spaceLoader )
 	if conversionCache[obj] == nil then
 		local root = coNew( obj._type )
 	
@@ -225,20 +234,23 @@ function convertToCoral( obj, objModel )
 			currentService = root[portName]
 			currentServiceValues = obj[portName]
 			if port.isFacet then
-				fillServiceValues( currentService, currentServiceValues, objModel )
+				fillServiceValues( currentService, currentServiceValues, objModel, spaceLoader )
 			else
 				if conversionCache[ currentServiceValues ] == nil then
-					local providerObj = convertToCoral( currentServiceValues._providerTable, objModel )
+					local providerObj = convertToCoral( currentServiceValues._providerTable, objModel, spaceLoader )
 					currentService = conversionCache[ currentServiceValues ]
 					root[port] = currentService
 				end
+			end
+			if assignmentCache[ obj ] ~= nil then
+				spaceLoader:addChange( root, port, currentService )
 			end
 		end
 	end
 	return conversionCache[ obj ]
 end
 
-function fillServiceValues( service, serviceValues, objModel )
+function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	conversionCache[serviceValues] = service
 	
 	local fields = objModel:getFields( service.interface )
@@ -247,27 +259,32 @@ function fillServiceValues( service, serviceValues, objModel )
 	local fieldValue
 	local fieldName
 	
+	local hasChange
+	local refVec
 	for i, field in ipairs( fields ) do
 		fieldKind = field.type.kind
 		fieldName = field.name
 		fieldValue = serviceValues[field.name]
 		
 		if fieldValue ~= nil then
-			if fieldKind == 'TK_INTERFACE' then
-				local objProvider = convertToCoral( fieldValue._providerTable, objModel )
-				service[fieldName] = conversionCache[fieldValue]
+			hasChange = (assignmentCache[ serviceValues ] ~= nil) and (assignmentCache[ serviceValues ][field.name] ~= nil)
+			refVec = (fieldKind == 'TK_ARRAY') and (field.type.elementType.kind == 'TK_INTERFACE' )
+			if refVec then
+				local serviceArray = {}
+				for _, svInd in ipairs( fieldValue ) do
+					convertToCoral( svInd._providerTable, objModel, spaceLoader )
+					serviceArray[ #serviceArray + 1 ] = conversionCache[ svInd ]
+				end
+				service[fieldName] = serviceArray
 				
-			elseif fieldKind == 'TK_ARRAY' then
-				local elementType = field.type.elementType
-				if elementType.kind == 'TK_INTERFACE' then
-					local serviceArray = {}
-					for _, svInd in ipairs( fieldValue ) do
-						convertToCoral( svInd._providerTable, objModel )
-						serviceArray[ #serviceArray + 1 ] = conversionCache[ svInd ]
-					end
-					service[fieldName] = serviceArray
-				else
-					service[fieldName] = fieldValue
+				if hasChange then
+					spaceLoader:addRefVecChange( service, field, service[fieldName] )
+				end
+			elseif fieldKind == 'TK_INTERFACE' then
+				local objProvider = convertToCoral( fieldValue._providerTable, objModel, spaceLoader )
+				service[fieldName] = conversionCache[fieldValue]
+				if hasChange then
+					spaceLoader:addRefChange( service, field, service[fieldName] )
 				end
 			elseif fieldKind == 'TK_STRUCT' then
 				local struct = service[fieldName]
@@ -275,8 +292,23 @@ function fillServiceValues( service, serviceValues, objModel )
 					struct[k] = v
 				end
 				service[fieldName] = struct
+				if hasChange then
+					spaceLoader:addChange( service, field, service[fieldName] )
+				end
 			else
 				service[fieldName] = fieldValue
+				if hasChange then
+					spaceLoader:addChange( service, field, service[fieldName] )
+				end
+			end
+		end
+		if assignmentCache[ serviceValues ] ~= nil then
+			if assignmentCache[ serviceValues ][field.name] ~= nil then
+				if refVec then
+					spaceLoader:addRefVecChange( service, field, service[fieldName] )
+				else
+					spaceLoader:addChange( service, field, service[fieldName] )
+				end
 			end
 		end
 	end

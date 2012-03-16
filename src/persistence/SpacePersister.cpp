@@ -26,6 +26,7 @@
 
 #include <set>
 #include <map>
+#include <deque>
 
 #include <ca/IObjectChanges.h>
 #include <ca/ChangedConnection.h>
@@ -44,6 +45,7 @@ namespace ca {
 
 class SpacePersister : public SpacePersister_Base
 {
+	
 public:
 	SpacePersister()
 	{
@@ -67,7 +69,7 @@ public:
 
 	void onSpaceChanged( ca::ISpaceChanges* changes )
 	{
-		_spaceChanges.push_back( changes );
+		cacheChanges( changes );
 	}
 
 	void insertObjectCache( co::IService* obj, co::uint32 id )
@@ -85,6 +87,48 @@ public:
 		_updateList = updateList;
 	}
 
+	void addChange( co::IService* service, co::IMember* member, const co::Any& newValue )
+	{
+		Change change;
+		change.member = member;
+		co::Any storedValue = newValue;
+
+		if( newValue.getType() != NULL && ( newValue.getType()->getKind() == co::TK_NATIVECLASS || newValue.getType()->getKind() == co::TK_NATIVECLASS ) )
+		{
+			storedValue.makeOut( newValue.getType() );
+		}
+
+		if( newValue.getKind() == co::TK_STRING )
+		{
+			storedValue.makeOut( co::typeOf<std::string>::get() );
+		}
+
+		valuePool.push_back( newValue );
+		change.newValuePtr.newValue = &valuePool.back();
+
+		addChange( service, change );
+
+	}
+
+	void addRefChange( co::IService* service, co::IMember* member, co::IService* newValue )
+	{
+		Change change;
+		change.member = member;
+		refPool.push_back( newValue );
+		change.newValuePtr.newRef = &refPool.back();
+
+		addChange( service, change );
+	}
+
+	void addRefVecChange( co::IService* service, co::IMember* member, co::RefVector<co::IService>& newValue )
+	{
+		Change change;
+		change.member = member;
+		refVecPool.push_back( newValue );
+		change.newValuePtr.newRefVec = &refVecPool.back();
+
+		addChange( service, change );
+	}
 	// ------ ca.ISpacePersister Methods ------ //
 
 	void initialize( co::IObject* rootObject )
@@ -199,14 +243,6 @@ public:
 			CORAL_THROW( ca::IOException, "Attempt to save changes in a intermediary revision" );
 		}
 
-		co::RefPtr<ca::ISpaceChanges> current;
-		for( int i = 0; i < _spaceChanges.size(); i++ )
-		{
-			current = _spaceChanges[ i ];
-
-			cacheChanges( current.get() );
-		}
-
 		std::vector<std::string> fieldNames;
 		std::vector<std::string> values;
 		
@@ -229,90 +265,14 @@ public:
 						_spaceStore->setRootObject( getObjectId( object ) );
 					}
 				}
-				else
-				{
-					if( getObjectId( service ) == 0 )
-					{
-						co::IPort* facet = service->getFacet();
-						co::uint32 providerId = getObjectId( object );
-						saveService( service, facet, providerId );
-
-						ChangeSetCache::iterator itCache = _changeCache.find( object );
-
-						bool objInserted = ( itCache != _changeCache.end() );
-
-						newChangeSet.clear();
-						ChangeSet &objChangeSet = ( objInserted ) ? itCache->second : newChangeSet;
-
-						Change change;
-						change.member = facet;
-						change.newValue = *it;
-						objChangeSet.insert(  change );
-
-						if( !objInserted )
-						{
-							_changeCache.insert( ChangeSetCache::value_type( object, objChangeSet ) );
-						}
-					}
-				}
-				
 			}
 
 			for( ChangeSetCache::iterator it = _changeCache.begin(); it != _changeCache.end(); it++ )
 			{
 				co::uint32 objectId = getObjectId( it->first );
-
 				for( ChangeSet::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++ )
 				{
-					
-					std::string valueStr;
-					if( it2->newValue.getKind() == co::TK_ARRAY )
-					{
-						co::IType* elementType = it2->newValue.getType();
-
-						if( elementType->getKind() == co::TK_INTERFACE )
-						{
-							//RefVector value. get database ids;
-							const co::RefVector<co::IService>& services = it2->newValue.get<const co::RefVector<co::IService>&>();
-
-							std::vector<co::uint32> serviceIds;
-							for( int i = 0; i < services.size(); i++ )
-							{
-								serviceIds.push_back( getObjectId( services[i].get() ) );
-							}
-
-							co::Any serviceIdsAny;
-							serviceIdsAny.set< const std::vector< co::uint32 >& >( serviceIds );
-
-							_serializer.toString( serviceIdsAny, valueStr );
-							valueStr.insert( 0, "#" );
-						}
-						else
-						{
-							_serializer.toString( it2->newValue, valueStr );
-						}
-					}
-					else if( it2->newValue.getKind() == co::TK_INTERFACE )
-					{
-						co::IService* service = it2->newValue.get<co::IService*>();
-						if( service == NULL)
-						{
-							valueStr = "nil";
-						}
-						else
-						{
-							_serializer.toString( getObjectId( service ), valueStr );
-							valueStr.insert( 0, "#" );
-						}
-					}
-					else
-					{
-						_serializer.toString( it2->newValue, valueStr );
-					}
-
-					fieldNames.push_back( it2->member->getName() );
-					values.push_back( valueStr );
-
+					saveChange( *(it2), fieldNames, values );
 				}
 
 				_spaceStore->addValues( objectId, fieldNames, values );
@@ -330,10 +290,11 @@ public:
 			throw;
 		}
 
-
 		_addedObjects.clear();
 		_changeCache.clear();
-		_spaceChanges.clear();
+		valuePool.clear();
+		refPool.clear();
+		refVecPool.clear();
 	}
 
 protected:
@@ -548,11 +509,26 @@ private:
 
 	void clear()
 	{
+		_changeCache.clear();
 		_objectIdCache.clear();
 
 		if( _space != NULL )
 		{
 			_space->removeSpaceObserver( this );
+		}
+	}
+
+	void prepareValue( const co::Any& inValue, co::Any& outValue )
+	{
+		outValue = inValue;
+		if( inValue.getType() != NULL && ( inValue.getType()->getKind() == co::TK_NATIVECLASS || inValue.getType()->getKind() == co::TK_NATIVECLASS ) )
+		{
+			outValue.makeOut( inValue.getType() );
+		}
+
+		if( inValue.getKind() == co::TK_STRING )
+		{
+			outValue.makeOut( co::typeOf<std::string>::get() );
 		}
 	}
 
@@ -581,26 +557,34 @@ private:
 				continue;
 			}
 
-			ChangeSetCache::iterator it = _changeCache.find( objectChanges->getObject() );
-
-			bool objInserted = ( it != _changeCache.end() );
-
-			changeSet.clear();
-			ChangeSet &objChangeSet = ( objInserted ) ? it->second : changeSet;
-
-			for( int k = 0; k < objectChanges->getChangedConnections().getSize(); k++ )
+			if( objectChanges->getChangedConnections().getSize() > 0 )
 			{
-				ca::ChangedConnection changedConn = objectChanges->getChangedConnections()[k];
+				ChangeSetCache::iterator it = _changeCache.find( objectChanges->getObject() );
 
-				change.member = changedConn.receptacle.get();
-				change.newValue = changedConn.current.get();
-				objChangeSet.insert( change );
+				bool objInserted = ( it != _changeCache.end() );
+
+				changeSet.clear();
+				ChangeSet &objChangeSet = ( objInserted ) ? it->second : changeSet;
+
+				for( int k = 0; k < objectChanges->getChangedConnections().getSize(); k++ )
+				{
+					ca::ChangedConnection changedConn = objectChanges->getChangedConnections()[k];
+
+					change.member = changedConn.receptacle.get();
+
+					refPool.push_back( changedConn.current );
+					change.newValuePtr.newRef = &changedConn.current;
+
+					objChangeSet.insert( change );
+				}
+
+				if( !objInserted )
+				{
+					_changeCache.insert( ChangeSetCache::value_type( objectChanges->getObject(), objChangeSet ) );
+				}
 			}
 
-			if( !objInserted )
-			{
-				_changeCache.insert( ChangeSetCache::value_type( objectChanges->getObject(), objChangeSet ) );
-			}
+			
 
 			for( int k = 0; k < objectChanges->getChangedServices().getSize(); k++ )
 			{
@@ -616,14 +600,26 @@ private:
 				for( int l = 0; l < changedServ->getChangedValueFields().getSize(); l++ )
 				{
 					change.member = changedServ->getChangedValueFields()[l].field.get();
-					change.newValue =  changedServ->getChangedValueFields()[l].current;
+
+					const co::Any& current = changedServ->getChangedValueFields()[l].current;
+
+					co::Any newValue;
+					prepareValue( current, newValue );
+
+					valuePool.push_back( newValue );
+					change.newValuePtr.newValue = &(valuePool.back());
+
 					serviceChangeSet.insert( change );
+					
 				}
 
 				for( int l = 0; l < changedServ->getChangedRefFields().getSize(); l++ )
 				{
 					change.member = changedServ->getChangedRefFields()[l].field.get();
-					change.newValue =  changedServ->getChangedRefFields()[l].current.get();
+					refPool.push_back( changedServ->getChangedRefFields()[l].current );
+
+					change.newValuePtr.newRef = &refPool.back();
+
 					serviceChangeSet.insert( change );
 				}
 
@@ -631,7 +627,8 @@ private:
 				{
 					change.member = changedServ->getChangedRefVecFields()[l].field.get();
 
-					change.newValue.set< const co::RefVector<co::IService>& >( changedServ->getChangedRefVecFields()[l].current );
+					refVecPool.push_back( changedServ->getChangedRefVecFields()[l].current );
+					change.newValuePtr.newRefVec = &refVecPool.back();
 					serviceChangeSet.insert( change );
 				}
 
@@ -661,6 +658,102 @@ private:
 		}
 	}
 
+	struct Change; //forward declaration
+
+	void addChange( co::IService* service, const Change& change )
+	{
+		ChangeSetCache::iterator itCache = _changeCache.find( service );
+
+		bool objInserted = ( itCache != _changeCache.end() );
+
+		ChangeSet newChangeSet;
+
+		newChangeSet.clear();
+		ChangeSet &objChangeSet = ( objInserted ) ? itCache->second : newChangeSet;
+
+		objChangeSet.insert(  change );
+
+		if( !objInserted )
+		{
+			_changeCache.insert( ChangeSetCache::value_type( service, objChangeSet ) );
+		}
+	}
+
+	void saveChange( const Change& change, std::vector<std::string>& fieldNames, std::vector<std::string>& values )
+	{
+		co::IField* field = dynamic_cast<co::IField*>( change.member );
+
+		std::string valueStr;
+
+		if( field != NULL )
+		{
+			if(field->getType()->getKind() == co::TK_ARRAY )
+			{
+				co::IType* elementType = co::cast<co::IArray>(field->getType())->getElementType();
+
+				if( elementType->getKind() == co::TK_INTERFACE )
+				{
+					//RefVector value. get database ids;
+					const co::RefVector<co::IService>& services = *( change.newValuePtr.newRefVec );
+
+					std::vector<co::uint32> serviceIds;
+					for( int i = 0; i < services.size(); i++ )
+					{
+						serviceIds.push_back( getObjectId( services[i].get() ) );
+					}
+
+					co::Any serviceIdsAny;
+					serviceIdsAny.set< const std::vector< co::uint32 >& >( serviceIds );
+
+					_serializer.toString( serviceIdsAny, valueStr );
+					valueStr.insert( 0, "#" );
+				}
+				else
+				{
+					const co::Any& value = *( change.newValuePtr.newValue );
+
+					_serializer.toString( value, valueStr );
+				}
+			}
+			else if( field->getType()->getKind() == co::TK_INTERFACE )
+			{
+				co::IService* service = change.newValuePtr.newRef->get();
+				if( service == NULL)
+				{
+					valueStr = "nil";
+				}
+				else
+				{
+					_serializer.toString( getObjectId( service ), valueStr );
+					valueStr.insert( 0, "#" );
+				}
+			}
+			else 
+			{
+				const co::Any& value = * (change.newValuePtr.newValue);
+
+				_serializer.toString( value, valueStr );
+			}
+		}
+		else //port
+		{
+			co::IService* service = change.newValuePtr.newRef->get();
+			if( service == NULL)
+			{
+				valueStr = "nil";
+			}
+			else
+			{
+				_serializer.toString( getObjectId( service ), valueStr );
+				valueStr.insert( 0, "#" );
+			}
+		}
+
+		fieldNames.push_back( change.member->getName() );
+		values.push_back( valueStr );
+	}
+
+
 private:
 	typedef std::map<const std::string, std::string> FieldValueMap;
 	typedef std::map<co::IService*, co::uint32> ObjectIdMap;
@@ -669,8 +762,14 @@ private:
 	{
 	public:
 		co::IMember* member;
-		co::Any newValue;
 
+		union{		
+			co::Any* newValue;
+			co::RefPtr<co::IService>* newRef;
+			co::RefVector<co::IService>* newRefVec;
+		} newValuePtr;
+
+		
 		bool operator< ( const Change& change ) const
 		{
 			return member < change.member;
@@ -681,17 +780,16 @@ private:
 			return member == change.member;
 		}
 
-		Change& operator=( const Change& change )
-		{
-			member = change.member;
-			newValue = change.newValue;
-		}
 	};
 
 	typedef std::set<Change> ChangeSet;
 	typedef std::set<co::IService*> ObjectSet;
 
 	typedef std::map<co::IService*, ChangeSet> ChangeSetCache;
+
+	typedef std::deque<co::RefPtr<co::IService> > RefPool;
+	typedef std::deque<co::RefVector<co::IService> > RefVecPool;
+	typedef std::deque<co::Any> ValuePool;
 
 private:
 
@@ -711,6 +809,10 @@ private:
 
 	ChangeSetCache _changeCache;
 	ObjectSet _addedObjects;
+
+	RefPool refPool;
+	RefVecPool refVecPool;
+	ValuePool valuePool;
 
 };
 
