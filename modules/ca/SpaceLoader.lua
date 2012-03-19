@@ -67,11 +67,7 @@ end
 function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 	if idCache[serviceId] == nil then
 		
-		print( "-" .. objectId .. " " .. serviceId )
-	
 		local typeName = spaceStore:getObjectType( serviceId, revision )
-		
-		print( typeName )
 		
 		namespaces[ extractNamespaceFullName( typeName ) ] = true
 		
@@ -83,7 +79,6 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		fieldNames, values = spaceStore:getValues( serviceId, revision )
 		
 		for i, value in ipairs( values ) do
-			print( "values " .. fieldNames[i] .. " " .. values[i] )
 			local idServiceStr = value:sub( 2 )
 			if  refKind( value ) == 1 then
 				local chunk = load( "return " .. idServiceStr )
@@ -107,7 +102,6 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				
 				for i, idService in ipairs( idServiceList ) do
 					local objProvider = spaceStore:getServiceProvider( idService, revision )
-					print ( "objProvider " .. objProvider )
 					restoreObject( spaceStore, objModel, objProvider, revision )
 					
 					serviceList[ #serviceList + 1 ] = idCache[ idService ]
@@ -128,9 +122,7 @@ end
 
 function restoreObject( spaceStore, objModel, objectId, revision )
 	if idCache[objectId] == nil then
-		print( objectId .. " " .. revision )
 		local typeName = spaceStore:getObjectType( objectId, revision )
-		print( typeName	)
 		local luaObjectTable = { _type = typeName, _id = objectId }
 		
 		idCache[ objectId ] = track( luaObjectTable )
@@ -140,7 +132,6 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 		fieldNames, values = spaceStore:getValues( objectId, revision )
 		
 		for i, value in ipairs( values ) do
-			print( i .. " " .. value )
 			serviceIdStr = value:sub(2)
 			local chunk = load( "return " .. serviceIdStr )
 			local serviceId = chunk()
@@ -154,7 +145,6 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 end
 
 function restore( space, spaceStore, objModel, revision, spaceLoader )
-print( '========================================================' )
 	spaceStore:open()
 	
 	local rootId = spaceStore:getRootObject( revision )
