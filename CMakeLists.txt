@@ -28,15 +28,6 @@ set( CORAL_PATH
 include_directories( ${CORAL_INCLUDE_DIRS} )
 
 ################################################################################
-# Installation
-################################################################################
-
-# enforce a safe default CMAKE_INSTALL_PREFIX
-if( NOT CMAKE_INSTALL_PREFIX MATCHES "coral-calcium" )
-	set( CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/coral-calcium" )
-endif()
-
-################################################################################
 # Packaging
 ################################################################################
 
@@ -45,12 +36,6 @@ set( CPACK_PACKAGE_VERSION_MAJOR		"0" )
 set( CPACK_PACKAGE_VERSION_MINOR		"1" )
 set( CPACK_PACKAGE_VERSION_PATCH		"0" )
 set( CPACK_PACKAGE_DESCRIPTION_SUMMARY	"Calcium is a versatile and minimally intrusive domain object model framework." )
-
-if( WIN32 )
-	set( CPACK_GENERATOR "ZIP" )
-else()
-	set( CPACK_GENERATOR "TBZ2" )
-endif()
 
 include( CPack )
 
