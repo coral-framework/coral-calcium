@@ -19,8 +19,8 @@ if( GTEST_FOUND )
 	add_subdirectory( src )
 	add_subdirectory( dom1 )
 	add_subdirectory( dom2 )
-	
-	ADD_CUSTOM_TARGET( tests DEPENDS testsCore tests_dom1 tests_dom2 )
+
+	add_custom_target( tests DEPENDS tests_core tests_dom1 tests_dom2 )
 
 else()
 	message( "WARNING: gtest not found - all tests have been disabled!" )
