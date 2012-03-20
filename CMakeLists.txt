@@ -10,13 +10,8 @@ project( CALCIUM )
 # Setup Coral
 ################################################################################
 
-# Resolve the CORAL_ROOT
-file( TO_CMAKE_PATH "$ENV{CORAL_ROOT}" CORAL_ROOT )
-
-# Add Coral's CMake dir to the CMAKE_MODULE_PATH
-set( CMAKE_MODULE_PATH ${CORAL_ROOT}/cmake ${CMAKE_MODULE_PATH} )
-
 # Load Coral's CMake package
+set( CMAKE_MODULE_PATH "${CORAL_ROOT}/cmake" "$ENV{CORAL_ROOT}/cmake" ${CMAKE_MODULE_PATH} )
 find_package( Coral REQUIRED )
 
 # Configure the coral path
