@@ -19,25 +19,23 @@ if( GTEST_FOUND )
 	add_subdirectory( src )
 	add_subdirectory( dom1 )
 	add_subdirectory( dom2 )
+
+	add_custom_target( tests DEPENDS tests_core tests_dom1 tests_dom2 )
 	
-	ADD_CUSTOM_TARGET( tests DEPENDS testsCore tests_dom1 tests_dom2 )
-	
-	FILE( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
-	ADD_TEST(
+	file( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
+	add_test(
 		NAME tests_dom1_pass1
 		COMMAND $<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1Pass1$<CONFIGURATION>.xml --gtest_filter=*pass1*
 	)
 	CORAL_TEST_ENVIRONMENT( tests_dom1_pass1 )
 
-	FILE( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
-	ADD_TEST(
+	add_test(
 		NAME tests_dom2
 		COMMAND $<TARGET_FILE:tests_dom2> --gtest_output=xml:../output/TestsDom2$<CONFIGURATION>.xml
 	)
 	CORAL_TEST_ENVIRONMENT( tests_dom2 )
 	
-	FILE( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
-	ADD_TEST(
+	add_test(
 		NAME tests_dom1_pass2
 		COMMAND $<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1Pass2$<CONFIGURATION>.xml --gtest_filter=*pass2*
 	)
