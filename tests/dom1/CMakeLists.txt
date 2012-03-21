@@ -68,15 +68,6 @@ TARGET_LINK_LIBRARIES( tests_dom1 ${GTEST_LIBRARIES} )
 source_group( "@Generated" FILES ${_GENERATED_FILES} )
 
 ################################################################################
-# Register the test
-################################################################################
-FILE( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
-ADD_TEST(
-	NAME tests_dom1
-	COMMAND $<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1$<CONFIGURATION>.xml
-)
-CORAL_TEST_ENVIRONMENT( tests_dom1 )
-################################################################################
 # If Valgrind is available, repeat the test checking for memory leaks
 ################################################################################
 IF( VALGRIND_COMMAND )

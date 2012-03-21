@@ -72,11 +72,11 @@ public:
 
 TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 {
-	std::string fileName = "../dom1/CompanyV1.db";
+	std::string fileName = "CompanyV1.db";
 
 	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
 
-	ASSERT_NO_THROW( persister->restore() );
+	persister->restore();
 
 	ca::ISpace * spaceRestored = persister->getSpace();
 	
@@ -144,6 +144,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	ASSERT_TRUE( company != NULL );
 
 	products = company->getProducts();
+	
 	ASSERT_EQ( 1, products.getSize() );
 
 	EXPECT_EQ( "Software2.0", products[0]->getName() );
@@ -165,6 +166,9 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	EXPECT_EQ( 10000, manager->getSalary() );
 
 	EXPECT_EQ( "Manager", manager->getRole() );
+	manager->setRole("Development Manager");
+	spaceRestored->addChange( manager );
+	spaceRestored->notifyChanges();
 
 	services = company->getServices();
 	ASSERT_EQ( 1, services.getSize() );
@@ -187,4 +191,65 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	EXPECT_EQ( "Wiliam Kanban Expert", devs[2]->getName() );
 	EXPECT_EQ( 9000, devs[2]->getSalary() );
 
+	devs[2]->setSalary( 15000 );
+	spaceRestored->addChange( devs[2] );
+	spaceRestored->notifyChanges();
+
+	ASSERT_NO_THROW( persisterToRestore->save() );
+
+	co::RefPtr<ca::ISpacePersister> persisterToRestore2 = createPersister( fileName );
+
+	ASSERT_NO_THROW( persisterToRestore2->restore() );
+
+	spaceRestored = persisterToRestore2->getSpace();
+
+	objRest = spaceRestored->getRootObject();
+
+	company = objRest->getService<dom::ICompany>();
+	ASSERT_TRUE( company != NULL );
+
+	products = company->getProducts();
+
+	ASSERT_EQ( 1, products.getSize() );
+
+	EXPECT_EQ( "Software2.0", products[0]->getName() );
+	EXPECT_EQ( 1000000, products[0]->getValue() );
+
+	devs = products[0]->getDevelopers();
+
+	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
+	EXPECT_EQ( 1000, devs[0]->getSalary() );
+	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+	EXPECT_EQ( 4000, devs[1]->getSalary() );
+
+	EXPECT_EQ( "Developer", devs[0]->getRole() );
+	EXPECT_EQ( "Developer", devs[1]->getRole() );
+
+	manager = products[0]->getLeader();
+
+	EXPECT_EQ( "Richard Scrum Master", manager->getName() );
+	EXPECT_EQ( 10000, manager->getSalary() );
+
+	EXPECT_EQ( "Development Manager", manager->getRole() );
+
+	services = company->getServices();
+	ASSERT_EQ( 1, services.getSize() );
+
+	EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
+	EXPECT_EQ( 50000, services[0]->getMonthlyIncome() );
+
+	devs = services[0]->getMantainers();
+
+	ASSERT_EQ( 3, devs.getSize() );
+
+	EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
+	EXPECT_EQ( 5000, devs[0]->getSalary() );
+	EXPECT_EQ( "Developer", devs[0]->getRole() );
+
+	EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
+	EXPECT_EQ( 3000, devs[1]->getSalary() );
+	EXPECT_EQ( "Developer", devs[1]->getRole() );
+
+	EXPECT_EQ( "Wiliam Kanban Expert", devs[2]->getName() );
+	EXPECT_EQ( 15000, devs[2]->getSalary() );
 }

@@ -67,12 +67,7 @@ source_group( "@Generated" FILES ${_GENERATED_FILES} )
 ################################################################################
 # Register the test
 ################################################################################
-FILE( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
-ADD_TEST(
-	NAME tests_dom2
-	COMMAND $<TARGET_FILE:tests_dom2> --gtest_output=xml:../output/TestsDom2$<CONFIGURATION>.xml
-)
-CORAL_TEST_ENVIRONMENT( tests_dom2 )
+
 ################################################################################
 # If Valgrind is available, repeat the test checking for memory leaks
 ################################################################################

@@ -176,14 +176,6 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	space:setRootObject( coralObj )
 	space:notifyChanges()
 	
-	for k, v in pairs( conversionCache ) do
-		if k._id == nil then
-			spaceLoader:insertNewObject( v )
-		else
-			spaceLoader:insertObjectCache( v, k._id )
-		end
-	end
-	
 	spaceLoader:setUpdateList( appliedUpdates )
 end
 
@@ -226,6 +218,12 @@ function convertToCoral( obj, objModel, spaceLoader )
 		
 		conversionCache[ obj ] = root
 		
+		if obj._id == nil then
+			spaceLoader:insertNewObject( root )
+		else
+			spaceLoader:insertObjectCache( root, obj._id )
+		end
+		
 		if (assignmentCache[ obj ] ~= nil) and (assignmentCache[ obj ]["_type"] ~= nil) then
 			spaceLoader:addTypeChange( root, obj._type )
 		end
@@ -255,6 +253,12 @@ end
 
 function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	conversionCache[serviceValues] = service
+	
+	if serviceValues._id == nil then
+		spaceLoader:insertNewObject( service )
+	else
+		spaceLoader:insertObjectCache( service, serviceValues._id )
+	end
 	
 	local fields = objModel:getFields( service.interface )
 	

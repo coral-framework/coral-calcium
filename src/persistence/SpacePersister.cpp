@@ -103,8 +103,8 @@ public:
 			storedValue.makeOut( co::typeOf<std::string>::get() );
 		}
 
-		valuePool.push_back( newValue );
-		change.newValuePtr.newValue = &valuePool.back();
+		_valuePool.push_back( newValue );
+		change.newValuePtr.newValue = &_valuePool.back();
 
 		addChange( service, change );
 
@@ -114,8 +114,8 @@ public:
 	{
 		Change change;
 		change.member = member;
-		refPool.push_back( newValue );
-		change.newValuePtr.newRef = &refPool.back();
+		_refPool.push_back( newValue );
+		change.newValuePtr.newRef = &_refPool.back();
 
 		addChange( service, change );
 	}
@@ -124,8 +124,8 @@ public:
 	{
 		Change change;
 		change.member = member;
-		refVecPool.push_back( newValue );
-		change.newValuePtr.newRefVec = &refVecPool.back();
+		_refVecPool.push_back( newValue );
+		change.newValuePtr.newRefVec = &_refVecPool.back();
 
 		addChange( service, change );
 	}
@@ -137,8 +137,8 @@ public:
 		co::Any anyNewType;
 		anyNewType.set<const std::string&>( newType );
 		anyNewType.makeOut( co::typeOf<std::string>::get() );
-		valuePool.push_back( anyNewType );
-		change.newValuePtr.newValue = &valuePool.back();
+		_valuePool.push_back( anyNewType );
+		change.newValuePtr.newValue = &_valuePool.back();
 
 		addChange( service, change );
 	}
@@ -313,9 +313,9 @@ public:
 
 		_addedObjects.clear();
 		_changeCache.clear();
-		valuePool.clear();
-		refPool.clear();
-		refVecPool.clear();
+		_valuePool.clear();
+		_refPool.clear();
+		_refVecPool.clear();
 	}
 
 protected:
@@ -531,6 +531,7 @@ private:
 	void clear()
 	{
 		_changeCache.clear();
+		_addedObjects.clear();
 		_objectIdCache.clear();
 
 		if( _space != NULL )
@@ -593,7 +594,7 @@ private:
 
 					change.member = changedConn.receptacle.get();
 
-					refPool.push_back( changedConn.current );
+					_refPool.push_back( changedConn.current );
 					change.newValuePtr.newRef = &changedConn.current;
 
 					objChangeSet.insert( change );
@@ -627,8 +628,8 @@ private:
 					co::Any newValue;
 					prepareValue( current, newValue );
 
-					valuePool.push_back( newValue );
-					change.newValuePtr.newValue = &(valuePool.back());
+					_valuePool.push_back( newValue );
+					change.newValuePtr.newValue = &(_valuePool.back());
 
 					serviceChangeSet.insert( change );
 					
@@ -637,9 +638,9 @@ private:
 				for( int l = 0; l < changedServ->getChangedRefFields().getSize(); l++ )
 				{
 					change.member = changedServ->getChangedRefFields()[l].field.get();
-					refPool.push_back( changedServ->getChangedRefFields()[l].current );
+					_refPool.push_back( changedServ->getChangedRefFields()[l].current );
 
-					change.newValuePtr.newRef = &refPool.back();
+					change.newValuePtr.newRef = &_refPool.back();
 
 					serviceChangeSet.insert( change );
 				}
@@ -648,8 +649,8 @@ private:
 				{
 					change.member = changedServ->getChangedRefVecFields()[l].field.get();
 
-					refVecPool.push_back( changedServ->getChangedRefVecFields()[l].current );
-					change.newValuePtr.newRefVec = &refVecPool.back();
+					_refVecPool.push_back( changedServ->getChangedRefVecFields()[l].current );
+					change.newValuePtr.newRefVec = &_refVecPool.back();
 					serviceChangeSet.insert( change );
 				}
 
@@ -703,7 +704,7 @@ private:
 	void saveChange( const Change& change, std::vector<std::string>& fieldNames, std::vector<std::string>& values )
 	{
 
-		if( change.member == NULL )
+		if( change.member == NULL ) //hack for type change
 		{
 			fieldNames.push_back( "_type" );
 
@@ -843,9 +844,9 @@ private:
 	ChangeSetCache _changeCache;
 	ObjectSet _addedObjects;
 
-	RefPool refPool;
-	RefVecPool refVecPool;
-	ValuePool valuePool;
+	RefPool _refPool;
+	RefVecPool _refVecPool;
+	ValuePool _valuePool;
 
 };
 
