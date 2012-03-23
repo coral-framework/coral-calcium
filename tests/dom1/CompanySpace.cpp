@@ -66,8 +66,6 @@ co::IObject* CompanySpace::createCompanyGraph()
 {
 	co::IType* devType = co::getType( "dom.Developer" );
 
-	CORAL_DLOG(INFO) << devType->getFullName();
-
 	// create a simple object graph with 2 entities and 1 relationship
 	_developer1 = co::newInstance( "dom.Developer" )->getService<dom::IDeveloper>();
 	_developer1->setName( "John Cplusplus Experienced" );

@@ -276,10 +276,10 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	for i, field in ipairs( fields ) do
 		fieldKind = field.type.kind
 		fieldName = field.name
-		fieldValue = serviceValues[field.name]
+		fieldValue = serviceValues[fieldName]
 		
 		if fieldValue ~= nil then
-			hasChange = (assignmentCache[ serviceValues ] ~= nil) and (assignmentCache[ serviceValues ][field.name] ~= nil)
+			hasChange = (assignmentCache[ serviceValues ] ~= nil) and (assignmentCache[ serviceValues ][fieldName] ~= nil)
 			refVec = (fieldKind == 'TK_ARRAY') and (field.type.elementType.kind == 'TK_INTERFACE' )
 			if refVec then
 				local serviceArray = {}

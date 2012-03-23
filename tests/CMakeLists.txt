@@ -16,28 +16,36 @@ if( GTEST_FOUND )
 		message( "WARNING: valgrind not found - all memory tests have been disabled!" )
 	endif()
 
+	set( CORAL_PATH ${CORAL_PATH}
+		"${CORAL_ROOT}/modules"
+	)
+	
 	add_subdirectory( src )
 	add_subdirectory( dom1 )
 	add_subdirectory( dom2 )
 
 	add_custom_target( tests DEPENDS tests_core tests_dom1 tests_dom2 )
 	
+	file( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bdEvoTest )
 	file( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
 	add_test(
 		NAME tests_dom1_pass1
-		COMMAND $<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1Pass1$<CONFIGURATION>.xml --gtest_filter=*pass1*
+		COMMAND ${CMAKE_COMMAND} chdir -E ${CMAKE_BINARY_DIR}/bdEvoTest
+		$<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1Pass1$<CONFIGURATION>.xml --gtest_filter=*pass1*
 	)
 	CORAL_TEST_ENVIRONMENT( tests_dom1_pass1 )
 
 	add_test(
 		NAME tests_dom2
-		COMMAND $<TARGET_FILE:tests_dom2> --gtest_output=xml:../output/TestsDom2$<CONFIGURATION>.xml
+		COMMAND ${CMAKE_COMMAND} chdir -E ${CMAKE_BINARY_DIR}/bdEvoTest
+		$<TARGET_FILE:tests_dom2> --gtest_output=xml:../output/TestsDom2$<CONFIGURATION>.xml
 	)
 	CORAL_TEST_ENVIRONMENT( tests_dom2 )
 	
 	add_test(
 		NAME tests_dom1_pass2
-		COMMAND $<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1Pass2$<CONFIGURATION>.xml --gtest_filter=*pass2*
+		COMMAND ${CMAKE_COMMAND} chdir -E ${CMAKE_BINARY_DIR}/bdEvoTest
+		$<TARGET_FILE:tests_dom1> --gtest_output=xml:../output/TestsDom1Pass2$<CONFIGURATION>.xml --gtest_filter=*pass2*
 	)
 	CORAL_TEST_ENVIRONMENT( tests_dom1_pass2 )
 	

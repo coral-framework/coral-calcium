@@ -463,6 +463,7 @@ private:
 			fieldNames.push_back( field->getName() );
 			values.push_back( fieldValueStr );
 		}
+
 		_spaceStore->addValues( objId, fieldNames, values );
 	}
 
@@ -715,7 +716,7 @@ private:
 			return;
 		}
 
-		co::IField* field = dynamic_cast<co::IField*>( change.member );
+		co::IField* field = static_cast<co::IField*>( change.member );
 
 		std::string valueStr;
 

@@ -71,7 +71,8 @@ source_group( "@Generated" FILES ${_GENERATED_FILES} )
 if( VALGRIND_COMMAND )
 	add_test(
 		NAME tests_dom1_MemoryCheck
-		COMMAND ${VALGRIND_COMMAND} --leak-check=full --show-reachable=yes --num-callers=15 --dsymutil=yes
+		COMMAND ${CMAKE_COMMAND} chdir -E ${CMAKE_BINARY_DIR}/bdEvoTest
+		${VALGRIND_COMMAND} --leak-check=full --show-reachable=yes --num-callers=15 --dsymutil=yes
 		--log-file=${CMAKE_BINARY_DIR}/ValgrindDom1$<CONFIGURATION>.log --error-exitcode=13
 		--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp $<TARGET_FILE:tests_dom1>
 	)
