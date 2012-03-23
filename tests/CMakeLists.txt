@@ -15,10 +15,6 @@ if( GTEST_FOUND )
 	if( NOT VALGRIND_COMMAND )
 		message( "WARNING: valgrind not found - all memory tests have been disabled!" )
 	endif()
-
-	set( CORAL_PATH ${CORAL_PATH}
-		"${CORAL_ROOT}/modules"
-	)
 	
 	add_subdirectory( src )
 	add_subdirectory( dom1 )
