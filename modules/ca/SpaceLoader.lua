@@ -79,8 +79,9 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		fieldNames, values = spaceStore:getValues( serviceId, revision )
 		
 		for i, value in ipairs( values ) do
-			local idServiceStr = value:sub( 2 )
-			if  refKind( value ) == 1 then
+			local refKind = refKind( value )
+			if  refKind == 1 then
+				local idServiceStr = value:sub( 2 )
 				local chunk = load( "return " .. idServiceStr )
 				local idServiceFieldValue = chunk()
 				
@@ -93,7 +94,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 					
 					luaObjectTable[ fieldNames[i] ] = idCache[ idServiceFieldValue ]
 				end
-			elseif refKind( value ) == 2 then
+			elseif refKind == 2 then
 				local idServiceListStr = value:sub( 2 )
 				local chunk = load( "return " .. idServiceListStr )
 				local idServiceList = chunk()
@@ -164,7 +165,7 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 
 	for _, script in ipairs( availableUpdates ) do
 		if not hasApplied[script] then
-			applyUpdate( script, track( obj ), spaceLoader )
+			applyUpdate( script, track( obj ) )
 			appliedUpdates = appliedUpdates .. script ..";"
 		end
 	end
@@ -172,11 +173,11 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	spaceStore:close()
 
 	coralObj = convertToCoral( obj, objModel, spaceLoader )
-	
 	space:setRootObject( coralObj )
 	space:notifyChanges()
 	
 	spaceLoader:setUpdateList( appliedUpdates )
+	
 end
 
 function loadCaModels( objModel )
@@ -186,17 +187,26 @@ function loadCaModels( objModel )
 
 end
 
-function applyUpdate( updateScript, coralGraph, spaceLoader )
+function applyUpdate( updateScript, coralGraph )
 	local path = co.findScript( updateScript )
 	
+	if path == nil then
+		coRaise( "ca.IOException", "Script file not found" )
+	end
+	
 	local file, err = io.open( path, 'rb' )
+	
 	if file then
 		local chunk, err = load( file:lines( 4096 ), path, 't' )
 		
 		if ( chunk ) then
 			file:close()
 			chunk()
-			local ok, result = pcall( update, coralGraph, spaceLoader )
+			local ok, result = pcall( update, coralGraph )
+			
+			-- unload the chunk and update function
+			chunk = nil
+			update = nil
 			
 			if not ok then
 				coRaise( "ca.IOException", result )

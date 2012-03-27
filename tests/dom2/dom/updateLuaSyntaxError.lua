@@ -1,5 +1,5 @@
 
-function companyUpdate( node )
+function companyUpdate( node, spaceLoader )
 	local company = node.company
 	
 	local projects = company.projects
@@ -20,7 +20,7 @@ function companyUpdate( node )
 	company.projects = nil
 end
 
-function projectUpdate( node )
+function projectUpdate( node, spaceLoader )
 	local devs = {}
 	
 	local project = node.project
@@ -66,7 +66,7 @@ function projectUpdate( node )
 	
 end
 
-function convertToEmployee( node )
+function convertToEmployee( node, spaceLoader )
 	if( node._type == "dom.Manager" ) then
 		node.employee = node.manager
 		node.employee.role = "Manager"
@@ -78,18 +78,17 @@ function convertToEmployee( node )
 	end
 	node.employee._type = "dom.IEmployee"
 	node._type = "dom.Employee"
-		
 end
 
 local updateFunctions
 updateFunctions = { ["dom.Company"] = companyUpdate, ["dom.Manager"] = convertToEmployee, ["dom.Developer"] = convertToEmployee, ["dom.Project"] = projectUpdate,}
 		
-function update( node )
+function update( node, spaceLoader )
 	
 	if node ~= nil then
-		local updateFunc = updateFunctions[ node._type ]
+		local updateFunc = updateFunct[ node._type ]
 		
-		updateFunc( node )
+		updateFunc( node, spaceLoader )
 	end
 	
 end

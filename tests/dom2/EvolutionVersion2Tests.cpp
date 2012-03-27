@@ -41,7 +41,7 @@ public:
 		
 	}
 
-	co::RefPtr<ca::ISpacePersister> createPersister( const std::string& fileName )
+	co::RefPtr<ca::ISpacePersister> createPersister( const std::string& fileName, const std::string& modelName )
 	{
 		co::IObject* persisterObj = co::newInstance( "ca.SpacePersister" );
 		co::RefPtr<ca::ISpacePersister> persister = persisterObj->getService<ca::ISpacePersister>();
@@ -53,7 +53,7 @@ public:
 
 		co::IObject* modelObj = co::newInstance( "ca.Model" );
 		ca::IModel* model = modelObj->getService<ca::IModel>();
-		model->setName( "dom" );
+		model->setName( modelName );
 
 
 		_universe = universeObj->getService<ca::IUniverse>();
@@ -70,13 +70,41 @@ public:
 
 };
 
+TEST_F( EvolutionVersion2Tests, testScriptNotFound )
+{
+	std::string fileName = "CompanyV1.db";
+
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "notfound" );
+
+	ASSERT_THROW( persister->restore(), ca::IOException );
+
+}
+
+TEST_F( EvolutionVersion2Tests, testScriptWithoutUpdateFunc )
+{
+	std::string fileName = "CompanyV1.db";
+
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "scriptNoUpdate" );
+
+	ASSERT_THROW( persister->restore(), ca::IOException );
+}
+
+TEST_F( EvolutionVersion2Tests, testSyntaxErrorUpdate )
+{
+	std::string fileName = "CompanyV1.db";
+
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "syntaxerror" );
+
+	ASSERT_THROW( persister->restore(), ca::IOException );
+}
+
 TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 {
 	std::string fileName = "CompanyV1.db";
 
-	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "dom" );
 
-	persister->restore();
+	persister->restore() ;
 
 	ca::ISpace * spaceRestored = persister->getSpace();
 	
@@ -132,7 +160,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 
 	ASSERT_NO_THROW( persister->save() );
 
-	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName, "dom" );
 
 	ASSERT_NO_THROW( persisterToRestore->restore() );
 
@@ -197,9 +225,9 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 
 	ASSERT_NO_THROW( persisterToRestore->save() );
 
-	co::RefPtr<ca::ISpacePersister> persisterToRestore2 = createPersister( fileName );
+	co::RefPtr<ca::ISpacePersister> persisterToRestore2 = createPersister( fileName, "dom" );
 
-	ASSERT_NO_THROW( persisterToRestore2->restore() );
+	persisterToRestore2->restore() ;
 
 	spaceRestored = persisterToRestore2->getSpace();
 
@@ -253,3 +281,4 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	EXPECT_EQ( "Wiliam Kanban Expert", devs[2]->getName() );
 	EXPECT_EQ( 15000, devs[2]->getSalary() );
 }
+

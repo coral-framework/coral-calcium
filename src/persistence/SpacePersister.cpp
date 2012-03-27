@@ -59,7 +59,7 @@ public:
 		{
 			_spaceStore->close();
 		}
-		if( _space != NULL )
+		if( _space != NULL && _space->getRootObject() != NULL )
 		{
 			_space->removeSpaceObserver( this );
 		}
@@ -238,7 +238,6 @@ public:
 			clear();
 			_trackedRevision = revision;
 			restoreLua( _trackedRevision );
-			_space->addSpaceObserver( this );
 
 		}
 		catch( ... )
@@ -341,7 +340,7 @@ protected:
 		assert( universe );
 		_universe = universe;
 		_model = static_cast<ca::IModel*>( _universe->getProvider()->getService( "model" ) );
-		_serializer.setModel( _model );
+		_serializer.setModel( _model.get() );
 	}
 
 private:
@@ -360,7 +359,7 @@ private:
 		co::Any args[5];
 		args[0].set<ca::ISpace*>( getSpace() );
 		args[1].set<ca::ISpaceStore*>( _spaceStore.get() );
-		args[2].set<ca::IModel*>( _model );
+		args[2].set<ca::IModel*>( _model.get() );
 		args[3].set<co::uint32>( revision );
 		args[4].set<ca::ISpaceLoader*>( this );
 
@@ -535,10 +534,6 @@ private:
 		_addedObjects.clear();
 		_objectIdCache.clear();
 
-		if( _space != NULL )
-		{
-			_space->removeSpaceObserver( this );
-		}
 	}
 
 	void prepareValue( const co::Any& inValue, co::Any& outValue )
@@ -833,9 +828,7 @@ private:
 	co::RefPtr<ca::ISpaceStore> _spaceStore;
 
 	StringSerializer _serializer;
-	ca::IModel* _model;
-
-	co::RefVector<ca::ISpaceChanges> _spaceChanges;
+	co::RefPtr<ca::IModel> _model;
 
 	co::uint32 _trackedRevision;
 	std::string _updateList;
