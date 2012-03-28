@@ -99,6 +99,11 @@ TEST_F( Evolution1Version1Tests, pass1CreateCompanyV1File )
 	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
 	EXPECT_EQ( 4000, devs[1]->getSalary() );
 
+	//forcing one more revision
+	devs[1]->setSalary( 5000 );
+	spaceRestored->addChange( devs[1] );
+	spaceRestored->notifyChanges();
+
 	dom::IManager* manager = projects[0]->getManager();
 
 	EXPECT_EQ( "Richard Scrum Master", manager->getName() );
@@ -117,15 +122,17 @@ TEST_F( Evolution1Version1Tests, pass1CreateCompanyV1File )
 	EXPECT_EQ( "Wiliam Kanban Expert", manager->getName() );
 	EXPECT_EQ( 9000, manager->getSalary() );
 
+	ASSERT_NO_THROW( persisterToRestore->save() );
+
 }
 
-TEST_F( Evolution1Version1Tests, pass2CreateCompanyV1File ) // assure the bd file still valid
+TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision ) // assure the bd file still valid
 {
 	std::string fileName = "CompanyV1.db";
 
 	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
 
-	ASSERT_NO_THROW( persisterToRestore->restoreRevision( 1 ) );
+	ASSERT_NO_THROW( persisterToRestore->restoreRevision( 2 ) );
 
 	ca::ISpace * spaceRestored = persisterToRestore->getSpace();
 
@@ -152,7 +159,7 @@ TEST_F( Evolution1Version1Tests, pass2CreateCompanyV1File ) // assure the bd fil
 	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 	EXPECT_EQ( 1000, devs[0]->getSalary() );
 	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
-	EXPECT_EQ( 4000, devs[1]->getSalary() );
+	EXPECT_EQ( 5000, devs[1]->getSalary() );
 
 	dom::IManager* manager = projects[0]->getManager();
 
@@ -172,4 +179,13 @@ TEST_F( Evolution1Version1Tests, pass2CreateCompanyV1File ) // assure the bd fil
 	EXPECT_EQ( "Wiliam Kanban Expert", manager->getName() );
 	EXPECT_EQ( 9000, manager->getSalary() );
 
+}
+
+TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileInvalidRevision ) // can not restore revision from future version (yet)
+{
+	std::string fileName = "CompanyV1.db";
+
+	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+
+	ASSERT_THROW( persisterToRestore->restore(), ca::IOException );
 }

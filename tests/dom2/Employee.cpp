@@ -43,8 +43,8 @@ namespace dom {
 		const std::string& getName() { return _name; }
 		void setName( const std::string& name ) { _name = name; }
 
-		double getSalary() { return _salary; }
-		void setSalary( double salary ) { _salary = salary; }
+		co::int32 getSalary() { return _salary; }
+		void setSalary( co::int32 salary ) { _salary = salary; }
 
 	protected:
 
@@ -54,7 +54,7 @@ namespace dom {
 		dom::IService* _service;
 		std::string _name;
 		std::string _role;
-		double _salary;
+		co::int32 _salary;
 
 	};
 

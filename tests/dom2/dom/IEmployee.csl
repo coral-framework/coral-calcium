@@ -4,7 +4,7 @@ interface IEmployee
 	
 	string role;
 	
-	double salary;
+	int32 salary;
 	
 	IProduct product;
 	IService service;

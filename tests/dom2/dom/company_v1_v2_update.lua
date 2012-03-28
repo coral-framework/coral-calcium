@@ -27,16 +27,12 @@ function projectUpdate( node )
 	
 	for _, dev in ipairs( project.developers ) do
 		devProvider = dev._providerTable
-		update( devProvider, spaceLoader )
+		update( devProvider )
 		devs[ #devs + 1 ] = devProvider.employee
 	end
 	if ( project.isService ) then
 
 		node._type = "dom.Service"
-		
-		devProvider = project.manager._providerTable
-		update( devProvider, spaceLoader )
-		devs[ #devs + 1 ] = devProvider.employee
 		
 		node.service = {
 						_type = "dom.IService", 
@@ -58,7 +54,7 @@ function projectUpdate( node )
 						_providerTable = node,
 					}
 		leaderObj = project.manager._providerTable
-		update( leaderObj, spaceLoader )
+		update( leaderObj )
 		node.product.leader = leaderObj.employee
 		node.project = nil
 

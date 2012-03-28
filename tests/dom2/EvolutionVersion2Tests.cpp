@@ -29,6 +29,7 @@
 #include <ca/NoSuchObjectException.h>
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
+
 #include <cstdio>
 
 
@@ -80,15 +81,6 @@ TEST_F( EvolutionVersion2Tests, testScriptNotFound )
 
 }
 
-TEST_F( EvolutionVersion2Tests, testScriptWithoutUpdateFunc )
-{
-	std::string fileName = "CompanyV1.db";
-
-	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "scriptNoUpdate" );
-
-	ASSERT_THROW( persister->restore(), ca::IOException );
-}
-
 TEST_F( EvolutionVersion2Tests, testSyntaxErrorUpdate )
 {
 	std::string fileName = "CompanyV1.db";
@@ -98,16 +90,25 @@ TEST_F( EvolutionVersion2Tests, testSyntaxErrorUpdate )
 	ASSERT_THROW( persister->restore(), ca::IOException );
 }
 
-TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
+TEST_F( EvolutionVersion2Tests, testScriptWithoutUpdateFunc )
+{
+	std::string fileName = "CompanyV1.db";
+
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "scriptNoUpdate" );
+
+	ASSERT_THROW( persister->restore(), ca::IOException );
+}
+
+TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FilePreviousRevision )
 {
 	std::string fileName = "CompanyV1.db";
 
 	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "dom" );
 
-	persister->restore() ;
+	ASSERT_NO_THROW( persister->restoreRevision( 1 ) ); // restore allowed
 
 	ca::ISpace * spaceRestored = persister->getSpace();
-	
+
 	co::IObject* objRest = spaceRestored->getRootObject();
 
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
@@ -144,7 +145,66 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 
 	devs = services[0]->getMantainers();
 
-	ASSERT_EQ( 3, devs.getSize() );
+	ASSERT_EQ( 2, devs.getSize() );
+
+	EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
+	EXPECT_EQ( 5000, devs[0]->getSalary() );
+	EXPECT_EQ( "Developer", devs[0]->getRole() );
+
+	EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
+	EXPECT_EQ( 3000, devs[1]->getSalary() );
+	EXPECT_EQ( "Developer", devs[1]->getRole() );
+
+	ASSERT_THROW( persister->save(), ca::IOException ); //save not allowed
+}
+
+TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
+{
+	std::string fileName = "CompanyV1.db";
+
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "dom" );
+
+	ASSERT_NO_THROW( persister->restore() );
+
+	ca::ISpace * spaceRestored = persister->getSpace();
+	
+	co::IObject* objRest = spaceRestored->getRootObject();
+
+	dom::ICompany* company = objRest->getService<dom::ICompany>();
+	ASSERT_TRUE( company != NULL );
+
+	co::Range<dom::IProduct* const> products = company->getProducts();
+	ASSERT_EQ( 1, products.getSize() );
+
+	EXPECT_EQ( "Software2.0", products[0]->getName() );
+	EXPECT_EQ( 1000000, products[0]->getValue() );
+
+	co::Range<dom::IEmployee* const> devs = products[0]->getDevelopers();
+
+	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
+	EXPECT_EQ( 1000, devs[0]->getSalary() );
+	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+	EXPECT_EQ( 5000, devs[1]->getSalary() );
+
+	EXPECT_EQ( "Developer", devs[0]->getRole() );
+	EXPECT_EQ( "Developer", devs[1]->getRole() );
+
+	dom::IEmployee* manager = products[0]->getLeader();
+
+	EXPECT_EQ( "Richard Scrum Master", manager->getName() );
+	EXPECT_EQ( 10000, manager->getSalary() );
+
+	EXPECT_EQ( "Manager", manager->getRole() );
+
+	co::Range<dom::IService* const> services = company->getServices();
+	ASSERT_EQ( 1, services.getSize() );
+
+	EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
+	EXPECT_EQ( 50000, services[0]->getMonthlyIncome() );
+
+	devs = services[0]->getMantainers();
+
+	ASSERT_EQ( 2, devs.getSize() );
 
 
 	EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
@@ -155,10 +215,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	EXPECT_EQ( 3000, devs[1]->getSalary() );
 	EXPECT_EQ( "Developer", devs[1]->getRole() );
 
-	EXPECT_EQ( "Wiliam Kanban Expert", devs[2]->getName() );
-	EXPECT_EQ( 9000, devs[2]->getSalary() );
-
-	ASSERT_NO_THROW( persister->save() );
+	ASSERT_NO_THROW( persister->save() ); //save allowed
 
 	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName, "dom" );
 
@@ -183,7 +240,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 	EXPECT_EQ( 1000, devs[0]->getSalary() );
 	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
-	EXPECT_EQ( 4000, devs[1]->getSalary() );
+	EXPECT_EQ( 5000, devs[1]->getSalary() );
 
 	EXPECT_EQ( "Developer", devs[0]->getRole() );
 	EXPECT_EQ( "Developer", devs[1]->getRole() );
@@ -206,7 +263,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 
 	devs = services[0]->getMantainers();
 
-	ASSERT_EQ( 3, devs.getSize() );
+	ASSERT_EQ( 2, devs.getSize() );
 
 	EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
 	EXPECT_EQ( 5000, devs[0]->getSalary() );
@@ -216,11 +273,8 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	EXPECT_EQ( 3000, devs[1]->getSalary() );
 	EXPECT_EQ( "Developer", devs[1]->getRole() );
 
-	EXPECT_EQ( "Wiliam Kanban Expert", devs[2]->getName() );
-	EXPECT_EQ( 9000, devs[2]->getSalary() );
-
-	devs[2]->setSalary( 15000 );
-	spaceRestored->addChange( devs[2] );
+	devs[1]->setSalary( 4000 );
+	spaceRestored->addChange( devs[1] );
 	spaceRestored->notifyChanges();
 
 	ASSERT_NO_THROW( persisterToRestore->save() );
@@ -248,7 +302,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 	EXPECT_EQ( 1000, devs[0]->getSalary() );
 	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
-	EXPECT_EQ( 4000, devs[1]->getSalary() );
+	EXPECT_EQ( 5000, devs[1]->getSalary() );
 
 	EXPECT_EQ( "Developer", devs[0]->getRole() );
 	EXPECT_EQ( "Developer", devs[1]->getRole() );
@@ -268,17 +322,14 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1File )
 
 	devs = services[0]->getMantainers();
 
-	ASSERT_EQ( 3, devs.getSize() );
+	ASSERT_EQ( 2, devs.getSize() );
 
 	EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
 	EXPECT_EQ( 5000, devs[0]->getSalary() );
 	EXPECT_EQ( "Developer", devs[0]->getRole() );
 
 	EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
-	EXPECT_EQ( 3000, devs[1]->getSalary() );
+	EXPECT_EQ( 4000, devs[1]->getSalary() );
 	EXPECT_EQ( "Developer", devs[1]->getRole() );
-
-	EXPECT_EQ( "Wiliam Kanban Expert", devs[2]->getName() );
-	EXPECT_EQ( 15000, devs[2]->getSalary() );
 }
 

@@ -27,7 +27,7 @@ Type "dom.ICompany"
 Type "dom.IEmployee"
 {
 	name = "string",
-	salary = "double",
+	salary = "int32",
 	role = "string",
 }
 
