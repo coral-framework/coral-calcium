@@ -35,7 +35,11 @@ public:
 		assert( !_fileName.empty() );
 
 		_db.open( _fileName );
-		createTables();
+
+		if( checkEmptyValidDatabase() )
+		{
+			createTables();
+		}
 		fillLatestRevision();
 
 	}
@@ -312,6 +316,18 @@ private:
 		{
 			CORAL_THROW( ca::IOException, "Attempt to call a store modification routine without calling 'beginChanges' before." );
 		}
+	}
+
+	bool checkEmptyValidDatabase()
+	{
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name" );
+		ca::SQLiteResult rs = stmt.query();
+		
+		bool valid = !rs.next();
+
+		stmt.finalize();
+
+		return valid;
 	}
 
 	void createTables()

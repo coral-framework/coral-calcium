@@ -8,6 +8,8 @@
 #include <co/reserved/OS.h>
 #include <ca/IOException.h>
 
+#include <fstream>
+
 
 class SQLiteSpaceStoreTests : public ::testing::Test
 {
@@ -319,4 +321,41 @@ TEST_F( SQLiteSpaceStoreTests, addGetServiceTest )
 
 	spaceStore->close();
 
+}
+
+TEST_F( SQLiteSpaceStoreTests, invalidFilesTest )
+{
+	fileName = "textFile.db";
+
+	std::fstream fileWriter( fileName.c_str() );
+	fileWriter << "regular text file";
+	fileWriter.close();
+
+	spaceStoreObj = co::newInstance( "ca.SQLiteSpaceStore" );
+
+	(spaceStoreObj->getService<ca::INamed>())->setName( fileName );
+
+	spaceStore = spaceStoreObj->getService<ca::ISpaceStore>();
+
+	ASSERT_THROW( spaceStore->open(), ca::IOException );
+
+	ca::SQLiteConnection conn;
+	fileName = "otherDbFile.db";
+	remove( fileName.c_str() );
+	conn.open( fileName );
+
+	ASSERT_NO_THROW( conn.prepare( "CREATE TABLE [DUMMY] (\
+					 [DUMMY_COL] VARCHAR(128) )").execute() );
+	
+	conn.close();
+
+	// sqlite database from other use, not empty.
+
+	spaceStoreObj = co::newInstance( "ca.SQLiteSpaceStore" );
+
+	(spaceStoreObj->getService<ca::INamed>())->setName( fileName );
+
+	spaceStore = spaceStoreObj->getService<ca::ISpaceStore>();
+
+	ASSERT_THROW( spaceStore->open(), ca::IOException );
 }

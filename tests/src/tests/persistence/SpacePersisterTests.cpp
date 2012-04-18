@@ -133,7 +133,27 @@ inline erm::Multiplicity mult( co::int32 min, co::int32 max )
 	return m;
 }
 
-TEST_F( SpacePersisterTests, exceptionsTest )
+TEST_F( SpacePersisterTests, misuseTest )
+{
+	std::string fileName = "SimpleSpaceSave.db";
+
+	remove( fileName.c_str() );
+
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
+
+	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
+
+	//double initialize not allowed
+	ASSERT_THROW( persister->initialize( _erm->getProvider() ), ca::IOException );
+
+	co::RefPtr<ca::ISpacePersister> otherPersister = createPersister( fileName );
+	//cannot initialize with other persister either
+	ASSERT_THROW( otherPersister->initialize( _erm->getProvider() ), ca::IOException );
+
+	ASSERT_THROW( otherPersister->restoreRevision( 10 ), ca::IOException );
+}
+
+TEST_F( SpacePersisterTests, badInitializationTest )
 {
 	co::RefPtr<co::IObject> persisterObj = co::newInstance( "ca.SpacePersister" );
 	ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();

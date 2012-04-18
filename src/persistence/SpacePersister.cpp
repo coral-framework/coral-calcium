@@ -146,13 +146,19 @@ public:
 
 	void initialize( co::IObject* rootObject )
 	{
-		assert( !_space );
+		assertSpaceNotSet();
+
 		if( !_spaceStore.isValid() )
 		{
 			throw co::IllegalStateException("space file was not set, could not setup");
 		}
 
 		_spaceStore->open();
+
+		if( _spaceStore->getLatestRevision() > 0 )
+		{
+			CORAL_THROW( ca::IOException, "Space Store not empty, cannot initialize again" );
+		}
 
 		try
 		{
@@ -188,8 +194,6 @@ public:
 
 		_trackedRevision = 1;
 
-		assert( _spaceStore->getLatestRevision() == 1 );
-
 		_space->addSpaceObserver( this );
 
 		_spaceStore->close();
@@ -203,7 +207,7 @@ public:
 
 	void restore()
 	{
-		assert( !_space );
+		assertSpaceNotSet();
 		if( !_spaceStore.isValid() )
 		{
 			throw co::IllegalStateException("space store was not set, can't restore a space");
@@ -218,7 +222,7 @@ public:
 
 	void restoreRevision( co::uint32 revision )
 	{
-		assert( !_space );
+		assertSpaceNotSet();
 		if( !_spaceStore.isValid() )
 		{
 			throw co::IllegalStateException("space store was not set, can't restore a space");
@@ -344,6 +348,14 @@ protected:
 	}
 
 private:
+
+	void assertSpaceNotSet()
+	{
+		if( _space != NULL )
+		{
+			CORAL_THROW( ca::IOException, "Space already initialized/restored" );
+		}
+	}
 
 	void restoreLua( co::uint32 revision )
 	{
