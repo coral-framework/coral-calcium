@@ -326,8 +326,11 @@ TEST_F( SQLiteSpaceStoreTests, addGetServiceTest )
 TEST_F( SQLiteSpaceStoreTests, invalidFilesTest )
 {
 	fileName = "textFile.db";
+	remove( fileName.c_str() );
 
-	std::fstream fileWriter( fileName.c_str() );
+
+	std::fstream fileWriter;
+	fileWriter.open( fileName.c_str(), std::fstream::in | std::fstream::out | std::fstream::trunc);
 	fileWriter << "regular text file";
 	fileWriter.close();
 
