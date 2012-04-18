@@ -37,6 +37,16 @@ namespace dom {
 		void setServices( co::Range<dom::IService* const> services )
 		{
 			co::assign( services, _services );
+
+			for( int i = 0; i < services.getSize(); i++ )
+			{
+				for( int j = 0; j < services[i]->getMantainers(); j++ )
+				{
+					_employees.push_back( services[i]->getMantainers()[j] );
+				}
+				
+			}
+
 		}
 
 		co::Range<IProduct* const> getProducts()
@@ -47,6 +57,16 @@ namespace dom {
 		void setProducts( co::Range<IProduct* const> products )
 		{
 			co::assign( products, _products );
+
+			for( int i = 0; i < products.getSize(); i++ )
+			{
+				for( int j = 0; j < products[i]->getDevelopers(); j++ )
+				{
+					_employees.push_back( products[i]->getDevelopers()[j] );
+				}
+				_employees.push_back( products[i]->getLeader() );
+
+			}
 		}
 
 	private:

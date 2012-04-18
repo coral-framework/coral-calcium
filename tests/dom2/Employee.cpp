@@ -1,6 +1,7 @@
 #include "Employee_Base.h"
-#include <dom/IProduct.h>
-#include <dom/IService.h>
+#include <dom/IProject.h>
+#include <co/RefVector.h>
+#include <co/Range.h>
 
 namespace dom {
 
@@ -27,18 +28,18 @@ namespace dom {
 			_role = role;
 		}
 
-		dom::IService* getService()
+		co::Range<IProject* const> getWorking()
 		{
-			return _service;
+			return _working;
 		}
 
-		void setService( dom::IService* service )
+		void setWorking( co::Range<IProject* const> working )
 		{
-			_service = service;
+			co::assign( working, _working );
 		}
 
-		IProduct* getProduct() { return _product; }
-		void setProduct( IProduct* project ) { _product = _product; }
+		IProject* getLeading() { return _leading.get(); }
+		void setLeading( IProject* leading ) { _leading = leading; }
 
 		const std::string& getName() { return _name; }
 		void setName( const std::string& name ) { _name = name; }
@@ -50,8 +51,8 @@ namespace dom {
 
 
 	private:
-		IProduct* _product;
-		dom::IService* _service;
+		co::RefPtr<IProject> _leading;
+		co::RefVector<IProject> _working;
 		std::string _name;
 		std::string _role;
 		co::int32 _salary;

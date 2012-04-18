@@ -1,7 +1,5 @@
-interface IService
+interface IService extends IProject
 {
-	string name;
-	
 	double monthlyIncome;
 	
 	IEmployee[] mantainers;

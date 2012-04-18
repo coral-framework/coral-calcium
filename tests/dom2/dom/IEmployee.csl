@@ -6,6 +6,6 @@ interface IEmployee
 	
 	int32 salary;
 	
-	IProduct product;
-	IService service;
+	IProject leading;
+	IProject[] working;
 };

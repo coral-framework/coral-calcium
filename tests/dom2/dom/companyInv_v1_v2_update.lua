@@ -3,21 +3,38 @@ function companyUpdate( node )
 	local company = node.company
 	
 	local projects = company.projects
-	local serviceList = {}
-	local productList = {}
+	local employeeList = {}
 	
 	for _, project in ipairs( projects ) do
-		update( project._providerTable )
 		local projectUpdated = project._providerTable
-		if( project.isService ) then
-			serviceList[ #serviceList + 1 ] = projectUpdated.service
-		else
-			productList[ #productList + 1 ] = projectUpdated.product
+		update( projectUpdated )
+		for _, dev in ipairs( project.developers ) do
+			dev.working = {}
+			update( dev._providerTable )
+			dev.working[ #dev.working + 1 ] = getCorrectService( projectUpdated )
+			employeeList[ #employeeList + 1 ] = dev
 		end
+		if( getCorrectService( projectUpdated )._type == "dom.IProduct" ) then
+			local managerEmployee = project.manager._providerTable
+			convertToEmployee( managerEmployee )
+			managerEmployee.employee.leading = getCorrectService( projectUpdated )
+			employeeList[ #employeeList + 1 ] = managerEmployee.employee
+			-- service ignore the manager, removing object
+		end
+		
 	end
-	company.services = serviceList
-	company.products = productList
+	company.employees = employeeList
 	company.projects = nil
+end
+
+function getCorrectService( project )
+
+	if project.service == nil then
+		return project.product
+	else
+		return project.service
+	end
+
 end
 
 function projectUpdate( node )
@@ -25,11 +42,6 @@ function projectUpdate( node )
 	
 	local project = node.project
 	
-	for _, dev in ipairs( project.developers ) do
-		devProvider = dev._providerTable
-		update( devProvider )
-		devs[ #devs + 1 ] = devProvider.employee
-	end
 	if ( project.isService ) then
 
 		node._type = "dom.Service"
@@ -38,7 +50,6 @@ function projectUpdate( node )
 						_type = "dom.IService", 
 						name = project.name,
 						monthlyIncome = project.earnings,
-						mantainers = devs,
 						_providerTable = node,
 					}
 		
@@ -50,11 +61,9 @@ function projectUpdate( node )
 						_type = "dom.IProduct",
 						name = project.name,
 						value = project.earnings,
-						developers = devs,
 						_providerTable = node,
 					}
 		leaderObj = project.manager._providerTable
-		update( leaderObj )
 		node.product.leader = leaderObj.employee
 		node.project = nil
 
@@ -63,7 +72,7 @@ function projectUpdate( node )
 end
 
 function convertToEmployee( node )
-	if( node._type == "dom.Manager" ) then
+	if node._type == "dom.Manager" then
 		node.employee = node.manager
 		node.employee.role = "Manager"
 		node.manager = nil

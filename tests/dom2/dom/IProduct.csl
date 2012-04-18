@@ -1,7 +1,5 @@
-interface IProduct
+interface IProduct extends IProject
 {
-	string name;
-	
 	double value;
 	
 	IEmployee leader;

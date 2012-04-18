@@ -65,7 +65,9 @@ function refKind( fieldValue )
 end
 
 function restoreService( spaceStore, objModel, objectId, serviceId, revision )
-	if idCache[serviceId] == nil then
+	if idCache[objectId] == nil then
+		restoreObject( spaceStore, objModel, objectId, revision )
+	elseif idCache[serviceId] == nil then
 		
 		local typeName = spaceStore:getObjectType( serviceId, revision )
 		
@@ -90,12 +92,13 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				else
 					local objProvider = spaceStore:getServiceProvider( idServiceFieldValue, revision )
 					
-					restoreObject( spaceStore, objModel, objProvider, revision )
+					restoreService( spaceStore, objModel, objProvider, idServiceFieldValue, revision )
 					
 					luaObjectTable[ fieldNames[i] ] = idCache[ idServiceFieldValue ]
 				end
 			elseif refKind == 2 then
 				local idServiceListStr = value:sub( 2 )
+				
 				local chunk = load( "return " .. idServiceListStr )
 				local idServiceList = chunk()
 				
@@ -103,11 +106,13 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				
 				for i, idService in ipairs( idServiceList ) do
 					local objProvider = spaceStore:getServiceProvider( idService, revision )
-					restoreObject( spaceStore, objModel, objProvider, revision )
+					
+					restoreService( spaceStore, objModel, objProvider, idService, revision )
 					
 					serviceList[ #serviceList + 1 ] = idCache[ idService ]
+					
 				end
-				
+			
 				luaObjectTable[ fieldNames[i] ] = serviceList
 				
 			else
@@ -123,9 +128,9 @@ end
 
 function restoreObject( spaceStore, objModel, objectId, revision )
 	if idCache[objectId] == nil then
+		
 		local typeName = spaceStore:getObjectType( objectId, revision )
 		local luaObjectTable = { _type = typeName, _id = objectId }
-		
 		idCache[ objectId ] = track( luaObjectTable )
 		
 		local fieldNames = {}
@@ -171,7 +176,6 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	end
 	
 	spaceStore:close()
-
 	coralObj = convertToCoral( obj, objModel, spaceLoader )
 	space:setRootObject( coralObj )
 	space:notifyChanges()
@@ -287,7 +291,6 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 		fieldKind = field.type.kind
 		fieldName = field.name
 		fieldValue = serviceValues[fieldName]
-		
 		if fieldValue ~= nil then
 			hasChange = (assignmentCache[ serviceValues ] ~= nil) and (assignmentCache[ serviceValues ][fieldName] ~= nil)
 			refVec = (fieldKind == 'TK_ARRAY') and (field.type.elementType.kind == 'TK_INTERFACE' )
@@ -298,7 +301,6 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 					serviceArray[ #serviceArray + 1 ] = conversionCache[ svInd ]
 				end
 				service[fieldName] = serviceArray
-				
 				if hasChange then
 					spaceLoader:addRefVecChange( service, field, service[fieldName] )
 				end

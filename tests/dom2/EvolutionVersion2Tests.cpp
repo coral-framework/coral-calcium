@@ -21,6 +21,8 @@
 #include <dom/IProduct.h>
 #include <dom/IService.h>
 
+#include <co/Log.h>
+
 #include <ca/IModel.h>
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
@@ -157,6 +159,9 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FilePreviousRevision )
 
 	ASSERT_THROW( persister->save(), ca::IOException ); //save not allowed
 }
+
+// i'll put some effort to keep both tests working, for this, it'll be needed two different version 1 databases. 
+// For now, the most complicated one will be run
 
 TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 {
@@ -333,3 +338,149 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 	EXPECT_EQ( "Developer", devs[1]->getRole() );
 }
 
+TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
+{
+	std::string fileName = "CompanyV1Inv.db";
+
+	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName, "domInv" );
+	
+	ASSERT_NO_THROW( persister->restore() );
+	
+	ca::ISpace * spaceRestored = persister->getSpace();
+	
+	co::IObject* objRest = spaceRestored->getRootObject();
+	
+	dom::ICompany* company = objRest->getService<dom::ICompany>();
+	ASSERT_TRUE( company != NULL );
+
+	co::Range<dom::IEmployee* const> employees = company->getEmployees();
+	ASSERT_EQ( 5, employees.getSize() );
+	
+	EXPECT_EQ( "Joseph Java Newbie", employees[0]->getName() );
+	EXPECT_EQ( 1000, employees[0]->getSalary() );
+	EXPECT_EQ( "Developer", employees[0]->getRole() );
+	EXPECT_EQ( NULL, employees[0]->getLeading() );
+
+	ASSERT_EQ( 1, employees[0]->getWorking().getSize() );
+	dom::IProduct* devProduct;
+	ASSERT_NO_THROW( devProduct = co::cast<dom::IProduct>( employees[0]->getWorking()[0] ) );
+	EXPECT_EQ( "Software2.0", devProduct->getName() );
+	EXPECT_EQ( 1000000, devProduct->getValue() );
+
+	EXPECT_EQ( "Michael CSharp Senior", employees[1]->getName() );
+	EXPECT_EQ( 5000, employees[1]->getSalary() );
+	EXPECT_EQ( "Developer", employees[1]->getRole() );
+	EXPECT_EQ( NULL, employees[1]->getLeading() );
+
+	ASSERT_EQ( 1, employees[1]->getWorking().getSize() );
+	ASSERT_NO_THROW( devProduct = co::cast<dom::IProduct>( employees[1]->getWorking()[0] ) );
+	EXPECT_EQ( "Software2.0", devProduct->getName() );
+	EXPECT_EQ( 1000000, devProduct->getValue() );
+
+	EXPECT_EQ( "Richard Scrum Master", employees[2]->getName() );
+	EXPECT_EQ( 10000, employees[2]->getSalary() );
+	EXPECT_EQ( "Manager", employees[2]->getRole() );
+
+	EXPECT_EQ( 0, employees[2]->getWorking().getSize() );
+	ASSERT_TRUE( employees[2]->getLeading() != NULL );
+	ASSERT_NO_THROW( devProduct = co::cast<dom::IProduct>( employees[2]->getLeading() ) );
+
+	EXPECT_EQ( "Software2.0", devProduct->getName() );
+	EXPECT_EQ( 1000000, devProduct->getValue() );
+
+	EXPECT_EQ( "John Cplusplus Experienced", employees[3]->getName() );
+	EXPECT_EQ( 5000, employees[3]->getSalary() );
+	EXPECT_EQ( "Developer", employees[3]->getRole() );
+	EXPECT_EQ( NULL, employees[3]->getLeading() );
+
+	dom::IService* devService; 
+
+	ASSERT_EQ( 1, employees[3]->getWorking().getSize() );
+	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[3]->getWorking()[0] ) );
+	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+
+	EXPECT_EQ( "Jacob Lua Junior", employees[4]->getName() );
+	EXPECT_EQ( 3000, employees[4]->getSalary() );
+	EXPECT_EQ( "Developer", employees[4]->getRole() );
+	EXPECT_EQ( NULL, employees[4]->getLeading() );
+
+	ASSERT_EQ( 1, employees[4]->getWorking().getSize() );
+	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[4]->getWorking()[0] ) );
+	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+
+	ASSERT_NO_THROW( persister->save() );
+
+	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName, "domInv" );
+
+	ASSERT_NO_THROW( persisterToRestore->restore() );
+
+	spaceRestored = persisterToRestore->getSpace();
+
+	objRest = spaceRestored->getRootObject();
+
+	company = objRest->getService<dom::ICompany>();
+	ASSERT_TRUE( company != NULL );
+
+	employees = company->getEmployees();
+	ASSERT_EQ( 5, employees.getSize() );
+
+	EXPECT_EQ( "Joseph Java Newbie", employees[0]->getName() );
+	EXPECT_EQ( 1000, employees[0]->getSalary() );
+	EXPECT_EQ( "Developer", employees[0]->getRole() );
+	EXPECT_EQ( NULL, employees[0]->getLeading() );
+
+	ASSERT_EQ( 1, employees[0]->getWorking().getSize() );
+	ASSERT_NO_THROW( devProduct = co::cast<dom::IProduct>( employees[0]->getWorking()[0] ) );
+	EXPECT_EQ( "Software2.0", devProduct->getName() );
+	EXPECT_EQ( 1000000, devProduct->getValue() );
+
+	EXPECT_EQ( "Michael CSharp Senior", employees[1]->getName() );
+	EXPECT_EQ( 5000, employees[1]->getSalary() );
+	EXPECT_EQ( "Developer", employees[1]->getRole() );
+	EXPECT_EQ( NULL, employees[1]->getLeading() );
+
+	ASSERT_EQ( 1, employees[1]->getWorking().getSize() );
+	ASSERT_NO_THROW( devProduct = co::cast<dom::IProduct>( employees[1]->getWorking()[0] ) );
+	EXPECT_EQ( "Software2.0", devProduct->getName() );
+	EXPECT_EQ( 1000000, devProduct->getValue() );
+
+	EXPECT_EQ( "Richard Scrum Master", employees[2]->getName() );
+	EXPECT_EQ( 10000, employees[2]->getSalary() );
+	EXPECT_EQ( "Manager", employees[2]->getRole() );
+
+	EXPECT_EQ( 0, employees[2]->getWorking().getSize() );
+	ASSERT_TRUE( employees[2]->getLeading() != NULL );
+	ASSERT_NO_THROW( devProduct = co::cast<dom::IProduct>( employees[2]->getLeading() ) );
+
+	EXPECT_EQ( "Software2.0", devProduct->getName() );
+	EXPECT_EQ( 1000000, devProduct->getValue() );
+
+	EXPECT_EQ( "John Cplusplus Experienced", employees[3]->getName() );
+	EXPECT_EQ( 5000, employees[3]->getSalary() );
+	EXPECT_EQ( "Developer", employees[3]->getRole() );
+	EXPECT_EQ( NULL, employees[3]->getLeading() );
+	
+	ASSERT_EQ( 1, employees[3]->getWorking().getSize() );
+	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[3]->getWorking()[0] ) );
+	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+
+	EXPECT_EQ( "Jacob Lua Junior", employees[4]->getName() );
+	EXPECT_EQ( 3000, employees[4]->getSalary() );
+	EXPECT_EQ( "Developer", employees[4]->getRole() );
+	EXPECT_EQ( NULL, employees[4]->getLeading() );
+
+	ASSERT_EQ( 1, employees[4]->getWorking().getSize() );
+	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[4]->getWorking()[0] ) );
+	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+
+	devService->setMonthlyIncome( 60000 );
+	spaceRestored->addChange( devService );
+	spaceRestored->notifyChanges();
+	ASSERT_NO_THROW( persister->save() );
+
+
+}

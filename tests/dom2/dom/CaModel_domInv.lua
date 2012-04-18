@@ -13,20 +13,19 @@ Type "dom.Product"
 	product = "dom.IProduct",
 }
 
+Type "dom.IProject"
+{
+	name = "string",
+}
+
 Type "dom.Service"
 {
 	service = "dom.IService",
 }
 
-Type "dom.IProject"
-{
-	name = "string"
-}
-
 Type "dom.ICompany"
 {
-	products = "dom.IProduct[]",
-	services = "dom.IService[]",
+	employees = "dom.IEmployee[]",
 }
 
 Type "dom.IEmployee"
@@ -34,21 +33,20 @@ Type "dom.IEmployee"
 	name = "string",
 	salary = "int32",
 	role = "string",
+	leading = "dom.IProject",
+	working = "dom.IProject[]",
 }
 
 Type "dom.IProduct"
 {
 	name = "string",
 	value = "double",
-	leader = "dom.IEmployee",
-	developers = "dom.IEmployee[]",
 }
 
 Type "dom.IService"
 {
 	name = "string",
 	monthlyIncome = "double",
-	mantainers = "dom.IEmployee[]",
 }
 
-Update "dom.company_v1_v2_update"
+Update "dom.companyInv_v1_v2_update"
