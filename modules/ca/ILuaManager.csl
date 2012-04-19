@@ -1,0 +1,7 @@
+/*
+	Auxiliary Lua/Calcium interface implemented by ca.LuaManager.
+ */
+interface ILuaManager
+{
+	IGraphObserver observer;
+};

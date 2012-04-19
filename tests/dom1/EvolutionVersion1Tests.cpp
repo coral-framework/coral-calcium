@@ -10,10 +10,6 @@
 
 #include <co/Coral.h>
 #include <co/IObject.h>
-#include <ca/ISpacePersister.h>
-#include <co/RefPtr.h>
-#include <co/Coral.h>
-#include <co/IObject.h>
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
 
@@ -26,11 +22,10 @@
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
-#include <ca/ModelException.h>
-#include <ca/NoSuchObjectException.h>
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
-#include <cstdio>
+#include <ca/ModelException.h>
+#include <ca/ISpacePersister.h>
 
 
 class Evolution1Version1Tests : public CompanySpace 

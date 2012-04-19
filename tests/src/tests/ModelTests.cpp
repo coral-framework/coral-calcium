@@ -80,8 +80,6 @@ TEST( ModelTests, simpleValidModels )
 	ASSERT_TRUE( model->contains( someInterface ) );
 	ASSERT_TRUE( model->contains( someStruct ) );
 
-	
-
 	co::RefVector<co::IField> fields;
 
 	model->getFields( someInterface, fields );

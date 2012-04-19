@@ -3,24 +3,24 @@
  * See copyright notice in LICENSE.md
  */
 
-#include "SpaceChanges.h"
+#include "GraphChanges.h"
 #include <algorithm>
 
 namespace ca {
 
-SpaceChanges::SpaceChanges()
+GraphChanges::GraphChanges()
 {
 	// empty
 }
 
-SpaceChanges::SpaceChanges( ca::ISpace* space, SpaceChanges& o ) : _space( space )
+GraphChanges::GraphChanges( ca::IGraph* graph, GraphChanges& o ) : _graph( graph )
 {
 	std::swap( _addedObjects, o._addedObjects );
 	std::swap( _removedObjects, o._removedObjects );
 	std::swap( _changedObjects, o._changedObjects );
 }
 
-SpaceChanges::~SpaceChanges()
+GraphChanges::~GraphChanges()
 {
 	// empty
 }
@@ -43,9 +43,9 @@ inline int changesKeyCompare( const co::IObject* key, ca::IObjectChanges* change
 	return ( key == object ? 0 : ( key < object ? -1 : 1 ) );
 }
 
-ISpaceChanges* SpaceChanges::finalize( ca::ISpace* space )
+IGraphChanges* GraphChanges::finalize( ca::IGraph* graph )
 {
-	assert( !_space.isValid() );
+	assert( !_graph.isValid() );
 
 	// sort all arrays
 	std::sort( _addedObjects.begin(), _addedObjects.end() );
@@ -53,54 +53,54 @@ ISpaceChanges* SpaceChanges::finalize( ca::ISpace* space )
 	std::sort( _changedObjects.begin(), _changedObjects.end(), changesStdCompare );
 
 	// return a clone with which we swap our state
-	return new SpaceChanges( space, *this );
+	return new GraphChanges( graph, *this );
 }
 
-ca::ISpace* SpaceChanges::getSpace()
+ca::IGraph* GraphChanges::getGraph()
 {
-	return _space.get();
+	return _graph.get();
 }
 
-co::Range<co::IObject* const> SpaceChanges::getAddedObjects()
+co::Range<co::IObject* const> GraphChanges::getAddedObjects()
 {
 	return _addedObjects;
 }
 
-co::Range<co::IObject* const> SpaceChanges::getRemovedObjects()
+co::Range<co::IObject* const> GraphChanges::getRemovedObjects()
 {
 	return _removedObjects;
 }
 
-co::Range<ca::IObjectChanges* const> SpaceChanges::getChangedObjects()
+co::Range<ca::IObjectChanges* const> GraphChanges::getChangedObjects()
 {
 	return _changedObjects;
 }
 
-co::int32 SpaceChanges::findAddedObject( co::IObject* object )
+co::int32 GraphChanges::findAddedObject( co::IObject* object )
 {
 	size_t pos;
 	return co::binarySearch( co::Range<co::IObject* const>( _addedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
-co::int32 SpaceChanges::findRemovedObject( co::IObject* object )
+co::int32 GraphChanges::findRemovedObject( co::IObject* object )
 {
 	size_t pos;
 	return co::binarySearch( co::Range<co::IObject* const>( _removedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
-co::int32 SpaceChanges::findChangedObject( co::IObject* object )
+co::int32 GraphChanges::findChangedObject( co::IObject* object )
 {
 	size_t pos;
 	return co::binarySearch( co::Range<ca::IObjectChanges* const>( _changedObjects ),
 		object, changesKeyCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
-void revertFieldChanges( ISpace* space, IServiceChanges* changes )
+void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 {
 	co::IService* service = changes->getService();
-	space->addChange( service );
+	graph->addChange( service );
 
 	co::Any instance( service ), value;
 
@@ -135,7 +135,7 @@ void revertFieldChanges( ISpace* space, IServiceChanges* changes )
 	}
 }
 
-void SpaceChanges::revertChanges()
+void GraphChanges::revertChanges()
 {
 	// for each changed object
 	for( co::Range<IObjectChanges* const> objects( _changedObjects ); objects; objects.popFirst() )
@@ -150,16 +150,16 @@ void SpaceChanges::revertChanges()
 				object->setServiceAt( connections.getFirst().receptacle.get(),
 								    connections.getFirst().previous.get() );
 			}
-			_space->addChange( object );
+			_graph->addChange( object );
 		}
 
 		// revert field changes for each changed service
 		co::Range<IServiceChanges* const> services = objects.getFirst()->getChangedServices();
 		for( ; services; services.popFirst() )
-			revertFieldChanges( _space.get(), services.getFirst() );
+			revertFieldChanges( _graph.get(), services.getFirst() );
 	}
 }
 
-CORAL_EXPORT_COMPONENT( SpaceChanges, SpaceChanges );
+CORAL_EXPORT_COMPONENT( GraphChanges, GraphChanges );
 
 } // namespace ca

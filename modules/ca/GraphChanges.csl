@@ -1,0 +1,5 @@
+// Provides an immutable list of changes detected in a graph.
+component GraphChanges
+{
+	provides IGraphChanges changes;
+};

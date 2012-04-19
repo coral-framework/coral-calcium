@@ -15,8 +15,8 @@
 #include <ca/IModel.h>
 #include <ca/ISpace.h>
 #include <ca/IUniverse.h>
-#include <ca/ISpaceChanges.h>
-#include <ca/ISpaceObserver.h>
+#include <ca/IGraphChanges.h>
+#include <ca/IGraphObserver.h>
 #include <ca/IObjectChanges.h>
 #include <ca/IObjectObserver.h>
 #include <ca/IServiceChanges.h>
@@ -25,7 +25,6 @@
 #include <ca/ChangedRefVecField.h>
 #include <ca/ChangedValueField.h>
 #include <ca/ChangedConnection.h>
-#include <ca/NoSuchObjectException.h>
 
 #include <erm/IModel.h>
 #include <erm/IEntity.h>
@@ -33,14 +32,14 @@
 #include <erm/Multiplicity.h>
 
 class ERMSpace : public ::testing::Test,
-	public ca::ISpaceObserver,
+	public ca::IGraphObserver,
 	public ca::IObjectObserver,
 	public ca::IServiceObserver
 {
 public:
 	virtual ~ERMSpace() {;}
 
-	void onSpaceChanged( ca::ISpaceChanges* changes );
+	void onGraphChanged( ca::IGraphChanges* changes );
 	void onObjectChanged( ca::IObjectChanges* changes );
 	void onServiceChanged( ca::IServiceChanges* changes );
 
@@ -75,7 +74,7 @@ protected:
 	co::RefPtr<ca::IUniverse> _universe;
 	co::RefPtr<ca::ISpace> _space;
 
-	co::RefPtr<ca::ISpaceChanges> _changes;
+	co::RefPtr<ca::IGraphChanges> _changes;
 	co::RefVector<ca::IObjectChanges> _objectChanges;
 	co::RefVector<ca::IServiceChanges> _serviceChanges;
 

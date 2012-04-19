@@ -11,8 +11,10 @@ project( CALCIUM )
 ################################################################################
 
 # Load Coral's CMake package
-file( TO_CMAKE_PATH "$ENV{CORAL_ROOT}" CORAL_ROOT_ENV )
-set( CMAKE_MODULE_PATH "${CORAL_ROOT}/cmake" "${CORAL_ROOT_ENV}/cmake" ${CMAKE_MODULE_PATH} )
+if( NOT CORAL_ROOT )
+	file( TO_CMAKE_PATH "$ENV{CORAL_ROOT}" CORAL_ROOT )
+endif()
+set( CMAKE_MODULE_PATH "${CORAL_ROOT}/cmake" ${CMAKE_MODULE_PATH} )
 find_package( Coral REQUIRED )
 
 set( CORAL_PATH

@@ -17,8 +17,6 @@ local coRaise = co.raise
 local coTypeOf = co.typeOf
 local coType = co.Type
 
-local printVar = require "lua.printVar"
-
 --------------------------------------------------------------------------------
 -- Calcium Model Wrappers
 --------------------------------------------------------------------------------
@@ -241,11 +239,7 @@ end
 -- ca.LuaArchive
 --------------------------------------------------------------------------------
 
-local LuaArchive = co.Component {
-	name = "ca.LuaArchive",
-	provides = { archive = "ca.IArchive", file = "ca.INamed" },
-	receives = { model = "ca.IModel" },
-}
+local LuaArchive = co.Component "ca.LuaArchive"
 
 function LuaArchive:checkConfig()
 	if not self.model then

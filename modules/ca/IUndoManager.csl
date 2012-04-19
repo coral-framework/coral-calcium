@@ -15,7 +15,7 @@
 	balanced. Currently, all nested calls are ignored, and only the top-level
 	call generates an entry on the undo stack (combining all nested changes).
  */
-interface IUndoManager extends ISpaceObserver
+interface IUndoManager
 {
 	// Whether there are any changes to undo.
 	readonly bool canUndo;

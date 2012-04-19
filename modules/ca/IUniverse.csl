@@ -1,51 +1,7 @@
 /*
-	A unified context for objects under the same model.
-
-	\warning IUniverse is restricted and should not be used
-		directly. Use an ISpace instead.
+	A unified context for shared object graphs under the same model.
  */
-interface IUniverse
+interface IUniverse extends IGraph
 {
-	//---------- Space Registration and Management ----------//
-
-	/*
-		Adds a space to this universe.
-	 */
-	uint16 registerSpace( in ISpace space );
-
-	/*
-		Removes a space from this universe.
-	 */
-	void unregisterSpace( in uint16 spaceId );
-
-	/*
-		Sets the root object of a space.
-		\throw ModelException if \a root's component is not in the object model.
-		\throw co.IllegalStateException if the space's root object has already been set.
-	 */
-	void setRootObject( in uint16 spaceId, in co.IObject root ) raises ModelException, co.IllegalStateException;
-
-	/*
-		Returns the root object of a space.
-	 */
-	co.IObject getRootObject( in uint16 spaceId );
-
-	//---------- Change Tracking and Notifications ----------//
-
-	/*
-		Marks a \a service as having been changed.
-		The service will be checked for changes in the next call to notifyChanges().
-
-		\throw NoSuchObjectException if the object that provides \a service is not in this universe or space.
-		\throw ModelException if the \a service's facet is not in the object model.
-	 */
-	void addChange( in uint16 spaceId, in co.IService service ) raises NoSuchObjectException, ModelException;
-
-	/*
-		Gathers and posts a list of changes (ISpaceChanges) for each space.
-
-		Changes are detected by examining all services marked as changed (e.g.
-		by using addChange()) since the last call to notifyChanges().
-	 */
-	void notifyChanges( in uint16 spaceId );
+	// empty
 };

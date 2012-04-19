@@ -2,6 +2,7 @@
  * Calcium - Domain Model Framework
  * See copyright notice in LICENSE.md
  */
+
 #include "../ERMSpace.h"
 
 #include "persistence/sqlite/sqlite3.h"
@@ -10,7 +11,6 @@
 
 #include <co/Coral.h>
 #include <co/IObject.h>
-#include <ca/ISpacePersister.h>
 #include <co/RefPtr.h>
 #include <co/Coral.h>
 #include <co/IObject.h>
@@ -24,12 +24,10 @@
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
-#include <ca/ModelException.h>
-#include <ca/NoSuchObjectException.h>
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
-#include <cstdio>
-
+#include <ca/ModelException.h>
+#include <ca/ISpacePersister.h>
 
 class SpacePersisterTests : public ERMSpace 
 {
@@ -96,9 +94,6 @@ void applyRefVecChange( ca::ISpace* spaceERM )
 
 void applyAddedObjectChange( ca::ISpace* spaceERM, erm::IEntity* entity )
 {
-	co::IObject* objRest = spaceERM->getRootObject();
-	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
-
 	co::RefPtr<co::IObject> newEntityParent = co::newInstance( "erm.Entity");
 	erm::IEntity* newIEntityParent = newEntityParent->getService<erm::IEntity>();
 	newIEntityParent->setName( "newEntityParent" );
@@ -110,9 +105,6 @@ void applyAddedObjectChange( ca::ISpace* spaceERM, erm::IEntity* entity )
 
 void applyChangeAndRemoveObject( ca::ISpace* spaceERM, erm::IEntity* entity )
 {
-	co::IObject* objRest = spaceERM->getRootObject();
-	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
-
 	//entity must have a parent
 
 	entity->getParent()->setName( "ignored change" );
@@ -165,7 +157,6 @@ TEST_F( SpacePersisterTests, badInitializationTest )
 	remove( fileName.c_str() );
 
 	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
-	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 
 	universeObj->setService("model", _model.get());
 	
@@ -374,7 +365,6 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	ASSERT_NO_THROW( persister->save() );
 	
 	applyAddedObjectChange( spaceInitialized, serviceModel->getEntities()[3] );
-	erm::IEntity* entityToDelete = objRest->getService<erm::IModel>()->getEntities()[3]->getParent();
 	ASSERT_NO_THROW( persister->save() );
 
 	applyChangeAndRemoveObject( spaceInitialized, serviceModel->getEntities()[3] );

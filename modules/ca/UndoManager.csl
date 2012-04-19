@@ -1,11 +1,12 @@
-// Provides an undo manager for an object space.
+// Provides an undo manager for an object graph.
 component UndoManager
 {
 	provides IUndoManager undoManager;
+	provides IGraphObserver graphObserver;
 
 	/*
-		The space this undo manager should track.
-		This must be set once, before the component is ever used.
+		The graph this undo manager should track.
+		This must be set once before the component is first used.
 	 */
-	receives ISpace space;
+	receives IGraph graph;
 };

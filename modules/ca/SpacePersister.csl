@@ -1,8 +1,8 @@
 component SpacePersister
 {
-	provides ISpaceObserver spaceObserver;
+	provides IGraphObserver graphObserver;
 	provides ISpacePersister persister;
 	provides ISpaceLoader spaceLoader;
-	receives ISpaceStore store; 
+	receives ISpaceStore store;
 	receives IUniverse universe;
 };

@@ -232,7 +232,7 @@ TEST_F( SQLiteSpaceStoreTests, revisionNumberTests )
 	ASSERT_TRUE( spaceStore->getLatestRevision() == 0 );
 
 	spaceStore->beginChanges();
-	co::uint32 objectId, otherObjectId, serviceId;
+	co::uint32 objectId, otherObjectId;
 	ASSERT_NO_THROW( objectId = spaceStore->addObject( "type1" ) );
 	//ASSERT_NO_THROW( serviceId = spaceStore->addService( "type2", objectId ) );
 	ASSERT_NO_THROW( otherObjectId = spaceStore->addObject( "type3" ) );

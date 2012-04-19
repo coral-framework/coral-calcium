@@ -9,5 +9,8 @@ interface IModel
 	bool throwsOnSet;
 
 	void addEntity( in IEntity entity );
+	void removeEntity( in IEntity entity );
+
 	void addRelationship( in IRelationship rel );
+	void removeRelationship( in IRelationship rel );
 };

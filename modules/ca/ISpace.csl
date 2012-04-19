@@ -1,93 +1,26 @@
 /*
-	Manages an object graph, providing change tracking and notifications.
+	Manages a connected graph as a subset of a universe.
 
-	Objects are guaranteed to be unique within a space. However, they can be shared
-	by multiple spaces in the same universe, and have copies in different universes.
+	A space's object graph is defined as the set of objects reachable from a
+	\e "root object" through edges and nodes described in a \e "calcium model".
 
-	A note about observers: a space never keeps strong references to its observers;
-	therefore, observers must be removed from a space before they become invalid.
-	It's good practice for an observer to always handle its own addition to/removal from
-	a space, as this allows the observer's destructor to unregister itself if necessary.
+	Objects are always unique within a space, but can be shared by multiple
+	spaces in the same universe, and have duplicates in different universes.
  */
-interface ISpace extends ISpaceObserver
+interface ISpace extends IGraph
 {
-	//---------- Graph Management ----------//
+	// The universe that contains this space.
+	readonly IUniverse universe;
 
-	/*
-		Root of the object graph. In combination with a calcium model (IModel),
-		the root object fully defines the space's object graph.
-	 */
+	// Object that defines this space's graph.
 	readonly co.IObject rootObject;
 
 	/*
-		Sets the space's root object. This can only be done once for every space.
-
-		\throw ModelException if \a root's component is not defined in the calcium model.
+		Initializes the space with the given \a rootObject.
+		\throw ModelException if the \a rootObject's component is not in the calcium model.
 		\throw UnexpectedException if an object raises an exception while the graph is being initialized.
-		\throw co.IllegalStateException if the space's root object has already been set.
+		\throw co.IllegalStateException if the space has already been initialized.
 	 */
-	void setRootObject( in co.IObject root ) raises ModelException, UnexpectedException, co.IllegalStateException;
-
-	//---------- Change Tracking ----------//
-
-	/*
-		Marks a \a service as having been changed.
-		The service will be checked for changes in the next call to notifyChanges().
-
-		\throw NoSuchObjectException if the object that provides \a service is not in this space.
-		\throw ModelException if \a service's interface is not defined in the calcium model.
-	 */
-	void addChange( in co.IService service ) raises NoSuchObjectException, ModelException;
-
-	/*
-		Gathers a list of changes and posts all change notifications.
-
-		Changes are detected by examining all services marked as changed (e.g. by
-		using addChange()) since the last call to notifyChanges().
-
-		\throw UnexpectedException if an object raises an exception while being inspected for changes.
-	 */
-	void notifyChanges() raises UnexpectedException;
-
-	//---------- Change Notifications ----------//
-
-	/*
-		Adds an \a observer to be notified of changes in the space's object graph.
-		\throw co.IllegalArgumentException if \a observer is invalid.
-	 */
-	void addSpaceObserver( in ISpaceObserver observer ) raises co.IllegalArgumentException;
-
-	/*
-		Removes an \a observer from the list of space observers.
-		\throw co.IllegalArgumentException if \a observer is not in the list of space observers.
-	 */
-	void removeSpaceObserver( in ISpaceObserver observer ) raises co.IllegalArgumentException;
-
-	/*
-		Adds an \a observer to be notified of changes to a certain \a object.
-		\throw co.IllegalArgumentException if either \a object or \a observer are invalid.
-	 */
-	void addObjectObserver( in co.IObject object, in IObjectObserver observer )
-		raises co.IllegalArgumentException;
-
-	/*
-		Removes an \a observer from the list of observers of a certain \a object.
-		\throw co.IllegalArgumentException if \a observer is not in the \a object's list of observers.
-	 */
-	void removeObjectObserver( in co.IObject object, in IObjectObserver observer )
-		raises co.IllegalArgumentException;
-
-	/*
-		Adds an \a observer to be notified of changes to a certain \a service.
-		\throw co.IllegalArgumentException if either \a service or \a observer are invalid.
-	 */
-	void addServiceObserver( in co.IService service, in IServiceObserver observer )
-		raises co.IllegalArgumentException;
-
-	/*
-		Removes an \a observer from the list of observers of a certain \a service.
-		\throw co.IllegalArgumentException if \a observer is not in the \a service's list of observers.
-	 */
-	void removeServiceObserver( in co.IService service, in IServiceObserver observer )
-		raises co.IllegalArgumentException;
+	void initialize( in co.IObject rootObject )
+		raises ModelException, UnexpectedException, co.IllegalStateException;
 };

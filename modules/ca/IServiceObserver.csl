@@ -1,5 +1,5 @@
 /*
-	Callback interface to observe changes to a service.
+	Callback interface for observing changes in a service.
  */
 interface IServiceObserver
 {

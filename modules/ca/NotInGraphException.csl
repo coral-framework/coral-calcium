@@ -1,0 +1,2 @@
+// Raised when something is unexpectedly not in an object graph.
+exception NotInGraphException;

@@ -1,0 +1,7 @@
+/*
+	Callback interface for observing changes in a graph.
+ */
+interface IGraphObserver
+{
+	void onGraphChanged( in IGraphChanges changes );
+};

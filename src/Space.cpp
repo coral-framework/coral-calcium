@@ -3,74 +3,17 @@
  * See copyright notice in LICENSE.md
  */
 
+#include "Universe.h"
 #include "Space_Base.h"
-#include <ca/IUniverse.h>
-#include <ca/ISpaceChanges.h>
+#include <ca/IGraphChanges.h>
 #include <ca/IObjectChanges.h>
 #include <ca/IServiceChanges.h>
-#include <ca/ISpaceObserver.h>
-#include <ca/IObjectObserver.h>
-#include <ca/IServiceObserver.h>
-#include <ca/UnexpectedException.h>
 #include <co/Log.h>
 #include <co/Coral.h>
-#include <co/RefPtr.h>
-#include <co/IComponent.h>
-#include <co/IllegalStateException.h>
-#include <co/IllegalArgumentException.h>
 #include <algorithm>
 #include <map>
 
-#define CHECK_NULL_ARG( name ) \
-	if( !name ) throw co::IllegalArgumentException( "illegal null " #name );
-
 namespace ca {
-
-template<typename Observer>
-inline void checkObserverRemoved( int numRemoved, Observer* observer )
-{
-	if( numRemoved == 0 )
-		throw co::IllegalArgumentException( "no such observer in the list" );
-
-	if( numRemoved > 1 )
-	{
-		const char* typeName = "null";
-		if( observer )
-			typeName = observer->getProvider()->getComponent()->getFullName().c_str();
-
-		CORAL_LOG(WARNING) << "ca.Space: observer (" << typeName << ')' <<
-			observer << " was removed " << numRemoved << " times.";
-	}
-}
-
-template<typename Container, typename Observer>
-inline void removeObserver( Container& c, Observer* observer )
-{
-	typename Container::iterator end = c.end();
-	typename Container::iterator newEnd = std::remove( c.begin(), end, observer );
-	int numRemoved = static_cast<int>( std::distance( newEnd, end ) );
-	c.erase( newEnd, end );
-	checkObserverRemoved( numRemoved, observer );
-}
-
-template<typename Container, typename Iterator, typename Observer>
-inline void removeObserver( Container& c, Iterator begin, Iterator end, Observer* observer )
-{
-	int numRemoved = 0;
-	while( begin != end )
-	{
-		if( begin->second == observer )
-		{
-			c.erase( begin++ );
-			++numRemoved;
-		}
-		else
-		{
-			++begin;
-		}
-	}
-	checkObserverRemoved( numRemoved, observer );
-}
 
 class Space : public Space_Base
 {
@@ -82,173 +25,80 @@ public:
 
 	virtual ~Space()
 	{
-		// it is highly recommended that all observers unregister themselves
-		assert( _spaceObservers.empty() );
-
 		if( _universe.isValid() )
-			_universe->unregisterSpace( _spaceId );
+			_universe->spaceUnregister( _spaceId );
 	}
-	
+
+	ca::IModel* getModel()
+	{
+		checkRegistered();
+		return _universe->getModel();
+	}
+
+	ca::IUniverse* getUniverse()
+	{
+		return _universe.get();
+	}
+
 	co::IObject* getRootObject()
 	{
 		checkRegistered();
-		return _universe->getRootObject( _spaceId );
+		return _universe->spaceGetRootObject( _spaceId );
 	}
 
-	void setRootObject( co::IObject* root )
+	void initialize( co::IObject* root )
 	{
 		checkRegistered();
-		_universe->setRootObject( _spaceId, root );
+		_universe->spaceInitialize( _spaceId, root );
 	}
 
 	void addChange( co::IService* facet )
 	{
 		checkRegistered();
-		return _universe->addChange( _spaceId, facet );
+		return _universe->spaceAddChange( _spaceId, facet );
 	}
 
 	void notifyChanges()
 	{
 		checkRegistered();
-		_universe->notifyChanges( _spaceId );
+		_universe->notifyChanges();
 	}
 
-	void onObserverException( const char* what, co::IService* observer, co::Exception& e )
+	void addGraphObserver( ca::IGraphObserver* observer )
 	{
-		co::IObject* obj = observer->getProvider();
-		CORAL_THROW( UnexpectedException, "unexpected " << e.getTypeName()
-			<< " raised by " << what << " (" << obj->getComponent()->getFullName()
-			<< ")" << obj << ": " << e.getMessage() );
+		checkRegistered();
+		_universe->spaceAddGraphObserver( _spaceId, observer );
 	}
 
-	void onSpaceChanged( ca::ISpaceChanges* changes )
+	void removeGraphObserver( ca::IGraphObserver* observer )
 	{
-		// keep track of the current observer for error handling
-		co::IService* currentObserver = NULL;
-
-		// notify all space observers
-		try
-		{
-			size_t numSpaceObservers = _spaceObservers.size();
-			for( size_t i = 0; i < numSpaceObservers; ++i )
-			{
-				currentObserver = _spaceObservers[i];
-				_spaceObservers[i]->onSpaceChanged( changes );
-			}
-		}
-		catch( co::Exception& e )
-		{
-			onObserverException( "space observer", currentObserver, e );
-		}
-
-		// notify observers registered for specific objects/services in the change set
-		co::Range<ca::IObjectChanges* const> changedObjects = changes->getChangedObjects();
-		for( ; changedObjects; changedObjects.popFirst() )
-		{
-			ca::IObjectChanges* objectChanges = changedObjects.getFirst();
-			co::IObject* object = objectChanges->getObject();
-			ObjectObserverMap::iterator it = _objectObserverMap.find( object );
-			if( it == _objectObserverMap.end() )
-				continue;
-
-			// notify object observers
-			try
-			{
-				ObjectObserverList& ool = it->second.objectObservers;
-				size_t numObjectObservers = ool.size();
-				for( size_t i = 0; i < numObjectObservers; ++i )
-				{
-					currentObserver = ool[i];
-					ool[i]->onObjectChanged( objectChanges );
-				}
-			}
-			catch( co::Exception& e )
-			{
-				onObserverException( "object observer", currentObserver, e );
-			}
-
-			// notify observers registered for specific services
-			try
-			{
-				co::Range<IServiceChanges* const> changedServices = objectChanges->getChangedServices();
-				for( ; changedServices; changedServices.popFirst() )
-				{
-					ca::IServiceChanges* serviceChanges = changedServices.getFirst();
-					co::IService* service = serviceChanges->getService();
-					ServiceObserverMapRange range = it->second.serviceObserverMap.equal_range( service );
-					for( ; range.first != range.second; ++range.first )
-					{
-						currentObserver = range.first->second;
-						range.first->second->onServiceChanged( serviceChanges );
-					}
-				}
-			}
-			catch( co::Exception& e )
-			{
-				onObserverException( "service observer", currentObserver, e );
-			}
-		}
-	}
-
-	void addSpaceObserver( ca::ISpaceObserver* observer )
-	{
-		assert( observer != this );
-		CHECK_NULL_ARG( observer );
-		_spaceObservers.push_back( observer );
-	}
-
-	void removeSpaceObserver( ca::ISpaceObserver* observer )
-	{
-		removeObserver( _spaceObservers, observer );
+		checkRegistered();
+		_universe->spaceRemoveGraphObserver( _spaceId, observer );
 	}
 
 	void addObjectObserver( co::IObject* object, ca::IObjectObserver* observer )
 	{
-		CHECK_NULL_ARG( object );
-		CHECK_NULL_ARG( observer );
-		_objectObserverMap[object].objectObservers.push_back( observer );
+		checkRegistered();
+		_universe->addObjectObserver( object, observer );
 	}
 
 	void removeObjectObserver( co::IObject* object, ca::IObjectObserver* observer )
 	{
-		ObjectObserverMap::iterator it = _objectObserverMap.find( object );
-		if( it == _objectObserverMap.end() )
-			throw co::IllegalArgumentException( "object is not being observed" );
-
-		ObjectObserverList& ool = it->second.objectObservers;
-		removeObserver( ool, observer );
-
-		if( ool.empty() && it->second.serviceObserverMap.empty() )
-			_objectObserverMap.erase( it );
+		
+		checkRegistered();
+		_universe->removeObjectObserver( object, observer );
 	}
 
 	void addServiceObserver( co::IService* service, ca::IServiceObserver* observer )
 	{
-		CHECK_NULL_ARG( service );
-		CHECK_NULL_ARG( observer );
-
-		co::IObject* provider = service->getProvider();
-		if( service == provider )
-			throw co::IllegalArgumentException( "illegal service type; for services "
-				"of type 'co.IObject' please call addObjectObserver() instead" );
-
-		_objectObserverMap[provider].serviceObserverMap.insert(
-			ServiceObserverMap::value_type( service, observer ) );
+		checkRegistered();
+		_universe->addServiceObserver( service, observer );
 	}
 
 	void removeServiceObserver( co::IService* service, ca::IServiceObserver* observer )
 	{
-		CHECK_NULL_ARG( service );
-		ObjectObserverMap::iterator it = _objectObserverMap.find( service->getProvider() );
-		if( it == _objectObserverMap.end() )
-			throw co::IllegalArgumentException( "service is not being observed" );
-
-		ServiceObserverMap& som = it->second.serviceObserverMap;
-		ServiceObserverMapRange range = som.equal_range( service );
-		removeObserver( som, range.first, range.second, observer );
-
-		if( som.empty() && it->second.objectObservers.empty() )
-			_objectObserverMap.erase( it );
+		checkRegistered();
+		_universe->removeServiceObserver( service, observer );
 	}
 
 protected:
@@ -263,9 +113,10 @@ protected:
 			throw co::IllegalStateException( "once set, the universe of a ca.Space cannot be changed" );
 
 		CHECK_NULL_ARG( universe );
+		checkComponent( universe, "ca.Universe" );
 
-		_spaceId = universe->registerSpace( this );
-		_universe = universe;
+		_universe = static_cast<Universe*>( universe );
+		_spaceId = _universe->spaceRegister( this );
 	}
 
 private:
@@ -277,22 +128,7 @@ private:
 
 private:
 	co::int16 _spaceId;
-	co::RefPtr<ca::IUniverse> _universe;
-
-	typedef std::vector<ca::ISpaceObserver*> SpaceObserverList;
-	SpaceObserverList _spaceObservers;
-
-	typedef std::vector<ca::IObjectObserver*> ObjectObserverList;
-	typedef std::multimap<co::IService*, ca::IServiceObserver*> ServiceObserverMap;
-	typedef std::pair<ServiceObserverMap::iterator, ServiceObserverMap::iterator> ServiceObserverMapRange;
-	struct ObjectObservers
-	{
-		ObjectObserverList objectObservers;
-		ServiceObserverMap serviceObserverMap;
-	};
-
-	typedef std::map<co::IObject*, ObjectObservers> ObjectObserverMap;
-	ObjectObserverMap _objectObserverMap;
+	co::RefPtr<Universe> _universe;
 };
 
 CORAL_EXPORT_COMPONENT( Space, Space )

@@ -26,7 +26,7 @@ protected:
 		_undoManager = _undoManagerObj->getService<ca::IUndoManager>();
 		assert( _undoManager.isValid() );
 
-		_undoManagerObj->setService( "space", _space.get() );
+		_undoManagerObj->setService( "graph", _space.get() );
 	}
 
 	void TearDown()
@@ -53,13 +53,13 @@ TEST_F( UndoRedoTests, setup )
 	EXPECT_THROW( undoManager->undo(), co::IllegalStateException );
 
 	// cannot bind a null space
-	EXPECT_THROW( undoManagerObj->setService( "space", NULL ), co::IllegalArgumentException );
+	EXPECT_THROW( undoManagerObj->setService( "graph", NULL ), co::IllegalArgumentException );
 
 	// bind the space
-	undoManagerObj->setService( "space", _space.get() );
+	undoManagerObj->setService( "graph", _space.get() );
 
 	// cannot change the bound space
-	EXPECT_THROW( undoManagerObj->setService( "space", _space.get() ), co::IllegalStateException );
+	EXPECT_THROW( undoManagerObj->setService( "graph", _space.get() ), co::IllegalStateException );
 
 	// nothing to undo/redo
 	EXPECT_THROW( undoManager->undo(), ca::NoChangeException );

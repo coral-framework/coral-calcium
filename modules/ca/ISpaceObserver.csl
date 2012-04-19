@@ -1,7 +1,0 @@
-/*
-	Callback interface to observe changes to a space.
- */
-interface ISpaceObserver
-{
-	void onSpaceChanged( in ca.ISpaceChanges changes );
-};

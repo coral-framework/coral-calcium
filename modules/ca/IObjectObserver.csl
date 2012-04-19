@@ -1,5 +1,5 @@
 /*
-	Callback interface to observe changes to an object.
+	Callback interface for observing changes in an object.
  */
 interface IObjectObserver
 {

@@ -5,11 +5,13 @@
 
 #include "UndoManager_Base.h"
 
-#include <ca/ISpaceChanges.h>
-#include <ca/NoChangeException.h>
 #include <co/RefVector.h>
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
+
+#include <ca/IGraph.h>
+#include <ca/IGraphChanges.h>
+#include <ca/NoChangeException.h>
 
 namespace ca {
 
@@ -35,8 +37,8 @@ public:
 		// still recording a changeset?
 		assert( _nestingLevel == 0 );
 
-		if( _space.isValid() )
-			_space->removeSpaceObserver( this );
+		if( _graph.isValid() )
+			_graph->removeGraphObserver( this );
 	}
 
 	// ------ ca.IUndoManager Methods ------ //
@@ -70,10 +72,10 @@ public:
 			return;
 		}
 
-		checkHasSpace();
+		checkHasGraph();
 
 		// separate pre-existing changes from the new ones
-		_space->notifyChanges();
+		_graph->notifyChanges();
 
 		// start tracking changes
 		++_nestingLevel;
@@ -104,17 +106,17 @@ public:
 
 	void clear()
 	{
-		checkHasSpace();
+		checkHasGraph();
 		checkNotRecording();
 		clearStack( Stack_Undo );
 		clearStack( Stack_Redo );
 	}
 
-	// ------ ca.ISpaceObserver Methods ------ //
+	// ------ ca.IGraphObserver Methods ------ //
 
-	void onSpaceChanged( ca::ISpaceChanges* changes )
+	void onGraphChanged( ca::IGraphChanges* changes )
 	{
-		assert( changes && _space.get() == changes->getSpace() );
+		assert( changes && _graph.get() == changes->getGraph() );
 
 		// ignore changes if we're not tracking them
 		if( _targetStack == Stack_Invalid )
@@ -143,30 +145,28 @@ public:
 	}
 
 protected:
-	// ------ Receptacle 'space' (ca.ISpace) ------ //
-
-	ca::ISpace* getSpaceService()
+	ca::IGraph* getGraphService()
 	{
-		return _space.get();
+		return _graph.get();
 	}
 
-	void setSpaceService( ca::ISpace* space )
+	void setGraphService( ca::IGraph* graph )
 	{
-		if( _space.isValid() )
-			throw co::IllegalStateException( "once set, the space of a ca.UndoManager cannot be changed" );
+		if( _graph.isValid() )
+			throw co::IllegalStateException( "once set, the graph of a ca.UndoManager cannot be changed" );
 
-		if( !space )
-			throw co::IllegalArgumentException( "illegal null space" );
+		if( !graph )
+			throw co::IllegalArgumentException( "illegal null graph" );
 
-		space->addSpaceObserver( this );
-		_space = space;
+		graph->addGraphObserver( this );
+		_graph = graph;
 	}
 
 private:
-	inline void checkHasSpace()
+	inline void checkHasGraph()
 	{
-		if( !_space )
-			throw co::IllegalStateException( "the ca.UndoManager requires a space for this operation" );
+		if( !_graph )
+			throw co::IllegalStateException( "the ca.UndoManager requires a graph for this operation" );
 	}
 
 	inline void checkNotRecording()
@@ -184,7 +184,7 @@ private:
 	void recordChanges( Stack s )
 	{
 		_targetStack = s;
-		_space->notifyChanges();
+		_graph->notifyChanges();
 		if( _targetStack != Stack_Invalid )
 		{
 			_targetStack = Stack_Invalid;
@@ -196,14 +196,14 @@ private:
 	{
 		assert( s < Stack_Invalid );
 
-		checkHasSpace();
+		checkHasGraph();
 		checkNotRecording();
 
 		if( _changes[s].empty() )
 			throw NoChangeException( s == Stack_Undo ? "nothing to undo" : "nothing to redo" );
 
 		// separate pre-existing changes from the new ones
-		_space->notifyChanges();
+		_graph->notifyChanges();
 
 		// revert and discard the changes
 		_description = _descriptions[s].back();
@@ -217,7 +217,7 @@ private:
 	}
 
 private:
-	co::RefPtr<ca::ISpace> _space;
+	co::RefPtr<ca::IGraph> _graph;
 
 	// changeset recording:
 	int _nestingLevel;
@@ -225,7 +225,7 @@ private:
 	std::string _description;
 
 	typedef std::vector<std::string> StringStack;
-	typedef co::RefVector<ISpaceChanges> ChangeStack;
+	typedef co::RefVector<IGraphChanges> ChangeStack;
 
 	// undo / redo stacks:
 	ChangeStack _changes[Stack_Count];

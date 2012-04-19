@@ -242,8 +242,6 @@ TEST( StringSerializationTests, stringDefinitionArray )
 
 	std::string actual;
 
-	co::Any::ArrayKind ak = co::Any::AK_Range;
-
 	co::Any anyArray(co::Any::AK_Range, co::typeOf<co::int8>::get(), 0, int8Array, 3 ) ;
 	
 	serializer.toString( anyArray, actual );

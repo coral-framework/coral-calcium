@@ -5,10 +5,10 @@
 
 #include "SpacePersister_Base.h"
 
-#include <ca/ISpaceChanges.h>
-#include <ca/IUniverse.h>
 #include <ca/ISpace.h>
+#include <ca/IUniverse.h>
 #include <ca/IOException.h>
+#include <ca/IGraphChanges.h>
 #include <ca/FormatException.h>
 #include <ca/ISpaceStore.h>
 
@@ -61,13 +61,13 @@ public:
 		}
 		if( _space != NULL && _space->getRootObject() != NULL )
 		{
-			_space->removeSpaceObserver( this );
+			_space->removeGraphObserver( this );
 		}
 	}
 
 	// ------ ca.ISpaceObserver Methods ------ //
 
-	void onSpaceChanged( ca::ISpaceChanges* changes )
+	void onGraphChanged( ca::IGraphChanges* changes )
 	{
 		cacheChanges( changes );
 	}
@@ -142,6 +142,7 @@ public:
 
 		addChange( service, change );
 	}
+
 	// ------ ca.ISpacePersister Methods ------ //
 
 	void initialize( co::IObject* rootObject )
@@ -149,9 +150,7 @@ public:
 		assertSpaceNotSet();
 
 		if( !_spaceStore.isValid() )
-		{
 			throw co::IllegalStateException("space file was not set, could not setup");
-		}
 
 		_spaceStore->open();
 
@@ -189,12 +188,12 @@ public:
 
 		spaceObj->setService( "universe", _universe.get() );
 		
-		_space->setRootObject( rootObject );
+		_space->initialize( rootObject );
 		_space->notifyChanges();
 
 		_trackedRevision = 1;
 
-		_space->addSpaceObserver( this );
+		_space->addGraphObserver( this );
 
 		_spaceStore->close();
 
@@ -379,7 +378,7 @@ private:
 			co::Range<const co::Any>( args, CORAL_ARRAY_LENGTH( args ) ),
 			results );
 
-		_space->addSpaceObserver( this );
+		_space->addGraphObserver( this );
 		_space->notifyChanges();
 
 
@@ -402,8 +401,7 @@ private:
 
 		co::RefVector<co::IField> fields;
 		_model->getFields(type, fields);
-						
-		int j = 0;
+
 		std::vector<std::string> fieldNames;
 		std::vector<std::string> values;
 		std::string fieldValueStr;
@@ -562,7 +560,7 @@ private:
 		}
 	}
 
-	void cacheChanges( ca::ISpaceChanges* changes )
+	void cacheChanges( ca::IGraphChanges* changes )
 	{
 		int addedObjectsSize = changes->getAddedObjects().getSize();
 
@@ -800,7 +798,7 @@ private:
 	typedef std::map<const std::string, std::string> FieldValueMap;
 	typedef std::map<co::IService*, co::uint32> ObjectIdMap;
 
-	typedef struct Change
+	struct Change
 	{
 	public:
 		co::IMember* member;

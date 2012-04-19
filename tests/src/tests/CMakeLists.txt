@@ -44,7 +44,7 @@ target_link_libraries( tests_core ${GTEST_LIBRARIES} )
 file( MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/output )
 add_test(
 	NAME tests_core
-	COMMAND $<TARGET_FILE:tests_core> --gtest_output=xml:../../output/tests_core$<CONFIGURATION>.xml
+	COMMAND $<TARGET_FILE:tests_core> --gtest_output=xml:../../output/tests_core_$<CONFIGURATION>.xml
 )
 CORAL_TEST_ENVIRONMENT( tests_core )
 

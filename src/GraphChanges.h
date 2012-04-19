@@ -3,24 +3,22 @@
  * See copyright notice in LICENSE.md
  */
 
-#ifndef _CA_SPACECHANGES_H_
-#define _CA_SPACECHANGES_H_
+#ifndef _CA_GRAPHCHANGES_H_
+#define _CA_GRAPHCHANGES_H_
 
 #include "Model.h"
 #include "ObjectChanges.h"
-#include "SpaceChanges_Base.h"
-#include <co/IObject.h>
+#include "GraphChanges_Base.h"
 #include <co/RefVector.h>
-#include <ca/ISpace.h>
-#include <ca/IObjectChanges.h>
+#include <ca/IGraph.h>
 
 namespace ca {
 
-class SpaceChanges : public SpaceChanges_Base
+class GraphChanges : public GraphChanges_Base
 {
 public:
-	SpaceChanges();
-	virtual ~SpaceChanges();
+	GraphChanges();
+	virtual ~GraphChanges();
 
 	// ------ Internal Methods ------ //
 
@@ -43,11 +41,11 @@ public:
 		Prepares this changeset for dissemination. This creates an immutable
 		clone of this object, with 'space' set, and then resets this object.
 	 */
-	ISpaceChanges* finalize( ca::ISpace* space );
+	IGraphChanges* finalize( ca::IGraph* graph );
 
-	// ------ ca.ISpaceChanges Methods ------ //
+	// ------ ca.IGraphChanges Methods ------ //
 
-	ca::ISpace* getSpace();
+	ca::IGraph* getGraph();
 	co::Range<co::IObject* const> getAddedObjects();	
 	co::Range<co::IObject* const> getRemovedObjects();
 	co::Range<ca::IObjectChanges* const> getChangedObjects();
@@ -57,10 +55,10 @@ public:
 	void revertChanges();
 
 private:
-	SpaceChanges( ca::ISpace* space, SpaceChanges& other );
+	GraphChanges( ca::IGraph* graph, GraphChanges& other );
 
 private:
-	co::RefPtr<ca::ISpace> _space;
+	co::RefPtr<ca::IGraph> _graph;
 	co::RefVector<co::IObject> _addedObjects;
 	co::RefVector<co::IObject> _removedObjects;
 	co::RefVector<ca::IObjectChanges> _changedObjects;

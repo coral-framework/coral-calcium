@@ -26,12 +26,6 @@ public:
 		co::IType* elementType = array.getType();
 		co::uint32 elementSize = elementType->getReflector()->getSize();
 
-		co::uint8* p = getArrayPtr(array);
-
-		co::TypeKind ek = elementType->getKind();
-		bool isPrimitive = ( ( ek >= co::TK_BOOLEAN && ek <= co::TK_DOUBLE ) || ek == co::TK_ENUM );
-		co::uint32 flags = isPrimitive ? co::Any::VarIsValue : co::Any::VarIsConst|co::Any::VarIsReference;
-
 		void* ptr = getArrayPtr( array ) + elementSize * index;
 			
 		T* elementTypePointer = reinterpret_cast<T*>(ptr);
@@ -47,8 +41,6 @@ public:
 		co::IType* elementType = array.getType();
 		co::IReflector* reflector = elementType->getReflector();
 		co::uint32 elementSize = reflector->getSize();
-
-		co::uint8* p = getArrayPtr(array);
 
 		void* ptr = getArrayPtr( array ) + elementSize * index;
 		if( elementType->getKind() != co::TK_INTERFACE )

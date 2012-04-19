@@ -421,6 +421,10 @@ struct Traverser
 class Model : public Model_Base
 {
 public:
+	//! Returns whether the given component has ever been added to any model.
+	static bool contains( co::IComponent* ct );
+
+public:
 	Model();
 	virtual ~Model();
 
@@ -446,12 +450,11 @@ public:
 		return static_cast<ComponentRecord*>( rec );
 	}
 
-	// IModel Methods:
+	// ca.IModel methods:
 	const std::string& getName();
 	void setName( const std::string& name );
 	
 	co::Range<std::string const> getUpdates();
-
 
 	bool alreadyContains( co::IType* type );
 	bool contains( co::IType* type );
@@ -466,7 +469,6 @@ public:
 	void addUpdate( const std::string& update );
 
 	bool loadDefinitionsFor( const std::string& ns );
-
 
 protected:
 	TypeRecord* getType( co::IType* type );
@@ -486,6 +488,10 @@ protected:
 	void validateTransaction();
 	TypeRecord* validateTypeDependency( co::IType* dependency );
 	void commitTransaction();
+
+private:
+	typedef std::vector<co::IComponent*> ComponentList;
+	static ComponentList sm_components;
 
 private:
 	// --- permanent fields --- //

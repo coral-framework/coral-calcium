@@ -142,7 +142,7 @@ public:
 	const char* nextException;
 	ObserverExceptionTests() : nextException( NULL ) {;}
 
-	void onSpaceChanged( ca::ISpaceChanges* changes )
+	void onGraphChanged( ca::IGraphChanges* changes )
 	{
 		if( nextException )
 		{
@@ -172,17 +172,17 @@ public:
 
 TEST_F( ObserverExceptionTests, spaceObserver )
 {
-	_space->setRootObject( createSimpleERM() );
+	_space->initialize( createSimpleERM() );
 	nextException = "space exception";
 	ASSERT_EXCEPTION2( _space->notifyChanges(),
-		"unexpected co.MissingServiceException raised by space observer (ca.Model)",
+		"unexpected co.MissingServiceException raised by graph observer (ca.Model)",
 		"space exception" );
 }
 
 TEST_F( ObserverExceptionTests, objectObserver )
 {
 	startWithSimpleERM();
-	_space->removeSpaceObserver( this );
+	_space->removeGraphObserver( this );
 	_space->addObjectObserver( _entityA->getProvider(), this );
 
 	_entityA->setName( "Entity B" );
@@ -194,13 +194,13 @@ TEST_F( ObserverExceptionTests, objectObserver )
 		"unexpected co.MissingServiceException raised by object observer (ca.Model)",
 		"object exception" );
 
-	_space->addSpaceObserver( this );
+	_space->addGraphObserver( this );
 }
 
 TEST_F( ObserverExceptionTests, serviceObserver )
 {
 	startWithSimpleERM();
-	_space->removeSpaceObserver( this );
+	_space->removeGraphObserver( this );
 	_space->addServiceObserver( _entityA.get(), this );
 
 	_entityA->setName( "Entity B" );
@@ -212,5 +212,5 @@ TEST_F( ObserverExceptionTests, serviceObserver )
 		"unexpected co.MissingServiceException raised by service observer (ca.Model)",
 		"service exception" );
 
-	_space->addSpaceObserver( this );
+	_space->addGraphObserver( this );
 }

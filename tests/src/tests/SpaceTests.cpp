@@ -5,6 +5,7 @@
 
 #include "ERMSpace.h"
 #include <co/IllegalStateException.h>
+#include <ca/NotInGraphException.h>
 #include <ca/UnexpectedException.h>
 
 class SpaceTests : public ERMSpace
@@ -18,22 +19,22 @@ class SpaceTestsFaulty : public ERMSpace
 TEST_F( SpaceTests, initialization )
 {
 	// the space is empty, so beginChange() should always fail
-	EXPECT_THROW( _space->addChange( _model.get() ), ca::NoSuchObjectException );
+	EXPECT_THROW( _space->addChange( _model.get() ), ca::NotInGraphException );
 
 	createSimpleERM();
 
 	// none of the created components are in the space yet
-	EXPECT_THROW( _space->addChange( _erm.get() ), ca::NoSuchObjectException );
-	EXPECT_THROW( _space->addChange( _entityA.get() ), ca::NoSuchObjectException );
-	EXPECT_THROW( _space->addChange( _entityB.get() ), ca::NoSuchObjectException );
-	EXPECT_THROW( _space->addChange( _relAB.get() ), ca::NoSuchObjectException );
+	EXPECT_THROW( _space->addChange( _erm.get() ), ca::NotInGraphException );
+	EXPECT_THROW( _space->addChange( _entityA.get() ), ca::NotInGraphException );
+	EXPECT_THROW( _space->addChange( _entityB.get() ), ca::NotInGraphException );
+	EXPECT_THROW( _space->addChange( _relAB.get() ), ca::NotInGraphException );
 
 	// set the graph's root object (the erm.Model)
-	_space->setRootObject( _erm->getProvider() );
+	_space->initialize( _erm->getProvider() );
 
 	// once set, the root object cannot be changed
-	EXPECT_THROW( _space->setRootObject( NULL ), co::IllegalStateException );	
-	EXPECT_THROW( _space->setRootObject( _entityA->getProvider() ), co::IllegalStateException );
+	EXPECT_THROW( _space->initialize( NULL ), co::IllegalStateException );	
+	EXPECT_THROW( _space->initialize( _entityA->getProvider() ), co::IllegalStateException );
 
 	// now the space should contain the whole graph
 	EXPECT_NO_THROW( _space->addChange( _erm.get() ) );
@@ -47,7 +48,7 @@ TEST_F( SpaceTests, initialization )
 	ASSERT_TRUE( _changes.isValid() );
 
 	// the initial notification should contain only 'addedObjects'
-	EXPECT_EQ( _changes->getSpace(), _space.get() );
+	EXPECT_EQ( _changes->getGraph(), _space.get() );
 	EXPECT_FALSE( _changes->getAddedObjects().isEmpty() );
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 	EXPECT_TRUE( _changes->getChangedObjects().isEmpty() );
@@ -398,6 +399,6 @@ TEST_F( SpaceTests, changedValueFields )
 TEST_F( SpaceTestsFaulty, unexpectedExceptions )
 {
 	createSimpleERM();
-	ASSERT_EXCEPTION( _space->setRootObject( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
-	ASSERT_EXCEPTION( _space->setRootObject( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
+	ASSERT_EXCEPTION( _space->initialize( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
+	ASSERT_EXCEPTION( _space->initialize( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
 }

@@ -8,6 +8,7 @@
 #include <erm/IRelationship.h>
 #include <co/Exception.h>
 #include <co/RefVector.h>
+#include <algorithm>
 
 namespace erm {
 
@@ -34,11 +35,6 @@ public:
 		co::assign( entities, _entities );
 	}
 
-	void addEntity( IEntity* entity )
-	{
-		_entities.push_back( entity );
-	}
-
 	co::Range<IRelationship* const> getRelationships()
 	{
 		return _relationships;
@@ -48,10 +44,26 @@ public:
 	{
 		co::assign( relationships, _relationships );
 	}
+
+	void addEntity( IEntity* entity )
+	{
+		_entities.push_back( entity );
+	}
+
+	void removeEntity( IEntity* entity )
+	{
+		_entities.erase( std::remove( _entities.begin(), _entities.end(), entity ), _entities.end() );
+	}
 	
 	void addRelationship( IRelationship* rel )
 	{
 		_relationships.push_back( rel );
+	}
+
+	void removeRelationship( IRelationship* rel )
+	{
+		_relationships.erase(
+			std::remove( _relationships.begin(), _relationships.end(), rel ), _relationships.end() );
 	}
 
 	co::Range<IModel* const> getDependencies()

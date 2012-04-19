@@ -8,6 +8,10 @@
 #include <co/Coral.h>
 #include <co/ISystem.h>
 #include <co/IModuleManager.h>
+#include <co/IServiceManager.h>
+#include <ca/ILuaManager.h>
+#include <lua/IState.h>
+#include <lua/IInterceptor.h>
 
 namespace ca {
 
@@ -18,14 +22,10 @@ class ModulePart : public ca::ca_Base
 {
 public:
     ModulePart()
-	{
-		// empty
-	}
+	{;}
 
 	virtual ~ModulePart()
-	{
-		// empty
-	}
+	{;}
 
 	void initialize( co::IModule* module )
 	{
@@ -36,7 +36,14 @@ public:
 
 	void integrate( co::IModule* )
 	{
-		// empty
+		co::RefPtr<co::IObject> luaManager = co::newInstance( "ca.LuaManager" );
+
+		co::getSystem()->getServices()->addService(
+			co::typeOf<ca::ILuaManager>::get(),
+			luaManager->getService<ca::ILuaManager>() );
+
+		_luaInterceptor = luaManager->getService<lua::IInterceptor>();
+		co::getService<lua::IState>()->addInterceptor( _luaInterceptor.get() );
 	}
 
 	void integratePresentation( co::IModule* )
@@ -46,13 +53,18 @@ public:
 
 	void disintegrate( co::IModule* )
 	{
-		// empty
+		co::getService<lua::IState>()->removeInterceptor( _luaInterceptor.get() );
+		co::getSystem()->getServices()->removeService( co::typeOf<ca::ILuaManager>::get() );
+		_luaInterceptor = NULL;
 	}
 
 	void dispose( co::IModule* )
 	{
 		ca::ModuleInstaller::instance().uninstall();
 	}
+
+private:
+	co::RefPtr<lua::IInterceptor> _luaInterceptor;
 };
 
 CORAL_EXPORT_MODULE_PART( ModulePart );

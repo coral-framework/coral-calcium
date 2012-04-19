@@ -311,6 +311,18 @@ void ObjectRecord::destroy()
 	free( this );
 }
 
+/******************************************************************************/
+/* ca.Model                                                                   */
+/******************************************************************************/
+
+Model::ComponentList Model::sm_components;
+
+bool Model::contains( co::IComponent* ct )
+{
+	ComponentList::iterator it = std::lower_bound( sm_components.begin(), sm_components.end(), ct );
+	return it != sm_components.end() && *it == ct;
+}
+
 Model::Model()
 {
 	_level = 0;
@@ -784,9 +796,33 @@ void Model::commitTransaction()
 	size_t numTypes = _types.size();
 	size_t numTransactionTypes = _transaction.size();
 	_types.reserve( numTypes + numTransactionTypes );
-	_types.insert( _types.end(), _transaction.begin(), _transaction.end() );
-	std::inplace_merge( _types.begin(), _types.begin() + numTypes, _types.end(), TypeRecordComparator() );
+
+	unsigned numAddedComponents = 0;
+	for( TypeSet::iterator it = _transaction.begin(); it != _transaction.end(); ++it )
+	{
+		TypeRecord* rec = *it;
+		_types.push_back( rec );
+		if( rec->isComponent() )
+		{
+			co::IComponent* ct = static_cast<co::IComponent*>( rec->type );
+			if( !Model::contains( ct ) )
+			{
+				sm_components.push_back( ct );
+				++numAddedComponents;
+			}
+		}
+	}
+
 	_transaction.clear();
+
+	std::inplace_merge( _types.begin(), _types.begin() + numTypes, _types.end(), TypeRecordComparator() );
+	
+	if( numAddedComponents )
+	{
+		std::inplace_merge( sm_components.begin(),
+			sm_components.begin() + sm_components.size() - numAddedComponents,
+			sm_components.end() );
+	}
 }
 
 CORAL_EXPORT_COMPONENT( Model, Model )

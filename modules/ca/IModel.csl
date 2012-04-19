@@ -1,5 +1,5 @@
 /*
-	An object graph schema.
+	An object graph model (schema).
 
 	A calcium model is a set of types, along with an optional set of fields	for
 	each type (a subset of the type's actual fields), where all field types must
@@ -27,14 +27,14 @@ interface IModel
 {
 	// Name of this model. Must be set once, before using the service.
 	string name;
-	
+
 	//---------- Querying the Model ----------//
-	
+
 	/*
-		Returns a list of all script updates declared on loaded CaModels	
-	
+		Returns a list of all script updates declared on loaded CaModels
+
 	*/
-	
+
 	readonly string[] updates;
 
 	/*
@@ -128,11 +128,11 @@ interface IModel
 	 */
 	void addComponent( in co.IComponent type, in co.IPort[] ports )
 			raises co.IllegalStateException, co.IllegalArgumentException, ModelException;
-	
+
 	/*
 		Add an update script on updates list.
 	*/
 	void addUpdate( in string update );
-	
+
 	bool loadDefinitionsFor( in string moduleName );
 };

@@ -5,7 +5,7 @@
 
 #include "ERMSpace.h"
 
-void ERMSpace::onSpaceChanged( ca::ISpaceChanges* changes )
+void ERMSpace::onGraphChanged( ca::IGraphChanges* changes )
 {
 	_changes = changes;
 }
@@ -54,12 +54,12 @@ void ERMSpace::SetUp()
 
 	_spaceObj->setService( "universe", _universe.get() );
 
-	_space->addSpaceObserver( this );
+	_space->addGraphObserver( this );
 }
 
 void ERMSpace::TearDown()
 {
-	_space->removeSpaceObserver( this );
+	_space->removeGraphObserver( this );
 
 	_modelObj = NULL;
 	_spaceObj = NULL;
@@ -114,7 +114,7 @@ co::IObject* ERMSpace::createSimpleERM()
 
 void ERMSpace::startWithSimpleERM()
 {
-	_space->setRootObject( createSimpleERM() );
+	_space->initialize( createSimpleERM() );
 
 	// skip the first notification with the initial object additions
 	_space->notifyChanges();
@@ -139,7 +139,7 @@ void ERMSpace::startWithExtendedERM()
 {
 	createSimpleERM();
 	extendSimpleERM();
-	_space->setRootObject( _erm->getProvider() );
+	_space->initialize( _erm->getProvider() );
 
 	// skip the first notification with the initial object additions
 	_space->notifyChanges();

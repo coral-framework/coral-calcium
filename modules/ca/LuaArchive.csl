@@ -1,0 +1,7 @@
+@lua.Scripted( "ca.LuaArchive" )
+component LuaArchive
+{
+	provides INamed file;
+	provides IArchive archive;
+	receives IModel model;
+};

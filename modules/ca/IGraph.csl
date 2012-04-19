@@ -1,0 +1,77 @@
+/*
+	An object graph with change tracking and notifications.
+
+	\par Observers Life Cycle
+	A graph never keeps strong references to its observers; therefore, observers
+	must be removed from a graph before they become invalid. It is good practice
+	for an observer to always handle its own addition to/removal from a graph,
+	as this allows the observer's destructor to unregister itself if necessary.
+ */
+interface IGraph
+{
+	// The object model in effect for this graph.
+	readonly IModel model;
+
+	//---------- Change Tracking ----------//
+
+	/*
+		Marks a \a service in this graph as changed.
+		The service will be checked for changes in the next call to notifyChanges().
+		\throw NotInGraphException if \a service is not in the graph.
+	 */
+	void addChange( in co.IService service ) raises NotInGraphException;
+
+	/*
+		Gathers a list of changes and posts change notifications.
+
+		Changes are detected by examining all services marked as changed
+		(see addChange()) since the last call to notifyChanges().
+
+		\throw UnexpectedException if an object raises an exception while being inspected for changes.
+	 */
+	void notifyChanges() raises UnexpectedException;
+
+	//---------- Change Notifications ----------//
+
+	/*
+		Adds an \a observer to be notified of changes in this graph.
+		\throw co.IllegalArgumentException if \a observer is invalid.
+	 */
+	void addGraphObserver( in IGraphObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Removes an \a observer from the list of graph observers.
+		\throw co.IllegalArgumentException if \a observer is not in the list of graph observers.
+	 */
+	void removeGraphObserver( in IGraphObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Adds an \a observer to be notified of changes in a certain \a object.
+		\throw co.IllegalArgumentException if either \a object or \a observer are invalid.
+	 */
+	void addObjectObserver( in co.IObject object, in IObjectObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Removes an \a observer from the list of observers for an \a object.
+		\throw co.IllegalArgumentException if \a observer is not in the \a object's list of observers.
+	 */
+	void removeObjectObserver( in co.IObject object, in IObjectObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Adds an \a observer to be notified of changes in a certain \a service.
+		\throw co.IllegalArgumentException if either \a service or \a observer are invalid.
+	 */
+	void addServiceObserver( in co.IService service, in IServiceObserver observer )
+		raises co.IllegalArgumentException;
+
+	/*
+		Removes an \a observer from the list of observers for a \a service.
+		\throw co.IllegalArgumentException if \a observer is not in the \a service's list of observers.
+	 */
+	void removeServiceObserver( in co.IService service, in IServiceObserver observer )
+		raises co.IllegalArgumentException;
+};

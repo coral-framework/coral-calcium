@@ -14,7 +14,7 @@
 #include <ca/ISpace.h>
 #include <ca/IUniverse.h>
 #include <ca/ModelException.h>
-#include <ca/NoSuchObjectException.h>
+#include <ca/NotInGraphException.h>
 
 
 TEST( BasicTests, spaceUniverseAndModelSetup )
@@ -25,7 +25,7 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	assert( space );
 
 	// try using a space without an universe
-	EXPECT_THROW( space->setRootObject( spaceObj.get() ), co::IllegalStateException );
+	EXPECT_THROW( space->initialize( spaceObj.get() ), co::IllegalStateException );
 
 	// try binding a null universe to a space
 	EXPECT_THROW( spaceObj->setService( "universe", NULL ), co::IllegalArgumentException );
@@ -42,7 +42,7 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	EXPECT_NO_THROW( space->getRootObject() );
 
 	// but we should not be able to call methos that do require a model
-	EXPECT_THROW( space->setRootObject( spaceObj.get() ), co::IllegalStateException );
+	EXPECT_THROW( space->initialize( spaceObj.get() ), co::IllegalStateException );
 
 	// create a plain model and bind it to the universe
 	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
@@ -50,13 +50,13 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	universeObj->setService( std::string( "model" ), model );
 
 	// we should not be able to use the model because it doesn't have a name
-	EXPECT_THROW( space->setRootObject( spaceObj.get() ), co::IllegalStateException );
+	EXPECT_THROW( space->initialize( spaceObj.get() ), co::IllegalStateException );
 
 	model->setName( "test" );
 
 	// now the whole setup should be ready for use
-	EXPECT_THROW( space->setRootObject( spaceObj.get() ), ca::ModelException );
-	EXPECT_THROW( space->addChange( spaceObj.get() ), ca::NoSuchObjectException );
+	EXPECT_THROW( space->initialize( spaceObj.get() ), ca::ModelException );
+	EXPECT_THROW( space->addChange( spaceObj.get() ), ca::NotInGraphException );
 
 	// and we cannot change the model's name after it's been set
 	EXPECT_THROW( model->setName( "test" ), co::IllegalStateException );	

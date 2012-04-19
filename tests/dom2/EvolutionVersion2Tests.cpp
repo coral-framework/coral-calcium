@@ -27,12 +27,9 @@
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
-#include <ca/ModelException.h>
-#include <ca/NoSuchObjectException.h>
-#include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
-
-#include <cstdio>
+#include <ca/IOException.h>
+#include <ca/ModelException.h>
 
 
 class EvolutionVersion2Tests : public ::testing::Test

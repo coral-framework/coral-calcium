@@ -4,13 +4,12 @@
  */
 
 #include "Universe.h"
-#include "Universe_Base.h"
-#include <ca/ModelException.h>
-#include <ca/UnexpectedException.h>
 #include <co/Log.h>
-#include <co/IllegalStateException.h>
-#include <co/IllegalArgumentException.h>
-#include <sstream>
+#include <ca/ModelException.h>
+#include <ca/IGraphObserver.h>
+#include <ca/IObjectObserver.h>
+#include <ca/IServiceObserver.h>
+#include <ca/UnexpectedException.h>
 
 namespace ca {
 
@@ -389,7 +388,7 @@ struct AddRefTraverser : public UniverseTraverser<AddRefTraverser>
 	}
 };
 
-void UniverseRecord::addRef( co::uint16 spaceId, ObjectRecord* root )
+void UniverseRecord::addRef( co::int16 spaceId, ObjectRecord* root )
 {
 	assert( root );
 
@@ -408,7 +407,7 @@ void UniverseRecord::addRef( co::uint16 spaceId, ObjectRecord* root )
 	}
 }
 
-void UniverseRecord::addRef( ObjectRecord* from, ObjectRecord* to, co::uint16 spaceId )
+void UniverseRecord::addRef( ObjectRecord* from, ObjectRecord* to, co::int16 spaceId )
 {
 	assert( from && to );
 
@@ -466,7 +465,7 @@ struct RemoveRefTraverser : public UniverseTraverser<RemoveRefTraverser>
 	}
 };
 
-void UniverseRecord::removeRef( co::uint16 spaceId, ObjectRecord* root )
+void UniverseRecord::removeRef( co::int16 spaceId, ObjectRecord* root )
 {
 	assert( root );
 
@@ -489,7 +488,7 @@ void UniverseRecord::removeRef( co::uint16 spaceId, ObjectRecord* root )
 		destroyObject( root );
 }
 
-void UniverseRecord::removeRef( ObjectRecord* from, ObjectRecord* to, co::uint16 spaceId )
+void UniverseRecord::removeRef( ObjectRecord* from, ObjectRecord* to, co::int16 spaceId )
 {
 	assert( from );
 	if( !to ) return; // null reference
@@ -524,207 +523,422 @@ void UniverseRecord::removeRef( ObjectRecord* from, ObjectRecord* to )
 		removeRef( from, to, it->first );
 }
 
-//------ ca.Universe component -------------------------------------------------
+/******************************************************************************/
+/* Helper Functions for Handling Observers                                    */
+/******************************************************************************/
 
-class Universe : public Universe_Base
+template<typename Observer>
+inline void checkObserverRemoved( const char* prefix, Observer* observer, size_t numRemoved )
 {
-public:
-	Universe()
-	{
-		// empty
-	}
+	if( numRemoved == 0 )
+		throw co::IllegalArgumentException( "no such observer in the list" );
 
-	virtual ~Universe()
+	if( numRemoved > 1 )
 	{
-		// all spaces should have been unregistered by now
-		co::uint16 numSpaces = static_cast<co::uint16>( _u.spaces.size() );
-		for( co::uint16 i = 0; i < numSpaces; ++i )
+		const char* typeName = "null";
+		if( observer )
+			typeName = observer->getProvider()->getComponent()->getFullName().c_str();
+
+		CORAL_LOG(WARNING) << prefix << " (" << typeName << ')' <<
+			observer << " was removed " << numRemoved << " times.";
+	}
+}
+
+template<typename Container, typename Observer>
+inline void removeObserver( const char* prefix, Container& c, Observer* observer )
+{
+	typename Container::iterator end = c.end();
+	typename Container::iterator newEnd = std::remove( c.begin(), end, observer );
+	size_t numRemoved = std::distance( newEnd, end );
+	c.erase( newEnd, end );
+	checkObserverRemoved( prefix, observer, numRemoved );
+}
+
+template<typename Container, typename Iterator, typename Observer>
+inline void removeObserver( const char* prefix, Container& c, Iterator begin, Iterator end, Observer* observer )
+{
+	int numRemoved = 0;
+	while( begin != end )
+	{
+		if( begin->second == observer )
 		{
-			if( _u.spaces[i] )
-			{
-				assert( false );
-				unregisterSpace( i );
-			}
+			c.erase( begin++ );
+			++numRemoved;
 		}
+		else
+		{
+			++begin;
+		}
+	}
+	checkObserverRemoved( prefix, observer, numRemoved );
+}
 
-		// at this point the universe should have no objects left
-		assert( _u.objectMap.empty() );
+void raiseUnexpected( const char* desc, co::IService* service, co::Exception& e )
+{
+	co::IObject* obj = service->getProvider();
+	CORAL_THROW( UnexpectedException, "unexpected " << e.getTypeName()
+		<< " raised by " << desc << " (" << obj->getComponent()->getFullName()
+		<< ")" << obj << ": " << e.getMessage() );
+}
+
+
+/******************************************************************************/
+/* ca.Universe component                                                      */
+/******************************************************************************/
+
+MultiverseObserver* Universe::sm_multiverseObserver;
+
+Universe::Universe()
+{
+	_lastChangedService = NULL;
+
+	if( sm_multiverseObserver )
+		sm_multiverseObserver->onUniverseCreated( this );
+}
+
+Universe::~Universe()
+{
+	if( sm_multiverseObserver )
+		sm_multiverseObserver->onUniverseDestroyed( this );
+
+	// all spaces should have been unregistered by now
+	co::uint16 numSpaces = static_cast<co::uint16>( _u.spaces.size() );
+	for( co::uint16 i = 0; i < numSpaces; ++i )
+	{
+		if( _u.spaces[i] )
+		{
+			assert( false );
+			spaceUnregister( i );
+		}
 	}
 
-	co::uint16 registerSpace( ca::ISpace* space )
+	// at this point the universe should have no objects left
+	assert( _u.objectMap.empty() );
+}
+
+bool Universe::tryAddChange( co::IObject* object, co::IService* service )
+{
+	if( service == _lastChangedService )
+		return true;
+
+	ObjectRecord* objRec = _u.findObject( object );
+	if( objRec )
 	{
-		assert( _u.spaces.size() < co::MAX_UINT16 );
-		co::uint16 spaceId = static_cast<co::uint16>( _u.spaces.size() );
-		_u.spaces.push_back( new SpaceRecord( space ) );
-		return spaceId;
+		co::int16 facet = findFacet( objRec, service );
+		if( facet > -2 )
+		{
+			_lastChangedService = service;
+			_u.addChangedService( objRec, facet );
+			return true;
+		}
 	}
+	return false;
+}
 
-	void unregisterSpace( co::uint16 spaceId )
-	{
-		SpaceRecord* space = getSpace( spaceId );
+co::int16 Universe::spaceRegister( ca::ISpace* space )
+{
+	assert( _u.spaces.size() < co::MAX_INT16 );
+	co::int16 spaceId = static_cast<co::int16>( _u.spaces.size() );
+	_u.spaces.push_back( new SpaceRecord( space ) );
+	return spaceId;
+}
 
-		if( space->rootObject )
-			_u.removeRef( spaceId, space->rootObject );
+void Universe::spaceUnregister( co::int16 spaceId )
+{
+	SpaceRecord* space = getSpace( spaceId );
 
-		delete space;
-		_u.spaces[spaceId] = NULL;
-	}
+	if( space->rootObject )
+		_u.removeRef( spaceId, space->rootObject );
 
-	void setRootObject( co::uint16 spaceId, co::IObject* root )
-	{
-		checkHasModel();
+	delete space;
+	_u.spaces[spaceId] = NULL;
+}
 
-		SpaceRecord* space = getSpace( spaceId );
+co::IObject* Universe::spaceGetRootObject( co::int16 spaceId )
+{
+	ObjectRecord* object = getSpace( spaceId )->rootObject;
+	return object ? object->instance : NULL;
+}
 
-		if( space->rootObject )
-			throw co::IllegalStateException( "a root object was already set for this space" );
+void Universe::spaceInitialize( co::int16 spaceId, co::IObject* root )
+{
+	checkHasModel();
+
+	SpaceRecord* space = getSpace( spaceId );
+
+	if( space->rootObject )
+		throw co::IllegalStateException( "space was already initialized" );
 
 #if 0
-		// if we ever want to allow the root object to be 'reset':
-		if( root == NULL )
-		{
-			_u.removeRef( spaceId, space->rootObject );
-			space->rootObject = NULL;
-			return;
-		}
+	// if we ever want to allow the root object to be 'reset':
+	if( root == NULL )
+	{
+		_u.removeRef( spaceId, space->rootObject );
+		space->rootObject = NULL;
+		return;
+	}
 #endif
 
-		ObjectRecord* object = _u.findObject( root );
-		if( object )
-			_u.addRef( spaceId, object );
-		else
-			object = _u.createObject( spaceId, root );
+	ObjectRecord* object = _u.findObject( root );
+	if( object )
+		_u.addRef( spaceId, object );
+	else
+		object = _u.createObject( spaceId, root );
 
-		space->rootObject = object;
-	}
+	space->rootObject = object;
+}
 
-	co::IObject* getRootObject( co::uint16 spaceId )
+void Universe::spaceAddChange( co::int16 spaceId, co::IService* service )
+{
+	if( service == _lastChangedService && service )
+		return;
+
+	checkHasModel();
+
+	if( !service )
+		throw NotInGraphException( "illegal null service" );
+
+	ObjectRecord* object = _u.getObject( service->getProvider() );
+	if( !object )
+		throw NotInGraphException(
+			"service is not provided by an object in this space (nor universe)" );
+
+	if( spaceId >= 0 && object->spaceRefs[spaceId] < 1 )
+		throw NotInGraphException( "service is not provided by an object in this space" );
+
+	co::int16 facet = findFacet( object, service );
+	if( facet == -2 )
+		throw NotInGraphException( "the service's facet is not in the object model" );
+
+	_u.addChangedService( object, facet );
+}
+
+void Universe::spaceAddGraphObserver( co::int16 spaceId, ca::IGraphObserver* observer )
+{
+	CHECK_NULL_ARG( observer );
+	getSpace( spaceId )->observers.push_back( observer );
+}
+
+void Universe::spaceRemoveGraphObserver( co::int16 spaceId, ca::IGraphObserver* observer )
+{
+	removeObserver( "graph observer", getSpace( spaceId )->observers, observer );
+}
+
+ca::IModel* Universe::getModel()
+{
+	return _u.model.get();
+}
+
+void Universe::addChange( co::IService* service )
+{
+	spaceAddChange( -1, service );
+}
+
+void notifyObjectObservers( ObjectObserverMap& observers, co::Range<ca::IObjectChanges* const> changes )
+{
+	for( ; changes; changes.popFirst() )
 	{
-		ObjectRecord* object = getSpace( spaceId )->rootObject;
-		return object ? object->instance : NULL;
-	}
+		ca::IObjectChanges* objectChanges = changes.getFirst();
+		co::IObject* object = objectChanges->getObject();
+		ObjectObserverMap::iterator it = observers.find( object );
+		if( it == observers.end() )
+			continue;
 
-	void addChange( co::uint16 spaceId, co::IService* service )
-	{
-		checkHasModel();
-
-		if( !service )
-			throw ca::NoSuchObjectException( "illegal null service" );
-
-		ObjectRecord* object = _u.getObject( service->getProvider() );
-		if( !object )
-			throw ca::NoSuchObjectException(
-				"service is not provided by an object in this space (nor universe)" );
-
-		if( object->spaceRefs[spaceId] < 1 )
-			throw ca::NoSuchObjectException( "service is not provided by an object in this space" );
-
-		// locate the service's facet
-		co::int16 facet = -1; // -1 means the object's co.IObject facet
-		if( object->instance != service )
+		// notify object observers
+		ca::IObjectObserver* objectObserver;
+		try
 		{
-			co::int16 numFacets = object->model->numFacets;
-			while( 1 )
+			ObjectObserverList& ool = it->second.objectObservers;
+			size_t numObjectObservers = ool.size();
+			for( size_t i = 0; i < numObjectObservers; ++i )
 			{
-				if( facet >= numFacets )
-					throw ca::ModelException( "the service's facet is not in the object model" );
-
-				if( service == object->services[facet] )
-					break;
-
-				++facet;
+				objectObserver = ool[i];
+				objectObserver->onObjectChanged( objectChanges );
 			}
 		}
-
-		_u.addChangedService( object, facet );
-	}
-
-	void notifyChanges( co::uint16 spaceId )
-	{
-		// process the list of changed services
-		if( !_u.changedServices.empty() )
+		catch( co::Exception& e )
 		{
-			ChangedService* cs = &_u.changedServices.front();
-			ChangedService* lastCS = &_u.changedServices.back();
-			std::sort( cs, lastCS + 1 );
-
-			UpdateTraverser traverser( _u );
-			try
+			raiseUnexpected( "object observer", objectObserver, e );
+		}
+		
+		// notify service observers
+		ca::IServiceObserver* serviceObserver;
+		try
+		{
+			co::Range<IServiceChanges* const> changedServices = objectChanges->getChangedServices();
+			for( ; changedServices; changedServices.popFirst() )
 			{
-				for( ; cs <= lastCS ; ++cs )
+				ca::IServiceChanges* serviceChanges = changedServices.getFirst();
+				co::IService* service = serviceChanges->getService();
+				ServiceObserverMapRange range = it->second.serviceObserverMap.equal_range( service );
+				for( ; range.first != range.second; ++range.first )
 				{
-					if( cs->object != traverser.source )
-						traverser.reset( cs->object );
-					else if( cs->facet == traverser.lastFacet )
-						continue;
-
-					if( cs->facet < 0 )
-						traverser.traverseReceptacles();
-					else
-						traverser.traverseFacet( static_cast<co::uint8>( cs->facet ) );
+					serviceObserver = range.first->second;
+					serviceObserver->onServiceChanged( serviceChanges );
 				}
 			}
-			catch( std::exception& e )
-			{
-				CORAL_THROW( ca::UnexpectedException,
-					"unexpected exception while tracking changes to service (" <<
-						getServiceTypeName( cs->object, cs->facet ) << ")" <<
-							cs->object->instance << ", " << e.what() );
-			}
-
-			_u.changedServices.clear();
 		}
-
-		// notify all spaces with changes
-		size_t numSpaces = _u.spaces.size();
-		for( size_t i = 0; i < numSpaces; ++i )
+		catch( co::Exception& e )
 		{
-			SpaceRecord* s = _u.spaces[i];
-			if( s->hasChanges )
-			{
-				co::RefPtr<ISpaceChanges> changes( s->changes.finalize( s->space ) );
-				s->space->onSpaceChanged( changes.get() );
-				s->hasChanges = false;
-			}
+			raiseUnexpected( "service observer", serviceObserver, e );
 		}
 	}
+}
 
-private:
-	inline SpaceRecord* getSpace( co::uint16 spaceId )
+void notifyGraphObservers( GraphRecord* graph, IGraphChanges* changes )
+{
+	if( !graph->hasChanges )
+		return;
+
+	graph->hasChanges = false;
+
+	ca::IGraphObserver* current = NULL;
+	try
 	{
-		return _u.spaces[spaceId];
+		size_t numObservers = graph->observers.size();
+		for( size_t i = 0; i < numObservers; ++i )
+		{
+			current = graph->observers[i];
+			current->onGraphChanged( changes );
+		}
+	}
+	catch( co::Exception& e )
+	{
+		raiseUnexpected( "graph observer", current, e );
+	}
+}
+
+void Universe::notifyChanges()
+{
+	_lastChangedService = NULL;
+
+	// process the list of changed services
+	if( !_u.changedServices.empty() )
+	{
+		ChangedService* cs = &_u.changedServices.front();
+		ChangedService* lastCS = &_u.changedServices.back();
+		std::sort( cs, lastCS + 1 );
+
+		UpdateTraverser traverser( _u );
+		try
+		{
+			for( ; cs <= lastCS ; ++cs )
+			{
+				if( cs->object != traverser.source )
+					traverser.reset( cs->object );
+				else if( cs->facet == traverser.lastFacet )
+					continue;
+
+				if( cs->facet < 0 )
+					traverser.traverseReceptacles();
+				else
+					traverser.traverseFacet( static_cast<co::uint8>( cs->facet ) );
+			}
+		}
+		catch( std::exception& e )
+		{
+			CORAL_THROW( ca::UnexpectedException,
+				"unexpected exception while tracking changes to service (" <<
+					getServiceTypeName( cs->object, cs->facet ) << ")" <<
+						cs->object->instance << ", " << e.what() );
+		}
+
+		_u.changedServices.clear();
 	}
 
-	inline void checkHasModel()
+	// notify observers...
+
+	if( !_u.hasChanges )
+		return;
+
+	co::RefPtr<IGraphChanges> changes( _u.changes.finalize( this ) );
+	notifyObjectObservers( _u.objectObservers, changes->getChangedObjects() );
+	notifyGraphObservers( &_u, changes.get() );
+
+	size_t numSpaces = _u.spaces.size();
+	for( size_t i = 0; i < numSpaces; ++i )
 	{
-		if( !_u.model.isValid() )
-			throw co::IllegalStateException( "the ca.Universe requires a model for this operation" );
+		SpaceRecord* space = _u.spaces[i];
+		changes = space->changes.finalize( space->space );
+		notifyGraphObservers( space, changes.get() );
 	}
+}
 
-	ca::IModel* getModelService()
-	{
-		return _u.model.get();
-	}
+void Universe::addGraphObserver( ca::IGraphObserver* observer )
+{
+	CHECK_NULL_ARG( observer );
+	_u.observers.push_back( observer );
+}
 
-	void setModelService( ca::IModel* model )
-	{
-		if( _u.model.isValid() )
-			throw co::IllegalStateException( "once set, the model of a ca.Universe cannot be changed" );
+void Universe::removeGraphObserver( ca::IGraphObserver* observer )
+{
+	removeObserver( "graph observer", _u.observers, observer );
+}
 
-		if( !model )
-			throw co::IllegalArgumentException( "illegal null model" );
+void Universe::addObjectObserver( co::IObject* object, ca::IObjectObserver* observer )
+{
+	CHECK_NULL_ARG( object );
+	CHECK_NULL_ARG( observer );
+	_u.objectObservers[object].objectObservers.push_back( observer );
+}
 
-		if( model->getProvider()->getComponent()->getFullName() != "ca.Model" )
-			CORAL_THROW( co::IllegalArgumentException,
-				"illegal model instance (expected a ca.Model, got a "
-				<< model->getProvider()->getComponent()->getFullName() << ")" );
+void Universe::removeObjectObserver( co::IObject* object, ca::IObjectObserver* observer )
+{
+	ObjectObserverMap::iterator it = _u.objectObservers.find( object );
+	if( it == _u.objectObservers.end() )
+		throw co::IllegalArgumentException( "object is not being observed" );
 
-		_u.model = static_cast<Model*>( model );
-	}
+	ObjectObserverList& ool = it->second.objectObservers;
+	removeObserver( "object observer", ool, observer );
 
-private:
-	UniverseRecord _u;
-};
+	if( ool.empty() && it->second.serviceObserverMap.empty() )
+		_u.objectObservers.erase( it );
+}
+
+void Universe::addServiceObserver( co::IService* service, ca::IServiceObserver* observer )
+{
+	CHECK_NULL_ARG( service );
+	CHECK_NULL_ARG( observer );
+
+	co::IObject* provider = service->getProvider();
+	if( service == provider )
+		throw co::IllegalArgumentException( "illegal service type; for services "
+			"of type 'co.IObject' please call addObjectObserver() instead" );
+
+	_u.objectObservers[provider].serviceObserverMap.insert(
+		ServiceObserverMap::value_type( service, observer ) );
+}
+
+void Universe::removeServiceObserver( co::IService* service, ca::IServiceObserver* observer )
+{
+	CHECK_NULL_ARG( service );
+	ObjectObserverMap::iterator it = _u.objectObservers.find( service->getProvider() );
+	if( it == _u.objectObservers.end() )
+		throw co::IllegalArgumentException( "service is not being observed" );
+
+	ServiceObserverMap& som = it->second.serviceObserverMap;
+	ServiceObserverMapRange range = som.equal_range( service );
+	removeObserver( "service observer", som, range.first, range.second, observer );
+
+	if( som.empty() && it->second.objectObservers.empty() )
+		_u.objectObservers.erase( it );
+}
+
+ca::IModel* Universe::getModelService()
+{
+	return _u.model.get();
+}
+
+void Universe::setModelService( ca::IModel* model )
+{
+	if( _u.model.isValid() )
+		throw co::IllegalStateException( "once set, the model of a ca.Universe cannot be changed" );
+
+	CHECK_NULL_ARG( model );
+	checkComponent( model, "ca.Model" );
+
+	_u.model = static_cast<Model*>( model );
+}
 
 CORAL_EXPORT_COMPONENT( Universe, Universe )
 

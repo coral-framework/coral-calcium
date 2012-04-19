@@ -8,9 +8,10 @@ project( TESTS_DOM1 )
 # Build the 'DOM1' module
 ################################################################################
 
-set( CORAL_PATH ${CORAL_PATH}
+set( CORAL_PATH
     "${CMAKE_SOURCE_DIR}/tests/dom1"
 	"${CMAKE_BINARY_DIR}/modules/dom1"
+	${CORAL_PATH}
 )
 
 CORAL_GENERATE_MODULE( _GENERATED_FILES dom )

@@ -1,0 +1,11 @@
+/*
+	Singleton component for integrating Calcium into Lua.
+	- Provides the ca.ILuaManager service (for internal use).
+	- Intercepts Lua calls to Coral services and automatically marks services
+	as changed. This exempts Lua code from calling ca.IGraph:addChange().
+ */
+component LuaManager
+{
+	provides ca.ILuaManager manager;
+	provides lua.IInterceptor interceptor;
+};

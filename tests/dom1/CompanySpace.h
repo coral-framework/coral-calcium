@@ -15,7 +15,6 @@
 #include <ca/IModel.h>
 #include <ca/ISpace.h>
 #include <ca/IUniverse.h>
-#include <ca/NoSuchObjectException.h>
 
 #include <dom/ICompany.h>
 #include <dom/IDeveloper.h>

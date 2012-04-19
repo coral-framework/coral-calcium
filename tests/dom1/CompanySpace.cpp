@@ -31,7 +31,7 @@ void CompanySpace::SetUp()
 
 	_spaceObj->setService( "universe", _universe.get() );
 
-	_space->setRootObject( createCompanyGraph() );
+	_space->initialize( createCompanyGraph() );
 	_space->notifyChanges();
 
 }
@@ -64,7 +64,7 @@ void CompanySpace::TearDown()
 
 co::IObject* CompanySpace::createCompanyGraph()
 {
-	co::IType* devType = co::getType( "dom.Developer" );
+	//co::IType* devType = co::getType( "dom.Developer" );
 
 	// create a simple object graph with 2 entities and 1 relationship
 	_developer1 = co::newInstance( "dom.Developer" )->getService<dom::IDeveloper>();
