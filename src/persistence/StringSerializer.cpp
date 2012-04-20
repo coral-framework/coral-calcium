@@ -1,18 +1,9 @@
 #include "StringSerializer.h"
 
-#include <co/Any.h>
 #include <co/Coral.h>
-#include <co/IType.h>
-#include <sstream>
-#include <co/IClassType.h>
 #include <co/IField.h>
-#include <co/IReflector.h>
-#include <ca/IModel.h>
-#include <ca/ModelException.h>
-#include <ca/FormatException.h>
+#include <sstream>
 #include <co/IllegalArgumentException.h>
-#include <limits>
-
 
 #include "AnyArrayUtil.h"
 

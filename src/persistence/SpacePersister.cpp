@@ -5,38 +5,26 @@
 
 #include "SpacePersister_Base.h"
 
-#include <ca/ISpace.h>
-#include <ca/IUniverse.h>
-#include <ca/IOException.h>
-#include <ca/IGraphChanges.h>
-#include <ca/FormatException.h>
-#include <ca/ISpaceStore.h>
-
-#include <co/RefVector.h>
-#include <co/RefPtr.h>
-#include <co/IObject.h>
+#include <co/Coral.h>
 #include <co/IField.h>
-#include <co/IArray.h>
-#include <co/Any.h>
-#include <co/NotSupportedException.h>
-#include <co/IllegalArgumentException.h>
-#include <co/IllegalCastException.h>
-#include <co/IllegalStateException.h>
-#include <co/Log.h>
-
-#include <set>
-#include <map>
-#include <deque>
-
-#include <ca/IObjectChanges.h>
-#include <ca/ChangedConnection.h>
-#include <ca/ChangedRefVecField.h>
-#include <ca/ChangedRefField.h>
-#include <ca/ChangedValueField.h>
-#include <ca/IServiceChanges.h>
-
+#include <ca/ISpace.h>
 #include <lua/IState.h>
 
+#include <ca/IGraphChanges.h>
+#include <ca/IObjectChanges.h>
+#include <ca/IServiceChanges.h>
+#include <ca/ChangedConnection.h>
+#include <ca/ChangedValueField.h>
+#include <ca/ChangedRefField.h>
+#include <ca/ChangedRefVecField.h>
+
+#include <ca/IOException.h>
+#include <co/IllegalStateException.h>
+#include <co/IllegalArgumentException.h>
+
+#include <map>
+#include <set>
+#include <deque>
 
 #include "StringSerializer.h"
 #include "AnyArrayUtil.h"

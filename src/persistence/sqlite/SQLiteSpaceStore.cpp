@@ -7,7 +7,6 @@
 #include "SQLiteSpaceStore_Base.h"
 
 #include <co/RefPtr.h>
-#include <co/IllegalArgumentException.h>
 
 #include <ca/IOException.h>
 

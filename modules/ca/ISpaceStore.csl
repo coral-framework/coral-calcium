@@ -1,29 +1,85 @@
+/*
+	Interface to store and recover objects and values of a Space.
+
+	Spaces could be saved in different revisions. Each revision is a point in a Space's history timeline.
+	
+*/
 interface ISpaceStore
 {
+	/*
+		The number of the most recent revision of this store's Space
+	*/
+	
 	readonly uint32 latestRevision;
 	
+	/*
+		Open this store for read/write access
+	*/
 	void open() raises ca.IOException;
+	
+	/*
+		Close this store for read/write access
+	*/
 	void close() raises ca.IOException;
 
+	/*
+		Begin a transaction for adding changes in a Space
+	*/
 	void beginChanges();
-	void commitChanges( in string updates );
-	void discardChanges();
 	
-	//returns the root object's id for the current revision
+	/*
+		Confirm and persist the added changes after the last beginChanges call, informing all \a updates performed
+		
+		\throw ca.IOException if no beginChanges was called before.
+	*/
+	void commitChanges( in string updates ) raises ca.IOException;
+	
+	/*
+		Discard all changes informed after the last beginChanges call
+		\throw ca.IOException if no beginChanges was called before.
+	*/
+	void discardChanges() raises ca.IOException;
+	
+	//Returns the root object's id for the given \a revision
 	uint32 getRootObject( in uint32 revision );
 	
-	//set the root object's id for the current revision
+	//Sets the root object's id for the current revision
 	void setRootObject( in uint32 objectId );
 	
+	//Returns all \a updates performed in a given \a revision
 	void getUpdates( in uint32 revision, out string updates );
 	
+	// Stores a new object into Space of a given \a typeName
+	// Returns an unique id of the added object
 	uint32 addObject( in string typeName ) raises ca.IOException;
+	
+	// Stores a new service into a provider with a \a given typeName
+	// Returns an unique id of the added service
 	uint32 addService( in string typeName, in uint32 providerId ) raises ca.IOException;
 	
+	/* 
+	   Stores values into the identified object/service. The given \a fieldNames are port/fields of the identified object/service, respectively.
+	   The pattern for values's strings are the following:
+	   - Regular values ( numbers, strings, booleans and array of these kinds ) follow the lua pattern
+	   - References to service ( value of connections or value of reference fields ) are stored as co::uint32 valid value (representing a service's id) preceded by the character '#'
+	   - Vector of references are stored as an array of valid co::uint32 values (representing a service's id) following the lua pattern, preceded by the character '#'
+	*/
 	void addValues( in uint32 objectId, in string[] fieldNames, in string[] values ) raises ca.IOException;
+	
+	/*
+		Retrieve an \a object's \a typeName in a given \a revision
+		\throw ca.IOException if store is not open, or either objectId or revision is invalid
+	*/
 	void getObjectType( in uint32 objectId, in uint32 revision, out string typeName ) raises ca.IOException;
 	
+	/*
+		Retrieve an \a object's list of values in a given \a revision. The output arrays, \a fieldNames and \a values, are index matched.
+		\throw ca.IOException if store is not open, or either objectId or revision is invalid
+	*/
 	void getValues( in uint32 objectId, in uint32 revision, out string[] fieldNames, out string[] values ) raises ca.IOException;
 	
-	uint32 getServiceProvider( in uint32 serviceId, in uint32 revision );
+	/*
+		Retrieve the service's provider id for a service in a given \a revision.
+	*/
+	uint32 getServiceProvider( in uint32 serviceId, in uint32 revision ) raises ca.IOException;
 };
