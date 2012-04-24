@@ -1,5 +1,0 @@
-struct EntityBean
-{
-	int32 id;
-	string fullName;
-};

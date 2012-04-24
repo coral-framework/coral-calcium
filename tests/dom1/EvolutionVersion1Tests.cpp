@@ -10,21 +10,16 @@
 
 #include <co/Coral.h>
 #include <co/IObject.h>
-#include <co/IllegalStateException.h>
-#include <co/IllegalArgumentException.h>
 
 #include <dom/ICompany.h>
 #include <dom/IDeveloper.h>
 #include <dom/IManager.h>
 #include <dom/IProject.h>
 
-#include <ca/IModel.h>
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
-#include <ca/IUniverse.h>
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
-#include <ca/ModelException.h>
 #include <ca/ISpacePersister.h>
 
 

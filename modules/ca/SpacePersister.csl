@@ -1,8 +1,26 @@
+/*
+	Provides a ISpacePersister operations
+*/
 component SpacePersister
 {
+	/*
+		Observer for restored/initialized space
+	*/
 	provides IGraphObserver graphObserver;
 	provides ISpacePersister persister;
+	
+	/*
+		Auxiliary facet, must not be used explicitly
+	*/
 	provides ISpaceLoader spaceLoader;
+	
+	/*
+		Must be set before any component use
+	*/
 	receives ISpaceStore store;
+	
+	/*
+		Must be set before any component use
+	*/
 	receives IUniverse universe;
 };

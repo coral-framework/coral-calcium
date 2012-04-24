@@ -9,27 +9,20 @@
 
 #include <co/Coral.h>
 #include <co/IObject.h>
-#include <ca/ISpacePersister.h>
 #include <co/RefPtr.h>
-#include <co/Coral.h>
-#include <co/IObject.h>
-#include <co/IllegalStateException.h>
-#include <co/IllegalArgumentException.h>
 
 #include <dom/ICompany.h>
 #include <dom/IEmployee.h>
 #include <dom/IProduct.h>
 #include <dom/IService.h>
 
-#include <co/Log.h>
-
-#include <ca/IModel.h>
+#include <ca/ISpacePersister.h>
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
+#include <ca/IModel.h>
 #include <ca/IUniverse.h>
 #include <ca/ISpaceStore.h>
 #include <ca/IOException.h>
-#include <ca/ModelException.h>
 
 
 class EvolutionVersion2Tests : public ::testing::Test

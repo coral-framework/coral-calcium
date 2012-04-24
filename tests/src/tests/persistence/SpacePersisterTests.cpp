@@ -12,21 +12,18 @@
 #include <co/Coral.h>
 #include <co/IObject.h>
 #include <co/RefPtr.h>
-#include <co/Coral.h>
-#include <co/IObject.h>
-#include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
+#include <co/IllegalStateException.h>
+
 #include <erm/IModel.h>
 #include <erm/IRelationship.h>
 #include <erm/IEntity.h>
 
-#include <ca/IModel.h>
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
 #include <ca/IUniverse.h>
 #include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
-#include <ca/ModelException.h>
 #include <ca/ISpacePersister.h>
 
 class SpacePersisterTests : public ERMSpace 

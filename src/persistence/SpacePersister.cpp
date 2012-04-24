@@ -717,7 +717,7 @@ private:
 		{
 			if(field->getType()->getKind() == co::TK_ARRAY )
 			{
-				co::IType* elementType = co::cast<co::IArray>(field->getType())->getElementType();
+				co::IType* elementType = co::cast<co::IArray>( field->getType() )->getElementType();
 
 				if( elementType->getKind() == co::TK_INTERFACE )
 				{
@@ -746,7 +746,7 @@ private:
 			else if( field->getType()->getKind() == co::TK_INTERFACE )
 			{
 				co::IService* service = change.newValuePtr.newRef->get();
-				if( service == NULL)
+				if( service == NULL )
 				{
 					valueStr = "nil";
 				}
@@ -766,7 +766,7 @@ private:
 		else //port
 		{
 			co::IService* service = change.newValuePtr.newRef->get();
-			if( service == NULL)
+			if( service == NULL )
 			{
 				valueStr = "nil";
 			}

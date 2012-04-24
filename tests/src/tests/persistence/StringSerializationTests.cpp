@@ -3,20 +3,18 @@
 #include <gtest/gtest.h>
 #include <co/Coral.h>
 #include <co/RefPtr.h>
-#include <co/Any.h>
-#include <co/IObject.h>
-#include <co/Range.h>
+#include <co/IllegalArgumentException.h>
+
 #include <ca/IModel.h>
-#include <co/IField.h>
-#include <co/IReflector.h>
 #include <ca/FormatException.h>
+
 #include <serialization/BasicTypesStruct.h>
 #include <serialization/NestedStruct.h>
 #include <serialization/SimpleEnum.h>
 #include <serialization/NativeClassCoral.h>
 #include <serialization/ArrayStruct.h>
 #include <serialization/TwoLevelNestedStruct.h>
-#include <co/IllegalArgumentException.h>
+
 
 TEST( StringSerializationTests, stringDefinitionBasicTypes )
 {
@@ -39,7 +37,7 @@ TEST( StringSerializationTests, stringDefinitionBasicTypes )
 
 	co::uint8 uInteger8 = 127;
 	expected = "127";
-	
+
 	serializer.toString( co::Any(uInteger8), actual );
 	EXPECT_EQ(expected, actual);
 

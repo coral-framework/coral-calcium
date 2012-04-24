@@ -1,5 +1,0 @@
-struct FieldValueBean
-{
-	string fieldName;
-	string fieldValue;
-};

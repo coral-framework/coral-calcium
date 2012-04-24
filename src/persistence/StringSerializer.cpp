@@ -97,7 +97,7 @@ void StringSerializer::toStream( const co::Any& value, std::stringstream& ss )
 
 void StringSerializer::writeEnum( const co::Any& value, std::stringstream& ss, co::IType* type )
 {
-	co::IEnum* enumType = static_cast<co::IEnum*>(type);
+	co::IEnum* enumType = co::cast<co::IEnum>( type );
 
 	co::int8 enumAsint8 = value.get<co::int32>();
 			
@@ -106,12 +106,12 @@ void StringSerializer::writeEnum( const co::Any& value, std::stringstream& ss, c
 
 void StringSerializer::writeComplexType( const co::Any& value, std::stringstream& ss, co::IType* type )
 {
-	co::IRecordType * recordType = static_cast<co::IRecordType*>(type);
-	std::vector<co::IField*> fields; 
+	co::IRecordType * recordType = static_cast<co::IRecordType*>( type );
+	std::vector<co::IField*> fields;
 	getFieldsToSerializeForType( recordType, fields );
 	co::IReflector * ref = type->getReflector();
 	co::Any fieldValue;
-	std::string fieldValueStr;
+
 	ss << "{";
 	for(int i = 0; i < fields.size(); i++)
 	{
@@ -148,9 +148,9 @@ void StringSerializer::writeArray(const co::Any& value, std::stringstream& ss, c
 			arrayUtil.getArrayElement(value, i, arrayElement);
 			toStream(arrayElement, ss);
 				 
-			if( i < size-1)
+			if( i < size-1 )
 			{
-			ss << ",";
+				ss << ",";
 			}
 
 	}
@@ -162,9 +162,13 @@ void StringSerializer::writeBasicType( const co::Any& value, std::stringstream& 
 {
 	co::TypeKind kind = value.getKind();
 	if( kind == co::TK_BOOLEAN )
+	{
 		ss << ( value.get<bool>() ? "true" : "false" );
+	}
 	else if( kind == co::TK_STRING )
+	{
 		escapeLuaString( value.get<const std::string&>(), ss );
+	}
 	else
 	{
 		// 16 digits, sign, point, and \0
