@@ -44,7 +44,7 @@ namespace ca {
 		{
 			return false;
 		}
-		
+
 		if( tk == co::TK_ARRAY )
 		{
 			co::IArray* arrayType = co::cast<co::IArray>( type );

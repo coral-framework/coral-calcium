@@ -48,24 +48,18 @@ void StringSerializer::setModel(ca::IModel* model)
 
 void StringSerializer::getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fieldsToSerialize )
 {
-	if( _model == NULL )
-	{
-		for(int i = 0; i < type->getFields().getSize(); i++)
-		{
-			fieldsToSerialize.push_back( type->getFields()[i] );
-		}
-	}
-	else
-	{
-		co::RefVector<co::IField> refVector;
+	assert( _model != NULL );
+	
+	
+	co::RefVector<co::IField> refVector;
 				
-		_model->getFields(type, refVector);
+	_model->getFields(type, refVector);
 		
-		for(int i = 0; i < refVector.size(); i++)
-		{
-			fieldsToSerialize.push_back( refVector[i].get() );
-		}
+	for(int i = 0; i < refVector.size(); i++)
+	{
+		fieldsToSerialize.push_back( refVector[i].get() );
 	}
+	
 }
 
 

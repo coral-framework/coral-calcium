@@ -60,19 +60,21 @@ public:
 		cacheChanges( changes );
 	}
 
+	// ------ ca.ISpaceLoader Methods ------ //
+
 	void insertObjectCache( co::IService* obj, co::uint32 id )
 	{
 		_objectIdCache.insert( ObjectIdMap::value_type( obj, id ) );
 	}
 
-	void insertNewObject( co::IService* obj )
-	{
-		_addedObjects.insert( obj );
-	}
-
 	void setUpdateList( const std::string& updateList )
 	{
 		_updateList = updateList;
+	}
+
+	void insertNewObject( co::IService* obj )
+	{
+		_addedObjects.insert( obj );
 	}
 
 	void addChange( co::IService* service, co::IMember* member, const co::Any& newValue )
@@ -133,6 +135,11 @@ public:
 
 	// ------ ca.ISpacePersister Methods ------ //
 
+	ca::ISpace* getSpace()
+	{
+		return _space.get();
+	}
+
 	void initialize( co::IObject* rootObject )
 	{
 		assertSpaceNotSet();
@@ -185,11 +192,6 @@ public:
 
 		_spaceStore->close();
 
-	}
-
-	ca::ISpace* getSpace()
-	{
-		return _space.get();
 	}
 
 	void restore()

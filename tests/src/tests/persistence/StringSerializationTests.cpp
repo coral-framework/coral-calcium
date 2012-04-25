@@ -4,6 +4,7 @@
 #include <co/Coral.h>
 #include <co/RefPtr.h>
 #include <co/IllegalArgumentException.h>
+#include <co/IObject.h>
 
 #include <ca/IModel.h>
 #include <ca/FormatException.h>
@@ -19,6 +20,11 @@
 TEST( StringSerializationTests, stringDefinitionBasicTypes )
 {
 	ca::StringSerializer serializer;
+
+	co::IObject* modelObj = co::newInstance( "ca.Model" );
+	ca::IModel* model = modelObj->getService<ca::IModel>();
+	model->setName( "serialization" );
+	serializer.setModel( model );
 
 	std::string expected;
 	std::string actual;
@@ -144,6 +150,10 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 {
 
 	ca::StringSerializer serializer;
+	co::IObject* modelObj = co::newInstance( "ca.Model" );
+	ca::IModel* model = modelObj->getService<ca::IModel>();
+	model->setName( "serialization" );
+	serializer.setModel( model );
 
 	serialization::BasicTypesStruct structValue;
 	structValue.intValue = 1;
@@ -151,7 +161,7 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 	structValue.doubleValue = 4.56;
 	structValue.byteValue = 123;
 
-	std::string expected = "{byteValue=123,doubleValue=4.56,intValue=1,strValue='name'}";
+	std::string expected = "{byteValue=123,intValue=1,strValue='name'}";
 	std::string actual;
 
 	co::Any structAny;
@@ -165,7 +175,7 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 	nativeValue.strValue = "nameNative"; 
 	nativeValue.doubleValue = 6.52;
 	nativeValue.byteValue = -64;
-	expected = "{byteValue=-64,doubleValue=6.52,intValue=4386,strValue='nameNative'}";
+	expected = "{byteValue=-64,doubleValue=6.52,intValue=4386}";
 	structAny.set<serialization::NativeClassCoral&>( nativeValue );
 
 	serializer.toString( structAny, actual );
@@ -179,7 +189,7 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 	nestedStruct.structValue.doubleValue = 4.56;
 	nestedStruct.structValue.byteValue = 123;
 
-	expected = "{enumValue=Three,int16Value=1234,structValue={byteValue=123,doubleValue=4.56,intValue=1,strValue='name'}}";
+	expected = "{int16Value=1234,structValue={byteValue=123,intValue=1,strValue='name'}}";
 
 	structAny.set<const serialization::NestedStruct&>( nestedStruct );
 
@@ -204,10 +214,9 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 
 	arrayStruct.basicStructs.push_back( structValue );
 
-	expected = "{basicStructs={{byteValue=123,doubleValue=4.56,intValue=1,strValue='name'},"
-			   "{byteValue=67,doubleValue=10.43,intValue=73246,strValue='valueSecondStruct'}},"
-			   "enums={One,Two},"
-			   "integers={0,2,4,6,8}}";
+	expected = "{basicStructs={{byteValue=123,intValue=1,strValue='name'},"
+			   "{byteValue=67,intValue=73246,strValue='valueSecondStruct'}},"
+			   "enums={One,Two}}";
 
 	structAny.set<serialization::ArrayStruct&>(arrayStruct);
 
@@ -222,8 +231,8 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 
 	structAny.set<serialization::TwoLevelNestedStruct&>(twoLevelNestedStruct);
 
-	expected = "{boolean=true,nativeClass={byteValue=-64,doubleValue=6.52,intValue=4386,strValue='nameNative'},"
-			   "nested={enumValue=Three,int16Value=1234,structValue={byteValue=123,doubleValue=4.56,intValue=1,strValue='name'}}}";
+	expected = "{boolean=true,nativeClass={byteValue=-64,doubleValue=6.52,intValue=4386},"
+			   "nested={int16Value=1234,structValue={byteValue=123,intValue=1,strValue='name'}}}";
 	serializer.toString( structAny, actual );
 	EXPECT_EQ( expected, actual );
 }
@@ -231,6 +240,10 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 TEST( StringSerializationTests, stringDefinitionArray )
 {
 	ca::StringSerializer serializer;
+	co::IObject* modelObj = co::newInstance( "ca.Model" );
+	ca::IModel* model = modelObj->getService<ca::IModel>();
+	model->setName( "serialization" );
+	serializer.setModel( model );
 
 	std::vector<co::int8> int8vec;
 
@@ -327,7 +340,7 @@ TEST( StringSerializationTests, stringDefinitionArray )
 	arrayStruct[1].doubleValue = 1.2E6;
 	arrayStruct[1].byteValue = -100;
 
-	expected = "{{byteValue=123,doubleValue=4.56,intValue=1,strValue='name'},{byteValue=-100,doubleValue=1200000,intValue=6,strValue='nameSecond'}}";
+	expected = "{{byteValue=123,intValue=1,strValue='name'},{byteValue=-100,intValue=6,strValue='nameSecond'}}";
 
 	anyArray.setArray( co::Any::AK_Range, co::typeOf<serialization::BasicTypesStruct>::get(), 0, arrayStruct, 2 );
 	serializer.toString( anyArray, actual );

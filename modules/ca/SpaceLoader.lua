@@ -19,11 +19,6 @@ local mt = {
 		return returnValue
 	end,
 	__newindex = function (t,k,v)
-		-- if k == "_type" then
-			-- t[index]["_id"] = nil
-			-- assignmentCache[t] = nil -- no need to save changes for a new object
-			-- -- re-type then is a new object to be add
-		-- end
 
 		if t[index]["_id"] ~= nil then
 			if assignmentCache[t] == nil then
@@ -238,7 +233,7 @@ function convertToCoral( obj, objModel, spaceLoader )
 			spaceLoader:insertObjectCache( root, obj._id )
 		end
 
-		if (assignmentCache[ obj ] ~= nil) and (assignmentCache[ obj ]["_type"] ~= nil) then
+		if ( assignmentCache[ obj ] ~= nil ) and ( assignmentCache[ obj ]["_type"] ~= nil ) then
 			spaceLoader:addTypeChange( root, obj._type )
 		end
 
@@ -283,7 +278,7 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	local hasChange
 	local refVec
 
-	if (assignmentCache[ serviceValues ] ~= nil) and (assignmentCache[ serviceValues ]["_type"] ~= nil) then
+	if ( assignmentCache[ serviceValues ] ~= nil ) and ( assignmentCache[ serviceValues ]["_type"] ~= nil ) then
 		spaceLoader:addTypeChange( service, service.interface.fullName )
 	end
 

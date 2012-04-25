@@ -21,10 +21,7 @@ public:
 	void toString( const co::Any& value, std::string& valueToStr );
 
 	void setModel( ca::IModel* model );
-
 private:
-	ca::IModel* _model;
-
 	//determine which fields should be serialized. If a IModel is provided, it is used to tell the fields to be serialized.
 	//If not, all fields of the given type will be serialized.
 	void getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fields );
@@ -44,6 +41,8 @@ private:
 	bool mustBeEscaped( const std::string& str );
 
 	void escapeLuaString( const std::string& str, std::stringstream& ss );
+private:
+	ca::IModel* _model;
 };
 
 } // namespace ca

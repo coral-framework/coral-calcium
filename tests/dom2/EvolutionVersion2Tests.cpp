@@ -388,7 +388,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 	ASSERT_EQ( 1, employees[3]->getWorking().getSize() );
 	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[3]->getWorking()[0] ) );
 	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
-	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+	EXPECT_EQ( 50000.0/1.90, devService->getMonthlyIncome() );
 
 	EXPECT_EQ( "Jacob Lua Junior", employees[4]->getName() );
 	EXPECT_EQ( 3000, employees[4]->getSalary() );
@@ -398,7 +398,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 	ASSERT_EQ( 1, employees[4]->getWorking().getSize() );
 	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[4]->getWorking()[0] ) );
 	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
-	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+	EXPECT_NEAR( 26315.79, devService->getMonthlyIncome(), 0.01 );
 
 	ASSERT_NO_THROW( persister->save() );
 
@@ -451,11 +451,11 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 	EXPECT_EQ( 5000, employees[3]->getSalary() );
 	EXPECT_EQ( "Developer", employees[3]->getRole() );
 	EXPECT_EQ( NULL, employees[3]->getLeading() );
-	
+
 	ASSERT_EQ( 1, employees[3]->getWorking().getSize() );
 	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[3]->getWorking()[0] ) );
 	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
-	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+	EXPECT_NEAR( 26315.79, devService->getMonthlyIncome(), 0.01 );
 
 	EXPECT_EQ( "Jacob Lua Junior", employees[4]->getName() );
 	EXPECT_EQ( 3000, employees[4]->getSalary() );
@@ -465,7 +465,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 	ASSERT_EQ( 1, employees[4]->getWorking().getSize() );
 	ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[4]->getWorking()[0] ) );
 	EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
-	EXPECT_EQ( 50000, devService->getMonthlyIncome() );
+	EXPECT_NEAR( 26315.79, devService->getMonthlyIncome(), 0.01 );
 
 	devService->setMonthlyIncome( 60000 );
 	spaceRestored->addChange( devService );

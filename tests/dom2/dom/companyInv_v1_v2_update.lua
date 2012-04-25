@@ -49,7 +49,7 @@ function projectUpdate( node )
 		node.service = {
 						_type = "dom.IService", 
 						name = project.name,
-						monthlyIncome = project.earnings,
+						monthlyIncome = project.earnings / 1.90, --value conversion, now in us dollars.
 						_providerTable = node,
 					}
 		
@@ -60,7 +60,7 @@ function projectUpdate( node )
 		node.product = {
 						_type = "dom.IProduct",
 						name = project.name,
-						value = project.earnings,
+						value = project.earnings, 
 						_providerTable = node,
 					}
 		leaderObj = project.manager._providerTable
