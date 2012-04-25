@@ -22,9 +22,9 @@ TEST( StringSerializationTests, stringDefinitionBasicTypes )
 	ca::StringSerializer serializer;
 
 	co::IObject* modelObj = co::newInstance( "ca.Model" );
-	ca::IModel* model = modelObj->getService<ca::IModel>();
+	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
 	model->setName( "serialization" );
-	serializer.setModel( model );
+	serializer.setModel( model.get() );
 
 	std::string expected;
 	std::string actual;
@@ -151,9 +151,9 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 
 	ca::StringSerializer serializer;
 	co::IObject* modelObj = co::newInstance( "ca.Model" );
-	ca::IModel* model = modelObj->getService<ca::IModel>();
+	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
 	model->setName( "serialization" );
-	serializer.setModel( model );
+	serializer.setModel( model.get() );
 
 	serialization::BasicTypesStruct structValue;
 	structValue.intValue = 1;
@@ -241,9 +241,9 @@ TEST( StringSerializationTests, stringDefinitionArray )
 {
 	ca::StringSerializer serializer;
 	co::IObject* modelObj = co::newInstance( "ca.Model" );
-	ca::IModel* model = modelObj->getService<ca::IModel>();
+	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
 	model->setName( "serialization" );
-	serializer.setModel( model );
+	serializer.setModel( model.get() );
 
 	std::vector<co::int8> int8vec;
 
