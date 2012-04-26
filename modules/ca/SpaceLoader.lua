@@ -20,14 +20,13 @@ local mt = {
 	end,
 	__newindex = function (t,k,v)
 
-		if t[index]["_id"] ~= nil then
+		if t[index] ~= nil and t[index]["_id"] ~= nil then
 			if assignmentCache[t] == nil then
 				assignmentCache[t] = {}
 			end
 
 			assignmentCache[t][k] = v
 		end
-
 		t[index][k] = v   -- update original table
 	end
 }
@@ -243,17 +242,18 @@ function convertToCoral( obj, objModel, spaceLoader )
 			portName = port.name
 			currentService = root[portName]
 			currentServiceValues = obj[portName]
+			
 			if port.isFacet then
 				fillServiceValues( currentService, currentServiceValues, objModel, spaceLoader )
 			else
-				if conversionCache[ currentServiceValues ] == nil then
+				if currentServiceValues ~= nil and conversionCache[ currentServiceValues ] == nil then
 					local providerObj = convertToCoral( currentServiceValues._providerTable, objModel, spaceLoader )
 					currentService = conversionCache[ currentServiceValues ]
-					root[port] = currentService
+					root[portName] = currentService
 				end
 			end
-			if assignmentCache[ obj ] ~= nil then
-				spaceLoader:addChange( root, port, currentService )
+			if obj._id ~= nil and assignmentCache[ obj ] ~= nil and assignmentCache[ obj ][ portName ] ~= nil then
+				spaceLoader:addRefChange( root, port, currentService )
 			end
 		end
 	end
@@ -264,7 +264,9 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	conversionCache[serviceValues] = service
 
 	if serviceValues._id == nil then
-		spaceLoader:insertNewObject( service )
+		if serviceValues._providerTable._id ~= nil then 
+			spaceLoader:insertNewObject( service )
+		end
 	else
 		spaceLoader:insertObjectCache( service, serviceValues._id )
 	end
@@ -322,7 +324,6 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 			end
 		end
 	end
-
 end
 
 local function protectedRestoreSpace( space, spaceStore, objModel, revision, spaceLoader )

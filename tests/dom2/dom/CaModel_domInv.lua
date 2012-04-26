@@ -1,6 +1,7 @@
 Type "dom.Company"
 {
 	company = "dom.ICompany",
+	ceo = "dom.IEmployee",
 }
 
 Type "dom.Employee"

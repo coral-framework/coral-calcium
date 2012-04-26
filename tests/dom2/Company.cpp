@@ -68,11 +68,22 @@ namespace dom {
 
 			}
 		}
+	protected:
 
+		dom::IEmployee* getCeoService()
+		{
+			return _ceo.get();
+		}
+
+		void setCeoService( dom::IEmployee * ceo )
+		{
+			_ceo = ceo;
+		}
 	private:
 		co::RefVector<IEmployee> _employees;
 		co::RefVector<dom::IService> _services;
 		co::RefVector<IProduct> _products;
+		co::RefPtr<IEmployee> _ceo;
 	};
 
 	CORAL_EXPORT_COMPONENT( Company, Company )

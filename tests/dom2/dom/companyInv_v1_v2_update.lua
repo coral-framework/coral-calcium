@@ -23,6 +23,22 @@ function companyUpdate( node )
 		end
 		
 	end
+	
+	local ceo = {
+					_type = "dom.Employee",
+					employee = 
+					{
+						_type = "dom.IEmployee",
+						name = "James CEO Boss",
+						salary = 100000.0,
+						role = "CEO",
+						working = {},
+					}
+				}
+				
+	ceo.employee._providerTable = ceo
+	
+	node.ceo = ceo.employee
 	company.employees = employeeList
 	company.projects = nil
 end
@@ -41,7 +57,6 @@ function projectUpdate( node )
 	local devs = {}
 	
 	local project = node.project
-	
 	if ( project.isService ) then
 
 		node._type = "dom.Service"

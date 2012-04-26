@@ -343,6 +343,15 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
 	ASSERT_TRUE( company != NULL );
 
+	dom::IEmployee* ceo = co::cast<dom::IEmployee>( objRest->getService( "ceo" ) );
+	ASSERT_TRUE( ceo != NULL );
+
+	EXPECT_EQ( "James CEO Boss", ceo->getName() );
+	EXPECT_EQ( 100000, ceo->getSalary() );
+	EXPECT_EQ( "CEO", ceo->getRole() );
+	EXPECT_EQ( NULL, ceo->getLeading() );
+	EXPECT_EQ( 0, ceo->getWorking().getSize() );
+
 	co::Range<dom::IEmployee* const> employees = company->getEmployees();
 	ASSERT_EQ( 5, employees.getSize() );
 	
