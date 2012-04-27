@@ -6,16 +6,16 @@ function companyUpdate( node )
 	local employeeList = {}
 	
 	for _, project in ipairs( projects ) do
-		local projectUpdated = project._providerTable
+		local projectUpdated = project._provider
 		update( projectUpdated )
 		for _, dev in ipairs( project.developers ) do
 			dev.working = {}
-			update( dev._providerTable )
+			update( dev._provider )
 			dev.working[ #dev.working + 1 ] = getCorrectService( projectUpdated )
 			employeeList[ #employeeList + 1 ] = dev
 		end
 		if( getCorrectService( projectUpdated )._type == "dom.IProduct" ) then
-			local managerEmployee = project.manager._providerTable
+			local managerEmployee = project.manager._provider
 			convertToEmployee( managerEmployee )
 			managerEmployee.employee.leading = getCorrectService( projectUpdated )
 			employeeList[ #employeeList + 1 ] = managerEmployee.employee
@@ -23,21 +23,12 @@ function companyUpdate( node )
 		end
 		
 	end
-	
-	local ceo = {
-					_type = "dom.Employee",
-					employee = 
-					{
-						_type = "dom.IEmployee",
-						name = "James CEO Boss",
-						salary = 100000.0,
-						role = "CEO",
-						working = {},
-					}
-				}
-				
-	ceo.employee._providerTable = ceo
-	
+
+	local ceo = newInstance( "dom.Employee" )
+	ceo.employee.name = "James CEO Boss"
+	ceo.employee.salary = 100000.0
+	ceo.employee.role = "CEO"
+		
 	node.ceo = ceo.employee
 	company.employees = employeeList
 	company.projects = nil
@@ -65,7 +56,7 @@ function projectUpdate( node )
 						_type = "dom.IService", 
 						name = project.name,
 						monthlyIncome = project.earnings / 1.90, --value conversion, now in us dollars.
-						_providerTable = node,
+						_provider = node,
 					}
 		
 		node.project = nil
@@ -76,9 +67,9 @@ function projectUpdate( node )
 						_type = "dom.IProduct",
 						name = project.name,
 						value = project.earnings, 
-						_providerTable = node,
+						_provider = node,
 					}
-		leaderObj = project.manager._providerTable
+		leaderObj = project.manager._provider
 		node.product.leader = leaderObj.employee
 		node.project = nil
 

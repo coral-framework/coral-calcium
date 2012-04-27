@@ -7,8 +7,8 @@ function companyUpdate( node )
 	local productList = {}
 	
 	for _, project in ipairs( projects ) do
-		update( project._providerTable )
-		local projectUpdated = project._providerTable
+		update( project._provider )
+		local projectUpdated = project._provider
 		if( project.isService ) then
 			serviceList[ #serviceList + 1 ] = projectUpdated.service
 		else
@@ -26,7 +26,7 @@ function projectUpdate( node )
 	local project = node.project
 	
 	for _, dev in ipairs( project.developers ) do
-		devProvider = dev._providerTable
+		devProvider = dev._provider
 		update( devProvider )
 		devs[ #devs + 1 ] = devProvider.employee
 	end
@@ -39,7 +39,7 @@ function projectUpdate( node )
 						name = project.name,
 						monthlyIncome = project.earnings,
 						mantainers = devs,
-						_providerTable = node,
+						_provider = node,
 					}
 		
 		node.project = nil
@@ -51,9 +51,9 @@ function projectUpdate( node )
 						name = project.name,
 						value = project.earnings,
 						developers = devs,
-						_providerTable = node,
+						_provider = node,
 					}
-		leaderObj = project.manager._providerTable
+		leaderObj = project.manager._provider
 		update( leaderObj )
 		node.product.leader = leaderObj.employee
 		node.project = nil

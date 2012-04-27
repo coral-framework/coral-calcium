@@ -9,6 +9,7 @@ local coNew = co.new
 local coType = co.Type
 local coRaise = co.raise
 
+local model
 -- create private index
 local index = {}
 
@@ -38,6 +39,23 @@ function track (t)
   return proxy
 end
 
+function newInstance( typeStr )
+	local ports = model:getPorts( coType( typeStr ) )
+	local t = { _type = typeStr }
+	t = track(t)
+	for _, port in ipairs( ports ) do
+		if port.isFacet then
+			local facetTable = facet( port.type.fullName, t )
+			t[ port.name ] = facetTable
+		end
+	end
+	return t
+end 
+
+function facet( serviceType, provider )
+	local facetTable = { _type = serviceType, _provider = provider }
+	return track( facetTable )
+end
 
 function extractNamespaceFullName( typeName )
 	for ns in typeName:gmatch( "([%w%.]+)%.%w+" ) do
@@ -114,7 +132,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				luaObjectTable[ fieldNames[i] ] = chunk()
 			end
 		end
-		luaObjectTable._providerTable = idCache[ objectId ]
+		luaObjectTable._provider = idCache[ objectId ]
 	end
 
 	return idCache[ serviceId ]
@@ -145,6 +163,7 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 end
 
 function restore( space, spaceStore, objModel, revision, spaceLoader )
+	model = objModel
 	spaceStore:open()
 
 	local rootId = spaceStore:getRootObject( revision )
@@ -247,7 +266,7 @@ function convertToCoral( obj, objModel, spaceLoader )
 				fillServiceValues( currentService, currentServiceValues, objModel, spaceLoader )
 			else
 				if currentServiceValues ~= nil and conversionCache[ currentServiceValues ] == nil then
-					local providerObj = convertToCoral( currentServiceValues._providerTable, objModel, spaceLoader )
+					local providerObj = convertToCoral( currentServiceValues._provider, objModel, spaceLoader )
 					currentService = conversionCache[ currentServiceValues ]
 					root[portName] = currentService
 				end
@@ -264,7 +283,7 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	conversionCache[serviceValues] = service
 
 	if serviceValues._id == nil then
-		if serviceValues._providerTable._id ~= nil then 
+		if serviceValues._provider._id ~= nil then 
 			spaceLoader:insertNewObject( service )
 		end
 	else
@@ -294,7 +313,7 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 			if refVec then
 				local serviceArray = {}
 				for _, svInd in ipairs( fieldValue ) do
-					convertToCoral( svInd._providerTable, objModel, spaceLoader )
+					convertToCoral( svInd._provider, objModel, spaceLoader )
 					serviceArray[ #serviceArray + 1 ] = conversionCache[ svInd ]
 				end
 				service[fieldName] = serviceArray
@@ -302,7 +321,7 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 					spaceLoader:addRefVecChange( service, field, service[fieldName] )
 				end
 			elseif fieldKind == 'TK_INTERFACE' then
-				local objProvider = convertToCoral( fieldValue._providerTable, objModel, spaceLoader )
+				local objProvider = convertToCoral( fieldValue._provider, objModel, spaceLoader )
 				service[fieldName] = conversionCache[fieldValue]
 				if hasChange then
 					spaceLoader:addRefChange( service, field, service[fieldName] )
