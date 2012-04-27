@@ -25,6 +25,7 @@ function companyUpdate( node )
 	end
 
 	local ceo = newInstance( "dom.Employee" )
+	
 	ceo.employee.name = "James CEO Boss"
 	ceo.employee.salary = 100000.0
 	ceo.employee.role = "CEO"
@@ -52,23 +53,19 @@ function projectUpdate( node )
 
 		node._type = "dom.Service"
 		
-		node.service = {
-						_type = "dom.IService", 
-						name = project.name,
-						monthlyIncome = project.earnings / 1.90, --value conversion, now in us dollars.
-						_provider = node,
-					}
+		node.service = Facet( "dom.IService", {
+								name = project.name,
+								monthlyIncome = project.earnings / 1.90, --value conversion, now in us dollars.
+							} )
 		
 		node.project = nil
 	else
 		node._type = "dom.Product"
 		
-		node.product = {
-						_type = "dom.IProduct",
+		node.product = Facet( "dom.IProduct", {
 						name = project.name,
 						value = project.earnings, 
-						_provider = node,
-					}
+					} )
 		leaderObj = project.manager._provider
 		node.product.leader = leaderObj.employee
 		node.project = nil

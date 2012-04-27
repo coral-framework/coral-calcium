@@ -25,9 +25,13 @@ local mt = {
 			if assignmentCache[t] == nil then
 				assignmentCache[t] = {}
 			end
-
 			assignmentCache[t][k] = v
 		end
+		if type( v ) == 'table' and v._facet then
+			v._provider = t
+			v._facet = nil
+		end
+		
 		t[index][k] = v   -- update original table
 	end
 }
@@ -45,16 +49,24 @@ function newInstance( typeStr )
 	t = track(t)
 	for _, port in ipairs( ports ) do
 		if port.isFacet then
-			local facetTable = facet( port.type.fullName, t )
+			local facetTable = Facet( port.type.fullName )
 			t[ port.name ] = facetTable
+			facetTable._provider = t
 		end
 	end
 	return t
 end 
 
-function facet( serviceType, provider )
-	local facetTable = { _type = serviceType, _provider = provider }
-	return track( facetTable )
+function Facet( serviceType, initialValues )
+	local facetTable = track({ _type = serviceType, _facet = true })
+	
+	if initialValues ~= nil and type( initialValues ) == 'table' then
+		for k, v in pairs( initialValues ) do
+			facetTable[k] = v
+		end		
+	end
+	
+	return facetTable
 end
 
 function extractNamespaceFullName( typeName )
