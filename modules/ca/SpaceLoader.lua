@@ -1,27 +1,18 @@
-local idCache = {}
-local conversionCache = {}
+local updateEnv = {}
 
-local assignmentCache = {}
-
-local namespaces = {}
-
-local coNew = co.new
-local coType = co.Type
-local coRaise = co.raise
-
-local model
--- create private index
-local index = {}
+updateEnv.index = {}
+updateEnv.assignmentCache = {}
+local assignmentCache = updateEnv.assignmentCache
 
 -- create metatable
-local mt = {
+updateEnv.updateMT = {
 	__index = function (t,k)
-		local returnValue = t[index][k]
+		local returnValue = t[updateEnv.index][k]
 		return returnValue
 	end,
 	__newindex = function (t,k,v)
 
-		if t[index] ~= nil and t[index]["_id"] ~= nil then
+		if t[updateEnv.index] ~= nil and t[updateEnv.index]["_id"] ~= nil then
 			if assignmentCache[t] == nil then
 				assignmentCache[t] = {}
 			end
@@ -32,29 +23,31 @@ local mt = {
 			v._facet = nil
 		end
 		
-		t[index][k] = v   -- update original table
+		t[updateEnv.index][k] = v   -- update original table
 	end
 }
 
-function track (t)
+function updateEnv.track (t)
   local proxy = {}
-  proxy[index] = t
-  setmetatable(proxy, mt)
+  proxy[updateEnv.index] = t
+  setmetatable( proxy, updateEnv.updateMT )
   return proxy
 end
+local track = updateEnv.track
 
-function newInstance( typeStr )
 
-	local cotype, err = coType( typeStr )
+function updateEnv.newInstance( typeStr )
+
+	local cotype, err = co.Type( typeStr )
 	if err then
 		error( err )
 	end
-	local ports = model:getPorts( cotype )
+	local ports = updateEnv.model:getPorts( cotype )
 	local t = { _type = typeStr }
 	t = track(t)
 	for _, port in ipairs( ports ) do
 		if port.isFacet then
-			local facetTable = Facet( port.type.fullName )
+			local facetTable = updateEnv.Facet( port.type.fullName )
 			t[ port.name ] = facetTable
 			facetTable._provider = t
 		end
@@ -62,7 +55,7 @@ function newInstance( typeStr )
 	return t
 end 
 
-facetMT = { __call = function( facetTable, initialValues )
+updateEnv.facetMT = { __call = function( facetTable, initialValues )
 	if initialValues ~= nil and type( initialValues ) == 'table' then
 		for k, v in pairs( initialValues ) do
 			facetTable[k] = v
@@ -71,11 +64,44 @@ facetMT = { __call = function( facetTable, initialValues )
 	return track( facetTable )
 end }
 
-function Facet( serviceType )
-	local facetTable = setmetatable( { _type = serviceType, _facet = true }, facetMT )
+function updateEnv.Facet( serviceType )
+	local facetTable = setmetatable( { _type = serviceType, _facet = true }, updateEnv.facetMT )
 	
 	return facetTable
 end
+
+local updateEnvMT = { __index = function( t, k )
+							local returnValue = updateEnv[k]
+							
+							if returnValue == nil then
+								returnValue = _G[k]
+							end
+							return returnValue
+						end
+					}
+
+local newEnv = { updateEnvMT = updateEnvMT } -- create new environment
+setmetatable( newEnv, {__index = _G} )
+_ENV = newEnv
+						
+local function loadFileIn( filePath, env )
+	local file, err = io.open( filePath, 'rb' )
+	if file then
+		local chunk, err = load( file:lines( 4096 ), filePath, 't', env )
+		file:close()
+		return chunk, err
+    end
+    return file, err
+end
+
+local idCache = {}
+local conversionCache = {}
+
+local namespaces = {}
+
+local coNew = co.new
+local coType = co.Type
+local coRaise = co.raise
 
 function extractNamespaceFullName( typeName )
 	for ns in typeName:gmatch( "([%w%.]+)%.%w+" ) do
@@ -183,7 +209,7 @@ function restoreObject( spaceStore, objModel, objectId, revision )
 end
 
 function restore( space, spaceStore, objModel, revision, spaceLoader )
-	model = objModel
+	updateEnv.model = objModel
 	spaceStore:open()
 
 	local rootId = spaceStore:getRootObject( revision )
@@ -203,7 +229,7 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 
 	for _, script in ipairs( availableUpdates ) do
 		if not hasApplied[script] then
-			applyUpdate( script, track( obj ) )
+			applyUpdate( script, obj )
 			appliedUpdates = appliedUpdates .. script ..";"
 		end
 	end
@@ -214,7 +240,6 @@ function restore( space, spaceStore, objModel, revision, spaceLoader )
 	space:notifyChanges()
 
 	spaceLoader:setUpdateList( appliedUpdates )
-
 end
 
 function loadCaModels( objModel )
@@ -231,33 +256,33 @@ function applyUpdate( updateScript, coralGraph )
 		coRaise( "ca.IOException", "Script file not found" )
 	end
 
-	local file, err = io.open( path, 'rb' )
+	currentEnv = setmetatable( {}, updateEnvMT )
+	updateList = {}
 
-	if file then
-		local chunk, err = load( file:lines( 4096 ), path, 't' )
+	local chunk, err = loadFileIn( path, currentEnv )
+		
+	if ( chunk ) then
+		chunk()
+		local ok, result = pcall( currentEnv.update, coralGraph )
+		-- unload the chunk and update function
+		
+		chunk = nil
+		update = nil
 
-		if ( chunk ) then
-			file:close()
-			chunk()
-			local ok, result = pcall( update, coralGraph )
-
-			-- unload the chunk and update function
-			chunk = nil
-			update = nil
-
-			if not ok then
-				coRaise( "ca.IOException", result )
-			end
-			return result
-		else
-			coRaise( "ca.IOException", err )
+		if not ok then
+			coRaise( "ca.IOException", result )
 		end
-    end
+		return result
+	else
+		coRaise( "ca.IOException", err )
+	end
+    
 	return nil
 
 end
 
 function convertToCoral( obj, objModel, spaceLoader )
+
 	if conversionCache[obj] == nil then
 		local root = coNew( obj._type )
 
@@ -301,7 +326,6 @@ end
 
 function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	conversionCache[serviceValues] = service
-
 	if serviceValues._id == nil then
 		if serviceValues._provider._id ~= nil then 
 			spaceLoader:insertNewObject( service )
