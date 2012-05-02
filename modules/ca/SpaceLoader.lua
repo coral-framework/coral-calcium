@@ -44,7 +44,12 @@ function track (t)
 end
 
 function newInstance( typeStr )
-	local ports = model:getPorts( coType( typeStr ) )
+
+	local cotype, err = coType( typeStr )
+	if err then
+		error( err )
+	end
+	local ports = model:getPorts( cotype )
 	local t = { _type = typeStr }
 	t = track(t)
 	for _, port in ipairs( ports ) do
@@ -57,14 +62,17 @@ function newInstance( typeStr )
 	return t
 end 
 
-function Facet( serviceType, initialValues )
-	local facetTable = track({ _type = serviceType, _facet = true })
-	
+facetMT = { __call = function( facetTable, initialValues )
 	if initialValues ~= nil and type( initialValues ) == 'table' then
 		for k, v in pairs( initialValues ) do
 			facetTable[k] = v
-		end		
+		end
 	end
+	return track( facetTable )
+end }
+
+function Facet( serviceType )
+	local facetTable = setmetatable( { _type = serviceType, _facet = true }, facetMT )
 	
 	return facetTable
 end

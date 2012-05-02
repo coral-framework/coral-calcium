@@ -14,6 +14,7 @@ function companyUpdate( node )
 			dev.working[ #dev.working + 1 ] = getCorrectService( projectUpdated )
 			employeeList[ #employeeList + 1 ] = dev
 		end
+		
 		if( getCorrectService( projectUpdated )._type == "dom.IProduct" ) then
 			local managerEmployee = project.manager._provider
 			convertToEmployee( managerEmployee )
@@ -36,7 +37,7 @@ function companyUpdate( node )
 end
 
 function getCorrectService( project )
-
+	
 	if project.service == nil then
 		return project.product
 	else
@@ -53,19 +54,20 @@ function projectUpdate( node )
 
 		node._type = "dom.Service"
 		
-		node.service = Facet( "dom.IService", {
-								name = project.name,
-								monthlyIncome = project.earnings / 1.90, --value conversion, now in us dollars.
-							} )
+		node.service = Facet "dom.IService" {
+									name = project.name,
+									monthlyIncome = project.earnings / 1.90, --value conversion, now in us dollars.
+								}
 		
 		node.project = nil
 	else
 		node._type = "dom.Product"
 		
-		node.product = Facet( "dom.IProduct", {
-						name = project.name,
-						value = project.earnings, 
-					} )
+		node.product = Facet "dom.IProduct" {
+							name = project.name,
+							value = project.earnings, 
+						}
+						
 		leaderObj = project.manager._provider
 		node.product.leader = leaderObj.employee
 		node.project = nil

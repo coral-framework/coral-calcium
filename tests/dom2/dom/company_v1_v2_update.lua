@@ -34,25 +34,22 @@ function projectUpdate( node )
 
 		node._type = "dom.Service"
 		
-		node.service = {
-						_type = "dom.IService", 
-						name = project.name,
-						monthlyIncome = project.earnings,
-						mantainers = devs,
-						_provider = node,
-					}
+		node.service = Facet "dom.IService" {
+									name = project.name,
+									monthlyIncome = project.earnings,
+									mantainers = devs,
+								}
+							
 		
 		node.project = nil
 	else
 		node._type = "dom.Product"
 		
-		node.product = {
-						_type = "dom.IProduct",
-						name = project.name,
-						value = project.earnings,
-						developers = devs,
-						_provider = node,
-					}
+		node.product = Facet "dom.IProduct" {
+									name = project.name,
+									value = project.earnings,
+									developers = devs,
+								}
 		leaderObj = project.manager._provider
 		update( leaderObj )
 		node.product.leader = leaderObj.employee
