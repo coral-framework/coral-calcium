@@ -255,7 +255,8 @@ function LuaArchive:save( rootObject )
 
 	assert( self.model[rootObject] )
 
-	local f = io.open( self.filename, "w" )
+	local f, errormsg = io.open( self.filename, "w" )
+	if not f then coRaise( "ca.IOException", "error saving the file: " .. errormsg ) end
 	local write = f.write
 	local writer = function(...) write( f, ... ) end
 
