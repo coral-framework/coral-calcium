@@ -188,12 +188,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	void clear()
 	{
 		if( !objectChanges )
-		{
-			CORAL_LOG(WARNING) << "ca.Universe: addChange() called for (" <<
-				source->model->type->getFullName() << ')' <<
-				source->instance << " without changes.";
 			return;
-		}
 
 		// add the 'changes' to each of this object's spaces
 		SpaceRefCountMap::iterator end = source->spaceRefs.end();

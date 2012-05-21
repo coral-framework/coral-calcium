@@ -11,6 +11,7 @@ local ipairs = ipairs
 local load = load
 local rawget = rawget
 local tostring = tostring
+local setlocale = os.setlocale
 
 local coNew = co.new
 local coRaise = co.raise
@@ -255,8 +256,14 @@ function LuaArchive:save( rootObject )
 
 	assert( self.model[rootObject] )
 
-	local f, errormsg = io.open( self.filename, "w" )
-	if not f then coRaise( "ca.IOException", "error saving the file: " .. errormsg ) end
+	local originalLocale = setlocale()
+	setlocale( 'C' ) -- avoids localized output
+
+	local f, err = io.open( self.filename, "w" )
+	if not f then
+		coRaise( "ca.IOException", "could not open file '" .. self.filename .. "' for writing: " .. err )
+	end
+
 	local write = f.write
 	local writer = function(...) write( f, ... ) end
 
@@ -279,6 +286,8 @@ format_version = 1
 	saveObject( writer, self.model, index, rootObject )
 
 	f:close()
+
+	setlocale( originalLocale )
 end
 
 function LuaArchive:restore()
