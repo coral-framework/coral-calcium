@@ -276,7 +276,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 
 	co::RefPtr<ca::ISpacePersister> persisterToRestore2 = createPersister( fileName, "dom" );
 
-	persisterToRestore2->restore() ;
+	ASSERT_NO_THROW( persisterToRestore2->restore() );
 
 	spaceRestored = persisterToRestore2->getSpace();
 
