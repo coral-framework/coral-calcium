@@ -140,6 +140,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 
 		for i, value in ipairs( values ) do
 			local refKind = refKind( value )
+
 			if  refKind == 1 then
 				local idServiceStr = value:sub( 2 )
 				local chunk = load( "return " .. idServiceStr )
@@ -149,9 +150,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 					luaObjectTable[ fieldNames[i] ] = nil
 				else
 					local objProvider = spaceStore:getServiceProvider( idServiceFieldValue, revision )
-
 					restoreService( spaceStore, objModel, objProvider, idServiceFieldValue, revision )
-
 					luaObjectTable[ fieldNames[i] ] = idCache[ idServiceFieldValue ]
 				end
 			elseif refKind == 2 then
@@ -174,6 +173,10 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				luaObjectTable[ fieldNames[i] ] = serviceList
 
 			else
+				if value:sub( 1, 1 ) == "'" then
+					local i
+					value, i = string.gsub( value, "\\", "\\\\" )
+				end
 				local chunk = load( "return " .. value )
 				luaObjectTable[ fieldNames[i] ] = chunk()
 			end
@@ -282,7 +285,6 @@ function applyUpdate( updateScript, coralGraph )
 end
 
 function convertToCoral( obj, objModel, spaceLoader )
-
 	if conversionCache[obj] == nil then
 		local root = coNew( obj._type )
 
@@ -370,23 +372,37 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 				if hasChange then
 					spaceLoader:addRefChange( service, field, service[fieldName] )
 				end
-			elseif fieldKind == 'TK_STRUCT' then
+			elseif fieldKind == 'TK_STRUCT' or fieldKind == 'TK_NATIVECLASS' then
 				local struct = service[fieldName]
-				for k, v in pairs( fieldValue ) do
-					struct[k] = v
-				end
+				struct = restoreComplexType( struct, field.type, fieldValue, objModel )
 				service[fieldName] = struct
 				if hasChange then
-					spaceLoader:addChange( service, field, service[fieldName] )
+					spaceLoader:addChange( service, field, struct )
 				end
 			else
 				service[fieldName] = fieldValue
 				if hasChange then
-					spaceLoader:addChange( service, field, service[fieldName] )
+					spaceLoader:addChange( service, field, fieldValue )
 				end
 			end
 		end
 	end
+end
+
+function restoreComplexType( struct, fieldType, fieldValue, objModel )
+	local fields = objModel:getFields( fieldType )
+	
+	for i, field in ipairs( fields ) do
+		local kind = field.type.kind
+		local fieldName = field.name
+		if kind == 'TK_STRUCT' or kind == 'TK_NATIVECLASS' then
+			local fieldComplex = struct[fieldName]
+			struct[fieldName] = restoreComplexType( fieldComplex, field.type, fieldValue[ fieldName ], objModel )
+		else
+			struct[fieldName] = fieldValue[fieldName]
+		end
+	end
+	return struct
 end
 
 local function protectedRestoreSpace( space, spaceStore, objModel, revision, spaceLoader )

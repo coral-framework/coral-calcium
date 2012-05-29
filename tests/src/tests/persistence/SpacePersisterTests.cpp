@@ -93,7 +93,7 @@ void applyAddedObjectChange( ca::ISpace* spaceERM, erm::IEntity* entity )
 {
 	co::RefPtr<co::IObject> newEntityParent = co::newInstance( "erm.Entity");
 	erm::IEntity* newIEntityParent = newEntityParent->getService<erm::IEntity>();
-	newIEntityParent->setName( "newEntityParent" );
+	newIEntityParent->setName( "\\newEntityParent" );
 	entity->setParent( newIEntityParent );
 
 	spaceERM->addChange( entity );
@@ -297,7 +297,7 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 	EXPECT_EQ( "newEntity", entities[3]->getName() );
 
 	ASSERT_TRUE( entities[3]->getParent() != NULL );
-	EXPECT_EQ( "newEntityParent", entities[3]->getParent()->getName() );
+	EXPECT_EQ( "\\newEntityParent", entities[3]->getParent()->getName() );
 
 	rels = erm->getRelationships();
 	ASSERT_EQ( 3, rels.getSize() );
@@ -488,7 +488,7 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	EXPECT_EQ( "newEntity", entities[3]->getName() );
 
 	ASSERT_TRUE( entities[3]->getParent() != NULL );
-	EXPECT_EQ( "newEntityParent", entities[3]->getParent()->getName() );
+	EXPECT_EQ( "\\newEntityParent", entities[3]->getParent()->getName() );
 
 	rels = erm->getRelationships();
 	ASSERT_EQ( 3, rels.getSize() );

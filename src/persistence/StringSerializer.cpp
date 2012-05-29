@@ -3,6 +3,7 @@
 #include <co/Coral.h>
 #include <co/IField.h>
 #include <sstream>
+#include <string>
 #include <co/IllegalArgumentException.h>
 
 #include "AnyArrayUtil.h"
@@ -186,6 +187,13 @@ bool StringSerializer::mustBeEscaped( const std::string& str )
 
 void StringSerializer::escapeLuaString( const std::string& str, std::stringstream& ss )
 {
+	std::string copy = str;
+	size_t start_pos = 0;
+	while((start_pos = str.find("\\", start_pos)) != std::string::npos) {
+		copy.replace( start_pos, 1, "\\\\" );
+		start_pos += 2; // In case 'to' contains 'from', like replacing 'x' with 'yx'
+	}
+	
 	if( !mustBeEscaped( str ) )
 	{
 		ss << "'" << str << "'";
