@@ -611,7 +611,12 @@ TypeRecord* Model::getType( co::IType* type )
 		CaModel file for it yet, do it and repeat the search.
 	 */
 	if( !res && loadCaModelFor( type ) )
-		res = findType( _types, type );
+	{
+		if( _level >= 1 )
+			res = findTransactionType( type );
+		else
+			res = findType( _types, type );
+	}
 
 	return res;
 }

@@ -207,8 +207,8 @@ TEST( ModelTests, interModuleDefinitions )
 		This time each module only defines their own types and we have no problem.
 	 */
 	co::RefPtr<ca::IModel> model = loadModel( "erm" );
+	ASSERT_TRUE( model->contains( co::getType( "camodels.SomeStruct" ) ) );
 	ASSERT_TRUE( model->contains( co::getType( "erm.IEntity" ) ) );
 	ASSERT_TRUE( model->contains( co::getType( "erm.Entity" ) ) );
-	ASSERT_TRUE( model->contains( co::getType( "camodels.SomeStruct" ) ) );
 	ASSERT_FALSE( model->contains( co::getType( "co.System" ) ) );
 }
