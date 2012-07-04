@@ -5,7 +5,9 @@
 project( TESTS )
 
 # Add the tests 'modules' dir to the CORAL_PATH
-set( CORAL_PATH "${TESTS_SOURCE_DIR}/modules" ${CORAL_PATH} )
+set( CORAL_PATH "${TESTS_SOURCE_DIR}/modules" 
+	${CORAL_ROOT}/modules
+	${CORAL_PATH} )
 
 add_subdirectory( lua )
 add_custom_target( tests )
