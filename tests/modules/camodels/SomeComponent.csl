@@ -1,0 +1,4 @@
+component SomeComponent
+{
+	provides SomeInterface someInterface;
+};

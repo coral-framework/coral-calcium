@@ -1,3 +1,5 @@
+import erm.IModel;
+
 interface SomeInterface
 {
 	SomeEnum enum1;
@@ -16,5 +18,7 @@ interface SomeInterface
 
 	SomeInterface autoRef;
 
+	erm.IModel external;
+	
 	readonly int8 readOnlyByte;
 };

@@ -7,6 +7,7 @@
 #include <co/MissingServiceException.h>
 #include <co/IllegalArgumentException.h>
 #include <ca/UnexpectedException.h>
+#include <camodels/SomeInterface.h>
 
 class SpaceNotificationTests : public ERMSpace
 {};
@@ -90,6 +91,75 @@ TEST_F( SpaceNotificationTests, objectObservers )
 	for( int i = 0; i < numExpectedObjects; ++i )
 		EXPECT_EQ( expectedObjects[i], _objectChanges[i]->getObject() );
 }
+
+#if 0
+TEST_F( SpaceNotificationTests, sharedModelNotification )
+{
+	startWithExtendedERM();
+
+	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
+	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
+	model->setName( "shared" );
+
+	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
+	universeObj->setService( "model", model.get() );
+	co::RefPtr<ca::IUniverse> universe = universeObj->getService<ca::IUniverse>();
+
+	co::RefPtr<co::IObject> rootObj = co::newInstance( "camodels.SomeComponent" );
+	co::RefPtr<camodels::SomeInterface> someInterface = rootObj->getService<camodels::SomeInterface>();
+	someInterface->setExternal( _erm.get() );
+
+	co::IObject* spaceObj = co::newInstance( "ca.Space" );
+	spaceObj->setService( "universe", universe.get() );
+	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
+	ASSERT_NO_THROW( space->initialize( rootObj.get() ) );
+	ASSERT_NO_THROW( space->notifyChanges() );
+
+	// the rest of the test, i don't know if it's correct, because never passed through here.
+	// but is based on the test below, then i think it should be ok
+
+	space->addServiceObserver( _entityA.get(), this );
+	space->addServiceObserver( _entityB.get(), this );
+	space->addServiceObserver( _relAB.get(), this );
+	space->addObjectObserver( _relAB->getProvider(), this );
+
+	_entityA->setName( "Entity B" );
+	space->addChange( _entityA.get() );
+
+	_entityB->setName( "Entity A" );
+	space->addChange( _entityB.get() );
+
+	_relAB->setEntityA( _entityB.get() );
+	_relAB->setEntityB( _entityA.get() );
+	space->addChange( _relAB.get() );
+	space->addChange( _relAB->getProvider() );
+
+	_entityC->setName( "Entity CC" );
+	space->addChange( _entityC.get() );
+
+	ASSERT_EQ( 0, _objectChanges.size() );
+	ASSERT_EQ( 0, _serviceChanges.size() );
+
+	space->notifyChanges();
+
+	ASSERT_EQ( 1, _objectChanges.size() );
+	ASSERT_EQ( 3, _serviceChanges.size() );
+
+	co::IService* expectedServices[] = {
+		_entityA.get(),
+		_entityB.get(),
+		_relAB.get()
+	};
+	const int numExpectedServices = CORAL_ARRAY_LENGTH( expectedServices );
+	std::sort( expectedServices, expectedServices + numExpectedServices );
+
+	for( int i = 0; i < numExpectedServices; ++i )
+		EXPECT_EQ( expectedServices[i], _serviceChanges[i]->getService() );
+
+	EXPECT_EQ( 2, _objectChanges[0]->getChangedConnections().getSize() );
+}
+
+#endif
 
 TEST_F( SpaceNotificationTests, serviceObservers )
 {

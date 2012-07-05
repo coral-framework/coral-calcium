@@ -375,6 +375,8 @@ struct Traverser
 	{
 		PortRecord& facet = getModel()->ports[facetId];
 
+		assert( facet.typeRec );
+
 		if( facet.typeRec->numRefs > 0 )
 			traverseFacetRefs( facetId, facet );
 		

@@ -7,6 +7,7 @@ project( TESTS_CORE )
 include_directories(
 	${GTEST_INCLUDE_DIRS}
 	${ERM_BINARY_DIR}/generated
+	${CAMODELS_BINARY_DIR}/generated
 	${SERIALIZATION_BINARY_DIR}/generated
 	${SERIALIZATION_SOURCE_DIR}
 	${CA_BINARY_DIR}/generated
