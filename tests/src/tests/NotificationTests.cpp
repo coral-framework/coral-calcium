@@ -92,7 +92,6 @@ TEST_F( SpaceNotificationTests, objectObservers )
 		EXPECT_EQ( expectedObjects[i], _objectChanges[i]->getObject() );
 }
 
-#if 0
 TEST_F( SpaceNotificationTests, sharedModelNotification )
 {
 	startWithExtendedERM();
@@ -109,8 +108,9 @@ TEST_F( SpaceNotificationTests, sharedModelNotification )
 	co::RefPtr<camodels::SomeInterface> someInterface = rootObj->getService<camodels::SomeInterface>();
 	someInterface->setExternal( _erm.get() );
 
-	co::IObject* spaceObj = co::newInstance( "ca.Space" );
+	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
 	spaceObj->setService( "universe", universe.get() );
+
 	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 	ASSERT_NO_THROW( space->initialize( rootObj.get() ) );
 	ASSERT_NO_THROW( space->notifyChanges() );
@@ -158,8 +158,6 @@ TEST_F( SpaceNotificationTests, sharedModelNotification )
 
 	EXPECT_EQ( 2, _objectChanges[0]->getChangedConnections().getSize() );
 }
-
-#endif
 
 TEST_F( SpaceNotificationTests, serviceObservers )
 {
