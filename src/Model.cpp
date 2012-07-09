@@ -339,8 +339,8 @@ Model::~Model()
 	assert( _transaction.empty() );
 
 	// delete all type records
-	size_t count = _types.size();
-	for( size_t i = 0; i < count; ++i )
+	size_t numTypes = _types.size();
+	for( size_t i = 0; i < numTypes; ++i )
 		_types[i]->destroy();
 }
 
@@ -438,8 +438,10 @@ void Model::discardChanges()
 	_discarded = true;
 	if( --_level == 0 )
 	{
-		for( TypeSet::iterator it = _transaction.begin(); it != _transaction.end(); ++it )
-			( *it )->destroy();
+		size_t numTransactionTypes = _transaction.size();
+		for( size_t i = 0; i < numTransactionTypes; ++i )
+			_transaction[i]->destroy();
+
 		_transaction.clear();
 	}
 }
@@ -447,7 +449,7 @@ void Model::discardChanges()
 void Model::addEnum( co::IEnum* enumType )
 {
 	checkCanAddType( enumType );
-	_transaction.insert( TypeRecord::create( enumType ) );
+	_transaction.push_back( TypeRecord::create( enumType ) );
 }
 
 void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField* const> fields )
@@ -520,7 +522,7 @@ void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField* co
 		throw;
 	}
 
-	_transaction.insert( rec );
+	_transaction.push_back( rec );
 }
 
 void Model::addComponent( co::IComponent* component, co::Range<co::IPort* const> ports )
@@ -550,7 +552,7 @@ void Model::addComponent( co::IComponent* component, co::Range<co::IPort* const>
 		throw;
 	}
 
-	_transaction.insert( rec );
+	_transaction.push_back( rec );
 }
 
 void Model::addUpdate( const std::string& update )
@@ -560,13 +562,44 @@ void Model::addUpdate( const std::string& update )
 
 bool Model::loadDefinitionsFor( const std::string& moduleName )
 {
-	co::RefPtr<co::ITypeManager> typeManager = co::getSystem()->getTypes();
+	co::INamespace* ns = co::getSystem()->getTypes()->getNamespace( moduleName );
+	return ns == NULL ? false : loadDefinitionsFor( ns );
+}
 
-	co::INamespace* ns = typeManager->getNamespace( moduleName );
-	if( ns == NULL || ( _visitedNamespaces.find( ns ) != _visitedNamespaces.end() ) )
+TypeRecord* Model::getType( co::IType* type )
+{
+	TypeRecord* res = findType( _types, type );
+
+	/*
+		If a type is not found and we haven't tried to load a
+		CaModel file for it yet, do it and repeat the search.
+	 */
+	if( !res && loadDefinitionsFor( type ) )
 	{
-		return false;
+		if( _level >= 1 )
+			res = findTransactionType( type );
+		else
+			res = findType( _types, type );
 	}
+
+	return res;
+}
+
+TypeRecord* Model::getTypeOrThrow( co::IType* type )
+{
+	TypeRecord* res = getType( type );		
+	if( !res )
+		CORAL_THROW( ca::ModelException, "type '" << type->getFullName() << "' is not in the object model" );
+	return res;
+}
+
+bool Model::loadDefinitionsFor( co::INamespace* ns )
+{
+	if( _name.empty() )
+		throw co::IllegalStateException( "the ca.Model's name is required for this operation" );
+
+	if( _visitedNamespaces.find( ns ) != _visitedNamespaces.end() )
+		return false;
 
 	_visitedNamespaces.insert( ns );
 
@@ -576,7 +609,7 @@ bool Model::loadDefinitionsFor( const std::string& moduleName )
 	fileName += "CaModel_";
 	fileName += _name;
 	fileName += ".lua";
-	if( !co::findFile( moduleName, fileName, filePath ) )
+	if( !co::findFile( ns->getFullName(), fileName, filePath ) )
 		return false;
 
 	co::Any args[2];
@@ -598,80 +631,14 @@ bool Model::loadDefinitionsFor( const std::string& moduleName )
 		CORAL_THROW( ca::ModelException, "error in CaModel file '" << filePath
 			<< "': " << e.getMessage() );
 	}
-	return true;
-
-}
-
-TypeRecord* Model::getType( co::IType* type )
-{
-	TypeRecord* res = findType( _types, type );
-
-	/*
-		If a type is not found and we haven't tried to load a
-		CaModel file for it yet, do it and repeat the search.
-	 */
-	if( !res && loadCaModelFor( type ) )
-	{
-		if( _level >= 1 )
-			res = findTransactionType( type );
-		else
-			res = findType( _types, type );
-	}
-
-	return res;
-}
-
-TypeRecord* Model::getTypeOrThrow( co::IType* type )
-{
-	TypeRecord* res = getType( type );		
-	if( !res )
-		CORAL_THROW( ca::ModelException, "type '" << type->getFullName() << "' is not in the object model" );
-	return res;
-}
-
-bool Model::loadCaModelFor( co::IType* type )
-{
-	if( _name.empty() )
-		throw co::IllegalStateException( "the ca.Model's name is required for this operation" );
-
-	// have we tried to load a CaModel file from this type's namespace before?
-	co::INamespace* ns = type->getNamespace();
-	if( _visitedNamespaces.find( ns ) != _visitedNamespaces.end() )
-		return false;
-
-	_visitedNamespaces.insert( ns );
-
-	// check if there's a matching CaModel file in the type's dir
-	std::string filePath;
-	std::string fileName;
-	fileName.reserve( 64 );
-	fileName += "CaModel_";
-	fileName += _name;
-	fileName += ".lua";
-	if( !co::findFile( ns->getFullName(), fileName, filePath ) )
-		return false;
-	
-	co::Any args[2];
-	args[0].set<ca::IModel*>( this );
-	args[1].set<const std::string&>( filePath );
-
-	beginChanges();
-
-	try
-	{
-		co::getService<lua::IState>()->callFunction( "ca.ModelLoader", std::string(),
-						co::Range<const co::Any>( args, CORAL_ARRAY_LENGTH( args ) ),
-						co::Range<const co::Any>() );
-		applyChanges();
-	}
-	catch( co::Exception& e )
-	{
-		discardChanges();
-		CORAL_THROW( ca::ModelException, "error in CaModel file '" << filePath
-						<< "': " << e.getMessage() );
-	}
 
 	return true;
+}
+
+bool Model::loadDefinitionsFor( co::IType* type )
+{
+	assert( type );
+	return loadDefinitionsFor( type->getNamespace() );
 }
 
 void Model::checkCanAddType( co::IType* type )
@@ -697,9 +664,9 @@ void Model::validateTransaction()
 	co::IMember* member;
 	try
 	{
-		for( TypeSet::iterator it = _transaction.begin(); it != _transaction.end(); ++it )
+		for( size_t i = 0; i < _transaction.size(); ++i )
 		{
-			typeRec = *it;
+			typeRec = _transaction[i];
 			switch( typeRec->kind )
 			{
 			case TRK_ENUM: break; // no need to validate enums
@@ -802,10 +769,12 @@ void Model::commitTransaction()
 	size_t numTransactionTypes = _transaction.size();
 	_types.reserve( numTypes + numTransactionTypes );
 
-	unsigned numAddedComponents = 0;
-	for( TypeSet::iterator it = _transaction.begin(); it != _transaction.end(); ++it )
+	std::sort( _transaction.begin(), _transaction.end(), TypeRecordComparator() );
+
+	size_t numAddedComponents = 0;
+	for( size_t i = 0; i < numTransactionTypes; ++i )
 	{
-		TypeRecord* rec = *it;
+		TypeRecord* rec = _transaction[i];
 		_types.push_back( rec );
 		if( rec->isComponent() )
 		{
@@ -821,7 +790,7 @@ void Model::commitTransaction()
 	_transaction.clear();
 
 	std::inplace_merge( _types.begin(), _types.begin() + numTypes, _types.end(), TypeRecordComparator() );
-	
+
 	if( numAddedComponents )
 	{
 		std::inplace_merge( sm_components.begin(),

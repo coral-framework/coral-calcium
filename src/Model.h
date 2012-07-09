@@ -59,6 +59,8 @@ struct TypeRecord
 	static TypeRecord* create( co::IEnum* type );
 };
 
+typedef std::vector<TypeRecord*> TypeList;
+
 // STL comparator class for keeping TypeRecords in sorted containers
 struct TypeRecordComparator
 {
@@ -67,9 +69,6 @@ struct TypeRecordComparator
 		return a->type < b->type;
 	}
 };
-
-typedef std::set<TypeRecord*, TypeRecordComparator> TypeSet;
-typedef std::vector<TypeRecord*> TypeList;
 
 // Helper function to locate a type's record in a sorted vector using binary search.
 inline TypeRecord* findType( TypeList& list, co::IType* type )
@@ -379,10 +378,10 @@ struct Traverser
 
 		if( facet.typeRec->numRefs > 0 )
 			traverseFacetRefs( facetId, facet );
-		
+
 		if( facet.typeRec->numRefVecs > 0 )
 			traverseFacetRefVecs( facetId, facet );
-		
+
 		if( facet.typeRec->numValues > 0 )
 			traverseFacetValues( facetId, facet );
 	}
@@ -476,15 +475,18 @@ protected:
 	TypeRecord* getType( co::IType* type );
 	TypeRecord* getTypeOrThrow( co::IType* type );
 
-	bool loadCaModelFor( co::IType* type );
-	
+	bool loadDefinitionsFor( co::INamespace* ns );
+	bool loadDefinitionsFor( co::IType* type );
+
 	void checkCanAddType( co::IType* type );
 
 	TypeRecord* findTransactionType( co::IType* type )
 	{
-		TypeRecord key( type );
-		TypeSet::iterator it = _transaction.find( &key );
-		return it != _transaction.end() ? *it : NULL;
+		size_t numTransactionTypes = _transaction.size();
+		for( size_t i = 0; i < numTransactionTypes; ++i )
+			if( type == _transaction[i]->type )
+				return _transaction[i];
+		return NULL;
 	}
 
 	void validateTransaction();
@@ -511,7 +513,7 @@ private:
 
 	int _level;
 	bool _discarded;
-	TypeSet _transaction;
+	TypeList _transaction;
 };
 
 } // namespace ca

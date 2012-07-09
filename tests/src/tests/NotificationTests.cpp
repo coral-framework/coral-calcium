@@ -31,7 +31,7 @@ TEST_F( SpaceNotificationTests, observersRegistration )
 
 	_entityA->setName( "Entity B" );
 	_space->addChange( _entityA.get() );
-	
+
 	_entityB->setName( "Entity A" );
 	_space->addChange( _entityB.get() );
 
@@ -120,19 +120,12 @@ TEST_F( SpaceNotificationTests, sharedModelNotification )
 
 	space->addServiceObserver( _entityA.get(), this );
 	space->addServiceObserver( _entityB.get(), this );
-	space->addServiceObserver( _relAB.get(), this );
-	space->addObjectObserver( _relAB->getProvider(), this );
 
 	_entityA->setName( "Entity B" );
 	space->addChange( _entityA.get() );
 
 	_entityB->setName( "Entity A" );
 	space->addChange( _entityB.get() );
-
-	_relAB->setEntityA( _entityB.get() );
-	_relAB->setEntityB( _entityA.get() );
-	space->addChange( _relAB.get() );
-	space->addChange( _relAB->getProvider() );
 
 	_entityC->setName( "Entity CC" );
 	space->addChange( _entityC.get() );
@@ -142,21 +135,18 @@ TEST_F( SpaceNotificationTests, sharedModelNotification )
 
 	space->notifyChanges();
 
-	ASSERT_EQ( 1, _objectChanges.size() );
-	ASSERT_EQ( 3, _serviceChanges.size() );
+	ASSERT_EQ( 0, _objectChanges.size() );
+	ASSERT_EQ( 2, _serviceChanges.size() );
 
 	co::IService* expectedServices[] = {
 		_entityA.get(),
 		_entityB.get(),
-		_relAB.get()
 	};
 	const int numExpectedServices = CORAL_ARRAY_LENGTH( expectedServices );
 	std::sort( expectedServices, expectedServices + numExpectedServices );
 
 	for( int i = 0; i < numExpectedServices; ++i )
 		EXPECT_EQ( expectedServices[i], _serviceChanges[i]->getService() );
-
-	EXPECT_EQ( 2, _objectChanges[0]->getChangedConnections().getSize() );
 }
 
 TEST_F( SpaceNotificationTests, serviceObservers )
