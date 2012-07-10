@@ -173,12 +173,15 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 				luaObjectTable[ fieldNames[i] ] = serviceList
 
 			else
-				if value:sub( 1, 1 ) == "'" then
-					local i
-					value, i = string.gsub( value, "\\", "\\\\" )
-				end
+				print( value )
 				local chunk = load( "return " .. value )
-				luaObjectTable[ fieldNames[i] ] = chunk()
+				
+				local runtimeValue = chunk()
+				
+				if value:sub( 1, 4 ) == "[=[\n" then
+					runtimeValue = '\n' .. runtimeValue
+				end
+				luaObjectTable[ fieldNames[i] ] = runtimeValue
 			end
 		end
 		luaObjectTable._provider = idCache[ objectId ]
