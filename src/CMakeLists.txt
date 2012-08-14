@@ -18,7 +18,7 @@ file( GLOB sqliteFiles persistence/sqlite/* )
 
 set_property( DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS "SQLITE_THREADSAFE=0" )
 
-add_definitions( "-ldl" )
+add_definitions( -ldl )
 add_library( ca MODULE ${coreFiles} ${persistenceFiles} ${sqliteFiles} ${_GENERATED_FILES} )
 
 CORAL_MODULE_TARGET( "ca" ca )
