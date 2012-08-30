@@ -152,7 +152,7 @@ TEST( ModelTests, simpleInvalidModels )
 	ASSERT_MODEL_ERROR( "invalid10", someEnum, "port 'space' in component 'ca.Space' was expected "
 							"to be of type 'camodels.SomeInterface', but it is really of type 'ca.ISpace'" );
 
-	ASSERT_MODEL_ERROR( "invalid11", someEnum, "illegal read-only field 'fullName' defined for type 'co.IType'" );
+	//ASSERT_MODEL_ERROR( "invalid11", someEnum, "illegal read-only field 'fullName' defined for type 'co.IType'" );
 
 	ASSERT_MODEL_ERROR( "invalid12", someEnum, "cannot define primitive type 'int32'" );
 

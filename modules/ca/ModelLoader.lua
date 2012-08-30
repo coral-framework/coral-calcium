@@ -100,9 +100,11 @@ local function processTypes( types, objModel )
 						"' was expected to be of type '" .. expectedTypeName ..
 						"', but it is really of type '" .. fieldType.fullName .. "'", 0 )
 				end
-				if field.isReadOnly then
-					error( "illegal read-only field '" .. fieldName .. "' defined for type '" .. typeDecl.name .. "'", 0 )
-				end
+				-- fields read-only are now allowed, you may want listen changes on them.
+				-- it will throw IllegalArgumentException when you try to save/restore such field
+				-- if field.isReadOnly then
+					-- error( "illegal read-only field '" .. fieldName .. "' defined for type '" .. typeDecl.name .. "'", 0 )
+				-- end
 				fields[#fields + 1] = field
 			end
 			objModel:addRecordType( type, fields )
