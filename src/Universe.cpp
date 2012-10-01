@@ -854,8 +854,11 @@ void Universe::notifyChanges()
 	for( size_t i = 0; i < numSpaces; ++i )
 	{
 		SpaceRecord* space = _u.spaces[i];
-		changes = space->changes.finalize( space->space );
-		notifyGraphObservers( space, changes.get() );
+		if( space )
+		{
+			changes = space->changes.finalize( space->space );
+			notifyGraphObservers( space, changes.get() );
+		}
 	}
 }
 
