@@ -19,22 +19,22 @@ namespace dom {
 			// empty
 		}
 
-		co::Range<IEmployee* const> getEmployees()
+		co::Range<IEmployee*> getEmployees()
 		{
 			return _employees;
 		}
 
-		void setEmployees( co::Range<IEmployee* const> employees )
+		void setEmployees( co::Range<IEmployee*> employees )
 		{
 			co::assign( employees, _employees );
 		}
 
-		co::Range<dom::IService* const> getServices()
+		co::Range<dom::IService*> getServices()
 		{
 			return _services;
 		}
 
-		void setServices( co::Range<dom::IService* const> services )
+		void setServices( co::Range<dom::IService*> services )
 		{
 			co::assign( services, _services );
 
@@ -49,12 +49,12 @@ namespace dom {
 
 		}
 
-		co::Range<IProduct* const> getProducts()
+		co::Range<IProduct*> getProducts()
 		{
 			return _products;
 		}
 
-		void setProducts( co::Range<IProduct* const> products )
+		void setProducts( co::Range<IProduct*> products )
 		{
 			co::assign( products, _products );
 

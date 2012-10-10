@@ -43,8 +43,8 @@ public:
 	// ------ ca.IObjectChanges Methods ------ //
 	
 	co::IObject* getObject();
-	co::Range<IServiceChanges* const> getChangedServices();
-	co::Range<ChangedConnection const> getChangedConnections();
+	co::Range<IServiceChanges*> getChangedServices();
+	co::Range<ChangedConnection> getChangedConnections();
 
 private:
 	co::RefPtr<co::IObject> _object;

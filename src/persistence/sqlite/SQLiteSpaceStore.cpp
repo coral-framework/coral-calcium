@@ -181,7 +181,7 @@ public:
 
 	}
 
-	void addValues( co::uint32 objId, co::Range<const std::string> fieldNames, co::Range<const std::string> values )
+	void addValues( co::uint32 objId, co::Range<std::string> fieldNames, co::Range<std::string> values )
 	{
 		checkBeginTransaction();
 		checkGenerateRevision();
@@ -250,7 +250,7 @@ public:
 		stmt.finalize();
 	}
 	
-	const std::string& getName() 
+	std::string getName() 
 	{
 		return _fileName;
 	}
@@ -293,7 +293,6 @@ public:
 	}
 
 private:
-
 	void checkGenerateRevision()
 	{
 		if( !_startedRevision )
@@ -306,8 +305,6 @@ private:
 			_startedRevision = true;
 		}
 	}
-
-
 
 	void checkBeginTransaction()
 	{

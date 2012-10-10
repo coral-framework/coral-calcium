@@ -28,7 +28,7 @@ TEST_F( SQLiteConnectionTests, testExecuteWithoutOpen )
 	ca::SQLiteConnection sqliteDBConn;
 
 	EXPECT_THROW( sqliteDBConn.prepare("CREATE TABLE A (fieldX INTEGER)").execute(), ca::IOException );
-	EXPECT_THROW( ca::SQLiteResult rs = sqliteDBConn.prepare("SELECT * FROM A").query(), ca::IOException );
+	EXPECT_THROW( sqliteDBConn.prepare("SELECT * FROM A").query(), ca::IOException );
 }
 
 TEST_F( SQLiteConnectionTests, testCreateDatabase )
@@ -64,8 +64,8 @@ TEST_F( SQLiteConnectionTests, testSuccessfullExecutes )
 	EXPECT_NO_THROW( sqliteDBConn.prepare( "INSERT INTO A VALUES (1, 'text1')" ).execute() );
 	EXPECT_NO_THROW( sqliteDBConn.prepare( "INSERT INTO A VALUES (2, 'text2')" ).execute() );
 	EXPECT_NO_THROW( sqliteDBConn.prepare( "INSERT INTO A VALUES (3, 'text3')" ).execute() );
-	
-	EXPECT_NO_THROW( ca::SQLiteResult rs = sqliteDBConn.prepare( "SELECT * FROM A" ).query() );
+
+	EXPECT_NO_THROW( sqliteDBConn.prepare( "SELECT * FROM A" ).query() );
 	
 	sqliteDBConn.close();
 }

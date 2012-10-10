@@ -65,7 +65,7 @@ public:
 		dom::ICompany* company = objRest->getService<dom::ICompany>();
 		ASSERT_TRUE( company != NULL );
 
-		co::Range<dom::IProject* const> projects = company->getProjects();
+		co::Range<dom::IProject*> projects = company->getProjects();
 		ASSERT_EQ( 2, projects.getSize() );
 
 		EXPECT_EQ( "Software2.0", projects[0]->getName() );
@@ -77,7 +77,7 @@ public:
 		EXPECT_EQ( false, projects[0]->getIsService() );
 		EXPECT_EQ( true, projects[1]->getIsService() );
 
-		co::Range<dom::IDeveloper* const> devs = projects[0]->getDevelopers();
+		co::Range<dom::IDeveloper*> devs = projects[0]->getDevelopers();
 		ASSERT_EQ( 2, devs.getSize() );
 
 		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
@@ -141,7 +141,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
 	ASSERT_TRUE( company != NULL );
 
-	co::Range<dom::IProject* const> projects = company->getProjects();
+	co::Range<dom::IProject*> projects = company->getProjects();
 	ASSERT_EQ( 2, projects.getSize() );
 
 	EXPECT_EQ( "Software2.0", projects[0]->getName() );
@@ -153,7 +153,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision
 	EXPECT_EQ( false, projects[0]->getIsService() );
 	EXPECT_EQ( true, projects[1]->getIsService() );
 
-	co::Range<dom::IDeveloper* const> devs = projects[0]->getDevelopers();
+	co::Range<dom::IDeveloper*> devs = projects[0]->getDevelopers();
 	ASSERT_EQ( 2, devs.getSize() );
 
 	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
@@ -196,7 +196,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyInvFileValidRevis
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
 	ASSERT_TRUE( company != NULL );
 
-	co::Range<dom::IProject* const> projects = company->getProjects();
+	co::Range<dom::IProject*> projects = company->getProjects();
 	ASSERT_EQ( 2, projects.getSize() );
 
 	EXPECT_EQ( "Software2.0", projects[0]->getName() );
@@ -208,7 +208,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyInvFileValidRevis
 	EXPECT_EQ( false, projects[0]->getIsService() );
 	EXPECT_EQ( true, projects[1]->getIsService() );
 
-	co::Range<dom::IDeveloper* const> devs = projects[0]->getDevelopers();
+	co::Range<dom::IDeveloper*> devs = projects[0]->getDevelopers();
 	ASSERT_EQ( 2, devs.getSize() );
 
 	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );

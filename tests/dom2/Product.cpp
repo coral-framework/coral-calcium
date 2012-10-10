@@ -25,12 +25,12 @@ namespace dom {
 		double getValue() { return _earnings; }
 		void setValue( double earnings ) { _earnings = earnings; }
 
-		co::Range<IEmployee* const> getDevelopers()
+		co::Range<IEmployee*> getDevelopers()
 		{
 			return _developers;
 		}
 
-		void setDevelopers( co::Range<IEmployee* const> developers )
+		void setDevelopers( co::Range<IEmployee*> developers )
 		{
 			co::assign( developers, _developers );
 		}

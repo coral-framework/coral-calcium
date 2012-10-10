@@ -1,16 +1,9 @@
 #include "StringSerializer.h"
 
-#include <co/Coral.h>
 #include <co/IField.h>
-#include <sstream>
-#include <string>
+#include <co/IReflector.h>
 #include <co/IllegalArgumentException.h>
-
-#include "AnyArrayUtil.h"
-
-#ifdef CORAL_OS_WIN
-#include <stdio.h>
-#endif
+#include <sstream>
 
 namespace ca {
 
@@ -19,161 +12,45 @@ StringSerializer::StringSerializer()
 	_model = NULL;
 }
 
-void StringSerializer::toString( const co::Any& value, std::string& valueToStr )
-{
-	if( value.getKind() == co::TK_NONE )
-	{
-		throw co::IllegalArgumentException("Invalid value");
-	}
-
-	if( value.isPointer() || value.isPointerConst() )
-	{
-		throw co::IllegalArgumentException("Pointer serialization not supported");
-	}
-
-#ifdef CORAL_OS_WIN
-	// makes windows compatible with the rest of the world
-	_set_output_format( _TWO_DIGIT_EXPONENT );
-#endif
-
-	std::stringstream valueStream;
-	toStream(value, valueStream);
-	valueStream.str().swap( valueToStr );
-}
-
-void StringSerializer::setModel(ca::IModel* model)
+void StringSerializer::setModel( ca::IModel* model )
 {
 	_model = model;
 }
 
-
-void StringSerializer::getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fieldsToSerialize )
+void StringSerializer::toString( const co::Any& value, std::string& result )
 {
-	assert( _model != NULL );
-	
-	
-	co::RefVector<co::IField> refVector;
-				
-	_model->getFields(type, refVector);
-		
-	for(int i = 0; i < refVector.size(); i++)
-	{
-		fieldsToSerialize.push_back( refVector[i].get() );
-	}
-	
+	std::stringstream ss;
+	streamOut( ss, value );
+	ss.str().swap( result );
 }
 
-
-void StringSerializer::toStream( const co::Any& value, std::stringstream& ss )
+void StringSerializer::streamOut( std::stringstream& ss, const co::Any& var )
 {
-	co::IType* type = value.getType();
-
-	if( type == NULL )
+	co::IType* type = var.getType();
+	co::TypeKind kind = type->getKind();
+	if( co::isScalar( kind ) )
 	{
-		writeBasicType(value, ss);
-	}
-	else
-	{
-		co::TypeKind kind = value.getKind();
-		if( kind == co::TK_STRUCT || kind == co::TK_NATIVECLASS )
-		{
-			writeComplexType( value, ss, type );
-		}
-		if( kind == co::TK_ARRAY )
-		{
-			writeArray( value, ss, type );
-		}
-		if( kind == co::TK_ENUM )
-		{
-			writeEnum( value, ss, type );
-		}
-	}
-}
-
-void StringSerializer::writeEnum( const co::Any& value, std::stringstream& ss, co::IType* type )
-{
-	co::IEnum* enumType = co::cast<co::IEnum>( type );
-
-	co::int8 enumAsint8 = value.get<co::int32>();
-			
-	ss << enumType->getIdentifiers()[enumAsint8];
-}
-
-void StringSerializer::writeComplexType( const co::Any& value, std::stringstream& ss, co::IType* type )
-{
-	co::IRecordType * recordType = static_cast<co::IRecordType*>( type );
-	std::vector<co::IField*> fields;
-	getFieldsToSerializeForType( recordType, fields );
-	co::IReflector * ref = type->getReflector();
-	co::Any fieldValue;
-
-	ss << "{";
-	for(int i = 0; i < fields.size(); i++)
-	{
-		co::IField* field = fields[i];
-
-		ss << field->getName() << "=";
-
-		ref->getField(value, field, fieldValue);
-				
-		toStream(fieldValue, ss);
-		if( i != fields.size()-1 )
-		{
-			ss << ",";
-		}
-	}
-	ss << "}";
-}
-
-void StringSerializer::writeArray(const co::Any& value, std::stringstream& ss, co::IType* type)
-{
-	AnyArrayUtil arrayUtil;
-	if( type->getKind() == co::TK_INTERFACE )
-	{
-		throw co::IllegalArgumentException("Pointer serialization not supported");
-	}
-
-	ss << "{";
-
-	int size = arrayUtil.getArraySize(value);
-	co::Any arrayElement;
-
-	for( int i = 0; i < size; i++ )
-	{
-			arrayUtil.getArrayElement(value, i, arrayElement);
-			toStream(arrayElement, ss);
-				 
-			if( i < size-1 )
-			{
-				ss << ",";
-			}
-
-	}
-	ss << "}";
-
-}
-
-void StringSerializer::writeBasicType( const co::Any& value, std::stringstream& ss )
-{
-	co::TypeKind kind = value.getKind();
-	if( kind == co::TK_BOOLEAN )
-	{
-		ss << ( value.get<bool>() ? "true" : "false" );
+		ss << var;
 	}
 	else if( kind == co::TK_STRING )
 	{
-		escapeLuaString( value.get<const std::string&>(), ss );
+		writeString( ss, var.get<const std::string&>() );
+	}
+	else if( co::isComplexValue( kind ) )
+	{
+		writeRecord( ss, var );
+	}
+	else if( kind == co::TK_ARRAY )
+	{
+		writeArray( ss, var.isIn() ? var : var.asIn() );
 	}
 	else
 	{
-		// 16 digits, sign, point, and \0
-		char buffer[32];
-		sprintf( buffer, "%.15g", value.get<double>() );
-		ss << buffer;
+		CORAL_THROW( co::IllegalArgumentException, "cannot serialize " << kind << " variables" );
 	}
 }
 
-bool StringSerializer::mustBeEscaped( const std::string& str )
+inline bool mustBeEscaped( const std::string& str )
 {
 	size_t size = str.size();
 	for( size_t i = 0; i < size; ++i )
@@ -185,17 +62,50 @@ bool StringSerializer::mustBeEscaped( const std::string& str )
 	return false;
 }
 
-void StringSerializer::escapeLuaString( const std::string& str, std::stringstream& ss )
+void StringSerializer::writeString( std::stringstream& ss, const std::string& str )
 {
-
-	if( !mustBeEscaped( str ) )
-	{
-		ss << "'" << str << "'";
-	}
-	else
-	{
+	if( mustBeEscaped( str ) )
 		ss << "[=[" << str << "]=]";
+	else
+		ss << "'" << str << "'";
+}
+
+void StringSerializer::writeRecord( std::stringstream& ss, const co::Any& var )
+{
+	assert( _model != NULL );
+
+	co::RefVector<co::IField> fields;
+	_model->getFields( static_cast<co::IRecordType*>( var.getType() ), fields );
+
+	co::IReflector* reflector = var.getType()->getReflector();
+	co::AnyValue value;
+
+	ss << "{";
+	for( size_t i = 0; i < fields.size(); ++i )
+	{
+		if( i > 0 )
+			ss << ",";
+
+		co::IField* field = fields[i].get();
+		ss << field->getName() << "=";
+
+		reflector->getField( var, field, value );
+		streamOut( ss, value.getAny() );
 	}
+	ss << "}";
+}
+
+void StringSerializer::writeArray( std::stringstream& ss, const co::Any& array )
+{
+	ss << "{";
+	size_t count = array.getCount();
+	for( size_t i = 0; i < count; ++i )
+	{
+		if( i > 0 )
+			ss << ",";
+		streamOut( ss, array[i] );
+	}
+	ss << "}";
 }
 
 }; // namespace ca

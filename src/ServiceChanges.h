@@ -48,9 +48,9 @@ public:
 	// ------ ca.IServiceChanges Methods ------ //
 
 	co::IService* getService();
-	co::Range<ChangedRefField const> getChangedRefFields();
-	co::Range<ChangedRefVecField const> getChangedRefVecFields();
-	co::Range<ChangedValueField const> getChangedValueFields();
+	co::Range<ChangedRefField> getChangedRefFields();
+	co::Range<ChangedRefVecField> getChangedRefVecFields();
+	co::Range<ChangedValueField> getChangedValueFields();
 
 private:
 	co::RefPtr<co::IService> _service;

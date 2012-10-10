@@ -105,8 +105,8 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	_undoManager->endChange();
 
 	// check the undoManager's state
-	co::Range<std::string const> undoStack = _undoManager->getUndoStack();
-	co::Range<std::string const> redoStack = _undoManager->getRedoStack();
+	co::Range<std::string> undoStack = _undoManager->getUndoStack();
+	co::Range<std::string> redoStack = _undoManager->getRedoStack();
 	EXPECT_TRUE( _undoManager->getCanUndo() );
 	EXPECT_FALSE( _undoManager->getCanRedo() );
 	ASSERT_EQ( 1, undoStack.getSize() );
@@ -236,8 +236,8 @@ TEST_F( UndoRedoTests, newChangeResetsRedoStack )
 	_undoManager->endChange();
 
 	// check the undoManager's state
-	co::Range<std::string const> undoStack = _undoManager->getUndoStack();
-	co::Range<std::string const> redoStack = _undoManager->getRedoStack();
+	co::Range<std::string> undoStack = _undoManager->getUndoStack();
+	co::Range<std::string> redoStack = _undoManager->getRedoStack();
 	EXPECT_TRUE( _undoManager->getCanUndo() );
 	EXPECT_FALSE( _undoManager->getCanRedo() );
 	ASSERT_EQ( 1, undoStack.getSize() );

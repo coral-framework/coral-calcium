@@ -83,14 +83,14 @@ TEST_F( LuaArchiveTests, simpleSaveRestore )
 	erm::IModel* erm = restoredObj->getService<erm::IModel>();
 	ASSERT_TRUE( erm != NULL );
 
-	co::Range<erm::IEntity* const> entities = erm->getEntities();
+	co::Range<erm::IEntity*> entities = erm->getEntities();
 	ASSERT_EQ( 3, entities.getSize() );
 
 	EXPECT_EQ( "Entity A", entities[0]->getName() );
 	EXPECT_EQ( "Entity B", entities[1]->getName() );
 	EXPECT_EQ( "Entity C", entities[2]->getName() );
 
-	co::Range<erm::IRelationship* const> rels = erm->getRelationships();
+	co::Range<erm::IRelationship*> rels = erm->getRelationships();
 	ASSERT_EQ( 3, rels.getSize() );
 
 	erm::IRelationship* rel = rels[0];

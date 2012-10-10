@@ -452,10 +452,10 @@ public:
 	}
 
 	// ca.IModel methods:
-	const std::string& getName();
+	std::string getName();
 	void setName( const std::string& name );
 	
-	co::Range<std::string const> getUpdates();
+	co::Range<std::string> getUpdates();
 
 	bool alreadyContains( co::IType* type );
 	bool contains( co::IType* type );
@@ -465,8 +465,8 @@ public:
 	void applyChanges();
 	void discardChanges();
 	void addEnum( co::IEnum* enumType );
-	void addRecordType( co::IRecordType* recordType, co::Range<co::IField* const> fields );
-	void addComponent( co::IComponent* component, co::Range<co::IPort* const> ports );
+	void addRecordType( co::IRecordType* recordType, co::Range<co::IField*> fields );
+	void addComponent( co::IComponent* component, co::Range<co::IPort*> ports );
 	void addUpdate( const std::string& update );
 
 	bool loadDefinitionsFor( const std::string& ns );
@@ -499,7 +499,6 @@ private:
 
 private:
 	// --- permanent fields --- //
-
 	std::string _name;
 	std::vector<std::string> _updates;
 

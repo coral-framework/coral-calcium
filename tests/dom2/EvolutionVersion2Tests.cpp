@@ -106,13 +106,13 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FilePreviousRevision )
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
 	ASSERT_TRUE( company != NULL );
 
-	co::Range<dom::IProduct* const> products = company->getProducts();
+	co::Range<dom::IProduct*> products = company->getProducts();
 	ASSERT_EQ( 1, products.getSize() );
 
 	EXPECT_EQ( "Software2.0", products[0]->getName() );
 	EXPECT_EQ( 1000000, products[0]->getValue() );
 
-	co::Range<dom::IEmployee* const> devs = products[0]->getDevelopers();
+	co::Range<dom::IEmployee*> devs = products[0]->getDevelopers();
 
 	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 	EXPECT_EQ( 1000, devs[0]->getSalary() );
@@ -129,7 +129,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FilePreviousRevision )
 
 	EXPECT_EQ( "Manager", manager->getRole() );
 
-	co::Range<dom::IService* const> services = company->getServices();
+	co::Range<dom::IService*> services = company->getServices();
 	ASSERT_EQ( 1, services.getSize() );
 
 	EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
@@ -168,13 +168,13 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
 	ASSERT_TRUE( company != NULL );
 
-	co::Range<dom::IProduct* const> products = company->getProducts();
+	co::Range<dom::IProduct*> products = company->getProducts();
 	ASSERT_EQ( 1, products.getSize() );
 
 	EXPECT_EQ( "Software2.0", products[0]->getName() );
 	EXPECT_EQ( 1000000, products[0]->getValue() );
 
-	co::Range<dom::IEmployee* const> devs = products[0]->getDevelopers();
+	co::Range<dom::IEmployee*> devs = products[0]->getDevelopers();
 
 	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 	EXPECT_EQ( 1000, devs[0]->getSalary() );
@@ -191,7 +191,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 
 	EXPECT_EQ( "Manager", manager->getRole() );
 
-	co::Range<dom::IService* const> services = company->getServices();
+	co::Range<dom::IService*> services = company->getServices();
 	ASSERT_EQ( 1, services.getSize() );
 
 	EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
@@ -352,7 +352,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 	EXPECT_EQ( NULL, ceo->getLeading() );
 	EXPECT_EQ( 0, ceo->getWorking().getSize() );
 
-	co::Range<dom::IEmployee* const> employees = company->getEmployees();
+	co::Range<dom::IEmployee*> employees = company->getEmployees();
 	ASSERT_EQ( 5, employees.getSize() );
 	
 	EXPECT_EQ( "Joseph Java Newbie", employees[0]->getName() );

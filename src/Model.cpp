@@ -344,7 +344,7 @@ Model::~Model()
 		_types[i]->destroy();
 }
 
-const std::string& Model::getName()
+std::string Model::getName()
 {
 	return _name;
 }
@@ -356,7 +356,7 @@ void Model::setName( const std::string& name )
 	_name = name;
 }
 
-co::Range<std::string const> Model::getUpdates()
+co::Range<std::string> Model::getUpdates()
 {
 	return _updates;
 }
@@ -452,7 +452,7 @@ void Model::addEnum( co::IEnum* enumType )
 	_transaction.push_back( TypeRecord::create( enumType ) );
 }
 
-void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField* const> fields )
+void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField*> fields )
 {
 	checkCanAddType( recordType );
 
@@ -491,9 +491,7 @@ void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField* co
 			if( itf )
 			{
 				// interfaces accept all field kinds and support inheritance
-				co::IInterface* ctItf = ( ct->getKind() == co::TK_INTERFACE ?
-									static_cast<co::IInterface*>( ct ) : NULL );
-				fieldIsValid = ( ctItf && itf->isSubTypeOf( ctItf ) );
+				fieldIsValid = itf->isA( ct );
 			}
 			else
 			{
@@ -525,7 +523,7 @@ void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField* co
 	_transaction.push_back( rec );
 }
 
-void Model::addComponent( co::IComponent* component, co::Range<co::IPort* const> ports )
+void Model::addComponent( co::IComponent* component, co::Range<co::IPort*> ports )
 {
 	checkCanAddType( component );
 
@@ -612,17 +610,12 @@ bool Model::loadDefinitionsFor( co::INamespace* ns )
 	if( !co::findFile( ns->getFullName(), fileName, filePath ) )
 		return false;
 
-	co::Any args[2];
-	args[0].set<ca::IModel*>( this );
-	args[1].set<const std::string&>( filePath );
-
 	beginChanges();
 
 	try
 	{
-		co::getService<lua::IState>()->callFunction( "ca.ModelLoader", std::string(),
-			co::Range<const co::Any>( args, CORAL_ARRAY_LENGTH( args ) ),
-			co::Range<const co::Any>() );
+		co::Any args[] = { static_cast<ca::IModel*>( this ), filePath };
+		co::getService<lua::IState>()->call( "ca.ModelLoader", std::string(), args, co::Range<co::Any>() );
 		applyChanges();
 	}
 	catch( co::Exception& e )
@@ -725,30 +718,28 @@ TypeRecord* Model::validateTypeDependency( co::IType* dependency )
 	TypeRecord* res = NULL;
 	switch( dependency->getKind() )
 	{
-	case co::TK_NONE:
-		assert( false );
-		break;
-	case co::TK_ANY:
-		throw ca::ModelException( "fields of type 'any' are currently forbidden" );
-	case co::TK_BOOLEAN:
+	case co::TK_BOOL:
 	case co::TK_INT8:
-	case co::TK_UINT8:
 	case co::TK_INT16:
-	case co::TK_UINT16:
 	case co::TK_INT32:
-	case co::TK_UINT32:
 	case co::TK_INT64:
+	case co::TK_UINT8:
+	case co::TK_UINT16:
+	case co::TK_UINT32:
 	case co::TK_UINT64:
 	case co::TK_FLOAT:
 	case co::TK_DOUBLE:
 	case co::TK_STRING:
 		// no need to validate these primitive types
 		break;
+
+	case co::TK_ANY:
+		throw ca::ModelException( "fields of type 'any' are currently forbidden" );
+
 	case co::TK_ARRAY:
 		res = validateTypeDependency( static_cast<co::IArray*>( dependency )->getElementType() );
 		break;
-	case co::TK_EXCEPTION:
-		throw ca::ModelException( "exceptions cannot be used as field types" );
+
 	case co::TK_ENUM:
 	case co::TK_STRUCT:
 	case co::TK_NATIVECLASS:
@@ -757,6 +748,13 @@ TypeRecord* Model::validateTypeDependency( co::IType* dependency )
 		res = findTransactionType( dependency );
 		if( !res )
 			res = getTypeOrThrow( dependency );
+		break;
+
+	case co::TK_EXCEPTION:
+		throw ca::ModelException( "exceptions cannot be used as field types" );
+
+	default:
+		assert( false );
 		break;
 	}
 

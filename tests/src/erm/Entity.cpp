@@ -20,7 +20,7 @@ public:
 		// empty
 	}
 
-	const std::string& getName() { return _name; }
+	std::string getName() { return _name; }
 	void setName( const std::string& name ) { _name = name; }
 
 	erm::IEntity* getParent()
@@ -33,9 +33,9 @@ public:
 		_parent = parent;
 	}
 
-	co::Range<erm::IRelationship* const> getRelationships()
+	co::Range<erm::IRelationship*> getRelationships()
 	{
-		return co::Range<erm::IRelationship* const>();
+		return co::Range<erm::IRelationship*>();
 	}
 
 private:

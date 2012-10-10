@@ -21,32 +21,32 @@ public:
 		// empty
 	}
 
-	co::Range<IDeveloper* const> getDevelopers()
+	co::Range<IDeveloper*> getDevelopers()
 	{
 		return _developers;
 	}
 
-	void setDevelopers( co::Range<IDeveloper* const> developers )
+	void setDevelopers( co::Range<IDeveloper*> developers )
 	{
 		co::assign( developers, _developers );
 	}
 
-	co::Range<IManager* const> getManagers()
+	co::Range<IManager*> getManagers()
 	{
 		return _managers;
 	}
 
-	void setManagers( co::Range<IManager* const> managers )
+	void setManagers( co::Range<IManager*> managers )
 	{
 		co::assign( managers, _managers );
 	}
 	
-	co::Range<IProject* const> getProjects()
+	co::Range<IProject*> getProjects()
 	{
 		return _projects;
 	}
 
-	void setProjects( co::Range<IProject* const> projects )
+	void setProjects( co::Range<IProject*> projects )
 	{
 		co::assign( projects, _projects );
 	}

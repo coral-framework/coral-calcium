@@ -46,9 +46,9 @@ public:
 	// ------ ca.IGraphChanges Methods ------ //
 
 	ca::IGraph* getGraph();
-	co::Range<co::IObject* const> getAddedObjects();	
-	co::Range<co::IObject* const> getRemovedObjects();
-	co::Range<ca::IObjectChanges* const> getChangedObjects();
+	co::Range<co::IObject*> getAddedObjects();	
+	co::Range<co::IObject*> getRemovedObjects();
+	co::Range<ca::IObjectChanges*> getChangedObjects();
 	co::int32 findAddedObject( co::IObject* object );
 	co::int32 findRemovedObject( co::IObject* object );
 	co::int32 findChangedObject( co::IObject* object );

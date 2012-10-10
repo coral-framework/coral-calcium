@@ -61,17 +61,17 @@ ca::IGraph* GraphChanges::getGraph()
 	return _graph.get();
 }
 
-co::Range<co::IObject* const> GraphChanges::getAddedObjects()
+co::Range<co::IObject*> GraphChanges::getAddedObjects()
 {
 	return _addedObjects;
 }
 
-co::Range<co::IObject* const> GraphChanges::getRemovedObjects()
+co::Range<co::IObject*> GraphChanges::getRemovedObjects()
 {
 	return _removedObjects;
 }
 
-co::Range<ca::IObjectChanges* const> GraphChanges::getChangedObjects()
+co::Range<ca::IObjectChanges*> GraphChanges::getChangedObjects()
 {
 	return _changedObjects;
 }
@@ -79,21 +79,21 @@ co::Range<ca::IObjectChanges* const> GraphChanges::getChangedObjects()
 co::int32 GraphChanges::findAddedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject* const>( _addedObjects ),
+	return co::binarySearch( co::Range<co::IObject*>( _addedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
 co::int32 GraphChanges::findRemovedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject* const>( _removedObjects ),
+	return co::binarySearch( co::Range<co::IObject*>( _removedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
 co::int32 GraphChanges::findChangedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<ca::IObjectChanges* const>( _changedObjects ),
+	return co::binarySearch( co::Range<ca::IObjectChanges*>( _changedObjects ),
 		object, changesKeyCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
@@ -105,29 +105,26 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 	co::Any instance( service ), value;
 
 	// revert all Ref fields
-	co::Range<ChangedRefField const> refFields = changes->getChangedRefFields();
+	co::Range<ChangedRefField> refFields = changes->getChangedRefFields();
 	for( ; refFields; refFields.popFirst() )
 	{
+		value = refFields.getFirst().previous.get();
 		co::IField* field = refFields.getFirst().field.get();
-		co::IInterface* type = static_cast<co::IInterface*>( field->getType() );
-		value.setService( refFields.getFirst().previous.get(), type );
 		field->getOwner()->getReflector()->setField( instance, field, value );
 	}
 
 	// revert all RefVec fields
-	co::Range<ChangedRefVecField const> refVecFields = changes->getChangedRefVecFields();
+	co::Range<ChangedRefVecField> refVecFields = changes->getChangedRefVecFields();
 	for( ; refVecFields; refVecFields.popFirst() )
 	{
 		co::IField* field = refVecFields.getFirst().field.get();
-		co::IType* elemType = static_cast<co::IArray*>( field->getType() )->getElementType();
-		const co::uint32 flags = co::Any::VarIsPointer | co::Any::VarIsPointerConst;
-		value.setArray( co::Any::AK_RefVector, elemType, flags, const_cast<void*>(
-			reinterpret_cast<const void*>( &refVecFields.getFirst().previous ) ) );
+		const co::RefVector<co::IService>& refVec = refVecFields.getFirst().previous;
+		value.set( true, field->getType(), &refVec[0], refVec.size() );
 		field->getOwner()->getReflector()->setField( instance, field, value );
 	}
 
 	// revert all Value fields
-	co::Range<ChangedValueField const> valueFields = changes->getChangedValueFields();
+	co::Range<ChangedValueField> valueFields = changes->getChangedValueFields();
 	for( ; valueFields; valueFields.popFirst() )
 	{
 		co::IField* field = valueFields.getFirst().field.get();
@@ -138,10 +135,10 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 void GraphChanges::revertChanges()
 {
 	// for each changed object
-	for( co::Range<IObjectChanges* const> objects( _changedObjects ); objects; objects.popFirst() )
+	for( co::Range<IObjectChanges*> objects( _changedObjects ); objects; objects.popFirst() )
 	{
 		// revert connection changes
-		co::Range<ChangedConnection const> connections = objects.getFirst()->getChangedConnections();
+		co::Range<ChangedConnection> connections = objects.getFirst()->getChangedConnections();
 		if( connections )
 		{
 			co::IObject* object = objects.getFirst()->getObject();
@@ -154,7 +151,7 @@ void GraphChanges::revertChanges()
 		}
 
 		// revert field changes for each changed service
-		co::Range<IServiceChanges* const> services = objects.getFirst()->getChangedServices();
+		co::Range<IServiceChanges*> services = objects.getFirst()->getChangedServices();
 		for( ; services; services.popFirst() )
 			revertFieldChanges( _graph.get(), services.getFirst() );
 	}

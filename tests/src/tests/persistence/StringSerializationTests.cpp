@@ -240,96 +240,60 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 TEST( StringSerializationTests, stringDefinitionArray )
 {
 	ca::StringSerializer serializer;
-	co::IObject* modelObj = co::newInstance( "ca.Model" );
-	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
+
+	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
+	ca::IModel* model = modelObj->getService<ca::IModel>();
 	model->setName( "serialization" );
-	serializer.setModel( model.get() );
-
-	std::vector<co::int8> int8vec;
-
-	co::int8 int8Array[] = {1,-2,3};
-
-	std::string expected = "{1,-2,3}";
-
+	serializer.setModel( model );
+	
 	std::string actual;
 
-	co::Any anyArray(co::Any::AK_Range, co::typeOf<co::int8>::get(), 0, int8Array, 3 ) ;
-	
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	co::int8 int8Array[] = { 1, -2, 3 };
+	serializer.toString( int8Array, actual );
+	EXPECT_EQ( "{1,-2,3}", actual );
 
-	co::int16 int16Array[] = {1, -2, 3};
-	expected = "{1,-2,3}";
+	co::int16 int16Array[] = { 1, -2, 3 };
+	serializer.toString( int16Array, actual );
+	EXPECT_EQ( "{1,-2,3}", actual );
 
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<co::int16>::get(), 0, int16Array, 3 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	co::int32 int32Array[] = { 123, -234, 345 };
+	serializer.toString( int32Array, actual );
+	EXPECT_EQ( "{123,-234,345}", actual );
 
-	co::int32 int32Array[] = {123, -234, 345};
-	expected = "{123,-234,345}";
+	co::int64 int64Array[] = { 321, -432, 543 };
+	serializer.toString( int64Array, actual );
+	EXPECT_EQ( "{321,-432,543}", actual );
 
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<co::int32>::get(), 0, int32Array, 3 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
-
-	co::int64 int64Array[] = {321, -432, 543};
-	expected = "{321,-432,543}";
-	
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<co::int64>::get(), 0, int64Array, 3 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
-
-	co::uint8 uint8Array[] = {1, 2, 3};
-	expected = "{1,2,3}";
-	
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<co::uint8>::get(), 0, uint8Array, 3 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	co::uint8 uint8Array[] = { 1, 2, 3 };
+	serializer.toString( uint8Array, actual );
+	EXPECT_EQ( "{1,2,3}", actual );
 
 	co::uint16 uint16Array[] = {1, 2, 3};
-	expected = "{1,2,3}";
-	
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<co::uint16>::get(), 0, uint16Array, 3 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	serializer.toString( uint16Array, actual );
+	EXPECT_EQ( "{1,2,3}", actual );
 
-	co::uint32 uint32Array[] = {123};
-	expected = "{123}";
-	
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<co::uint32>::get(), 0, uint32Array, 1 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	co::uint32 uint32Array[] = { 123 };
+	serializer.toString( uint32Array, actual );
+	EXPECT_EQ( "{123}", actual );
 
-	co::uint64 uint64Array[] = {321, 432};
-	expected = "{321,432}";
-	
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<co::uint64>::get(), 0, uint64Array, 2 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	co::uint64 uint64Array[] = { 321, 432 };
+	serializer.toString( uint64Array, actual );
+	EXPECT_EQ( "{321,432}", actual );
 
-	float floatArray[] = {6.25f, -3.35e-10f};
-	expected = "{6.25,-3.34999999962449e-10}";
-	
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<float>::get(), 0, floatArray, 2 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ( expected, actual );
+	float floatArray[] = { 6.25f, -3.35e-10f };
+	serializer.toString( floatArray, actual );
+	EXPECT_EQ( "{6.25,-3.34999999962449e-10}", actual );
 
-	double doubleArray[] = {-53485.67321312, 123e10};
-	expected = "{-53485.67321312,1230000000000}";
-	
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<double>::get(), 0, doubleArray, 2 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
-	
-	std::string stringArray[] = {"string1", "escaped\'", "[notScaped"};
-	expected = "{'string1',[=[escaped\']=],'[notScaped'}";
+	double doubleArray[] = { -53485.67321312, 123e10 };
+	serializer.toString( doubleArray, actual );
+	EXPECT_EQ( "{-53485.67321312,1230000000000}", actual );
 
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<std::string>::get(), 0, stringArray, 3 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	std::string stringArray[] = { "string1", "escaped\'", "[notScaped" };
+	serializer.toString( stringArray, actual );
+	EXPECT_EQ( "{'string1',[=[escaped\']=],'[notScaped'}", actual );
 
 	serialization::BasicTypesStruct arrayStruct[2];
-	
+
 	arrayStruct[0].intValue = 1;
 	arrayStruct[0].strValue = "name"; 
 	arrayStruct[0].doubleValue = 4.56;
@@ -340,24 +304,21 @@ TEST( StringSerializationTests, stringDefinitionArray )
 	arrayStruct[1].doubleValue = 1.2E6;
 	arrayStruct[1].byteValue = -100;
 
-	expected = "{{byteValue=123,intValue=1,strValue='name'},{byteValue=-100,intValue=6,strValue='nameSecond'}}";
+	serializer.toString( arrayStruct, actual );
+	EXPECT_EQ( "{{byteValue=123,intValue=1,strValue='name'},{byteValue=-100,intValue=6,strValue='nameSecond'}}", actual );
 
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<serialization::BasicTypesStruct>::get(), 0, arrayStruct, 2 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	serialization::SimpleEnum enumArray[] = {
+		serialization::One,
+		serialization::Three,
+		serialization::One,
+		serialization::Two
+	};
 
-	serialization::SimpleEnum enumArray[4] = {serialization::One, serialization::Three, serialization::One, serialization::Two};
-	expected = "{One,Three,One,Two}";
-	actual = "";
-	anyArray.setArray( co::Any::AK_Range, co::typeOf<serialization::SimpleEnum>::get(), 0, enumArray, 4 );
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	serializer.toString( enumArray, actual );
+	EXPECT_EQ( "{One,Three,One,Two}", actual );
 
 	std::vector<co::int32> empty;
-	anyArray.set<const std::vector<co::int32>&>(empty);
-
-	expected = "{}";
-	serializer.toString( anyArray, actual );
-	EXPECT_EQ(expected, actual);
+	serializer.toString( empty, actual );
+	EXPECT_EQ( "{}", actual );
 
 }

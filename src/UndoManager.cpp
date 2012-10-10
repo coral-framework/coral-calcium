@@ -53,12 +53,12 @@ public:
 		return !_descriptions[Stack_Redo].empty();
 	}
 
-	co::Range<std::string const> getUndoStack()
+	co::Range<std::string> getUndoStack()
 	{
 		return _descriptions[Stack_Undo];
 	}
 
-	co::Range<std::string const> getRedoStack()
+	co::Range<std::string> getRedoStack()
 	{
 		return _descriptions[Stack_Redo];
 	}

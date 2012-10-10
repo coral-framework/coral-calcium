@@ -28,12 +28,12 @@ namespace dom {
 			_role = role;
 		}
 
-		co::Range<IProject* const> getWorking()
+		co::Range<IProject*> getWorking()
 		{
 			return _working;
 		}
 
-		void setWorking( co::Range<IProject* const> working )
+		void setWorking( co::Range<IProject*> working )
 		{
 			co::assign( working, _working );
 		}

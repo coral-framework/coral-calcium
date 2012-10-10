@@ -18,29 +18,17 @@ class StringSerializer
 public:
 	StringSerializer();
 
-	void toString( const co::Any& value, std::string& valueToStr );
-
 	void setModel( ca::IModel* model );
+
+	void toString( const co::Any& value, std::string& result );
+
 private:
-	//determine which fields should be serialized. If a IModel is provided, it is used to tell the fields to be serialized.
-	//If not, all fields of the given type will be serialized.
-	void getFieldsToSerializeForType( co::IRecordType* type, std::vector<co::IField*>& fields );
+	// serialization functions
+	void streamOut( std::stringstream& ss, const co::Any& var );
+	void writeString( std::stringstream& ss, const std::string& str );
+	void writeRecord(std::stringstream& ss, const co::Any& var );
+	void writeArray( std::stringstream& ss, const co::Any& array );
 
-	//serialization functions
-	void toStream( const co::Any& value, std::stringstream& ss );
-
-	void writeEnum(const co::Any& value, std::stringstream& ss, co::IType* type);
-
-	void writeArray(const co::Any& value, std::stringstream& ss, co::IType* type);
-
-	void writeBasicType(const co::Any& value, std::stringstream& ss);
-
-	void writeComplexType(const co::Any& value, std::stringstream& ss, co::IType* type);
-
-	//string values helpers
-	bool mustBeEscaped( const std::string& str );
-
-	void escapeLuaString( const std::string& str, std::stringstream& ss );
 private:
 	ca::IModel* _model;
 };

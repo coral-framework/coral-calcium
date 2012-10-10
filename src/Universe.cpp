@@ -15,11 +15,11 @@ namespace ca {
 
 //------ Utility Macros for Handling Exceptions --------------------------------
 
-#define GEN_BARRIER( code, facetId, msg ) try { code; } catch( std::exception& ) { \
+#define GEN_BARRIER( code, facetId, msg ) try { code; } catch( std::exception& e ) { \
 	const char* name = getServiceTypeName( source, facetId ); \
 	CORAL_THROW( ca::UnexpectedException, \
-		"unexpected exception while tracking changes to service (" << \
-		name << ")" << source->instance << ", raised by " << msg ); }
+		"unexpected exception while tracking changes to " << msg \
+		<< " in " << name << ": " << e.what() ); }
 
 #define OBJ_BARRIER( code ) \
 	GEN_BARRIER( code, -1, "receptacle '" << receptacle.port->getName() << "'" )
@@ -112,7 +112,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 		assert( any.getKind() == co::TK_INTERFACE );
 
-		initRef( ref.service, ref.object, any.getState().data.service );
+		initRef( ref.service, ref.object, any.state.data.service );
 	}
 
 	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
@@ -121,7 +121,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 
 		co::Any any;
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
-		co::Range<co::IService* const> range = any.get<co::Range<co::IService* const> >();
+		co::Range<co::IService*> range = any.get<co::Range<co::IService*> >();
 
 		size_t size = range.getSize();
 		if( size )
@@ -138,8 +138,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 
 		co::TypeKind kind = any.getKind();
-		bool isPrimitive = ( ( kind >= co::TK_BOOLEAN && kind <= co::TK_DOUBLE ) || kind == co::TK_ENUM );
-		const void* fromPtr = ( isPrimitive ? &any.getState().data : any.getState().data.ptr );
+		const void* fromPtr = ( co::isScalar( kind ) ? &any.state.data : any.state.data.ptr );
 		field.getTypeReflector()->copyValues( fromPtr, valuePtr, 1 );
 	}
 };
@@ -247,7 +246,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
 		assert( any.getKind() == co::TK_INTERFACE );
 
-		co::IService* service = any.getState().data.service;
+		co::IService* service = any.state.data.service;
 		if( service == ref.service )
 			return; // no change
 
@@ -263,7 +262,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 	{
 		co::Any any;
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
-		co::Range<co::IService* const> range = any.get<co::Range<co::IService* const> >();
+		co::Range<co::IService*> range = any.get<co::Range<co::IService*> >();
 
 		size_t newSize = range.getSize();
 		size_t oldSize = refVec.getSize();
@@ -327,28 +326,24 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		co::IType* type = field.field->getType();
 		co::IReflector* reflector = type->getReflector();
 
-		// perform raw memory comparison
-		co::Any::State& s = any.getState();
-		bool isPrimitive = ( s.kind <= co::TK_DOUBLE || s.kind == co::TK_ENUM );
-		assert( !s.isPointer && ( ( isPrimitive && !s.isReference ) || ( !isPrimitive && s.isReference ) ) );
-		void* newValuePtr = ( isPrimitive ? &s.data : s.data.ptr );
-		if( ( s.kind == co::TK_STRING && isEqualStr( newValuePtr, valuePtr ) ) ||
-			isEqual( newValuePtr, valuePtr, reflector->getSize() ) )
-			return; // no change
+		// perform comparison
+		co::TypeKind k = any.getKind();
+		void* newValuePtr = ( co::isScalar( k ) ? &any.state.data : any.state.data.ptr );
+		if( k == co::TK_STRING )
+		{
+			if( isEqualStr( newValuePtr, valuePtr ) )
+				return; // no change
+		}
+		else // raw memory comparison
+		{
+			if( isEqual( newValuePtr, valuePtr, reflector->getSize() ) )
+				return; // no change
+		}
 
 		ChangedValueField& cf = getServiceChanges( facetId )->addChangedValueField();
 		cf.field = field.field;
-
-		if( isPrimitive )
-		{
-			cf.previous.setVariable( type, co::Any::VarIsValue, valuePtr );
-			cf.current = any;
-		}
-		else
-		{
-			reflector->copyValues( valuePtr, cf.previous.createComplexValue( type ), 1 );
-			reflector->copyValues( newValuePtr, cf.current.createComplexValue( type ), 1 );
-		}
+		cf.previous = co::Any( true, type, valuePtr );
+		cf.current = any;
 
 		// update our internal value
 		reflector->copyValues( newValuePtr, valuePtr, 1 );
@@ -729,7 +724,7 @@ void Universe::addChange( co::IService* service )
 	spaceAddChange( -1, service );
 }
 
-void notifyObjectObservers( ObjectObserverMap& observers, co::Range<ca::IObjectChanges* const> changes )
+void notifyObjectObservers( ObjectObserverMap& observers, co::Range<ca::IObjectChanges*> changes )
 {
 	for( ; changes; changes.popFirst() )
 	{
@@ -760,7 +755,7 @@ void notifyObjectObservers( ObjectObserverMap& observers, co::Range<ca::IObjectC
 		ca::IServiceObserver* serviceObserver;
 		try
 		{
-			co::Range<IServiceChanges* const> changedServices = objectChanges->getChangedServices();
+			co::Range<IServiceChanges*> changedServices = objectChanges->getChangedServices();
 			for( ; changedServices; changedServices.popFirst() )
 			{
 				ca::IServiceChanges* serviceChanges = changedServices.getFirst();

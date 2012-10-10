@@ -25,22 +25,22 @@ public:
 		// empty
 	}
 
-	co::Range<IEntity* const> getEntities()
+	co::Range<IEntity*> getEntities()
 	{
 		return _entities;
 	}
 
-	void setEntities( co::Range<IEntity* const> entities )
+	void setEntities( co::Range<IEntity*> entities )
 	{
 		co::assign( entities, _entities );
 	}
 
-	co::Range<IRelationship* const> getRelationships()
+	co::Range<IRelationship*> getRelationships()
 	{
 		return _relationships;
 	}
 
-	void setRelationships( co::Range<IRelationship* const> relationships )
+	void setRelationships( co::Range<IRelationship*> relationships )
 	{
 		co::assign( relationships, _relationships );
 	}
@@ -66,12 +66,12 @@ public:
 			std::remove( _relationships.begin(), _relationships.end(), rel ), _relationships.end() );
 	}
 
-	co::Range<IModel* const> getDependencies()
+	co::Range<IModel*> getDependencies()
 	{
 		return _dependencies;
 	}
 
-	void setDependencies( co::Range<IModel* const> dependencies )
+	void setDependencies( co::Range<IModel*> dependencies )
 	{
 		co::assign( dependencies, _dependencies );
 	}

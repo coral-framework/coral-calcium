@@ -32,10 +32,11 @@ bool containsMemberOfType( co::RefVector<T> vec, const std::string& memberName, 
 	size_t count = vec.size();
 	for( size_t i = 0; i < count; ++i )
 		if( vec[i]->getName() == memberName )
-			if( vec[i]->getType()->getFullName() == typeName )
-				return true;
-			else
+		{
+			if( vec[i]->getType()->getFullName() != typeName )
 				throw TypeMismatch();
+			return true;
+		}
 	return false;
 }
 

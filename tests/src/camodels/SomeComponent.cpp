@@ -25,12 +25,12 @@ public:
 
 	// ------ camodels.SomeInterface Methods ------ //
 
-	const co::Any& getAny1()
+	co::AnyValue getAny1()
 	{
 		return _any1;
 	}
 
-	void setAny1( const co::Any& any1 )
+	void setAny1( co::Any any1 )
 	{
 		_any1 = any1;
 	}
@@ -80,12 +80,12 @@ public:
 		return _readOnlyByte;
 	}
 
-	const camodels::SomeStruct& getReadOnlyStruct()
+	camodels::SomeStruct getReadOnlyStruct()
 	{
 		return _readOnlyStruct;
 	}
 
-	const std::string& getStr1()
+	std::string getStr1()
 	{
 		return _str1;
 	}
@@ -95,17 +95,17 @@ public:
 		_str1 = str1;
 	}
 
-	co::Range<std::string const> getStrArray()
+	co::Range<std::string> getStrArray()
 	{
 		return _strArray;
 	}
 
-	void setStrArray( co::Range<std::string const> strArray )
+	void setStrArray( co::Range<std::string> strArray )
 	{
 		co::assign( strArray, _strArray );
 	}
 
-	const camodels::SomeStruct& getStruct1()
+	camodels::SomeStruct getStruct1()
 	{
 		return _struct1;
 	}

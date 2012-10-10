@@ -14,7 +14,7 @@ double NativeClassCoral_Adapter::getDoubleValue( serialization::NativeClassCoral
 	return nativeClass.doubleValue;
 }
 
-const std::string& NativeClassCoral_Adapter::getStrValue( serialization::NativeClassCoral& nativeClass )
+std::string NativeClassCoral_Adapter::getStrValue( serialization::NativeClassCoral& nativeClass )
 {
 	return nativeClass.strValue;
 }

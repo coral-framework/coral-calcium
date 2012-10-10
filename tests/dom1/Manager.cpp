@@ -27,12 +27,12 @@ namespace dom {
 		double getSalary() { return _salary; }
 		void setSalary( double salary ) { _salary = salary; }
 
-		co::Range<IDeveloper* const> getWorkers()
+		co::Range<IDeveloper*> getWorkers()
 		{
 			return _workers;
 		}
 
-		void setWorkers( co::Range<IDeveloper* const> workers )
+		void setWorkers( co::Range<IDeveloper*> workers )
 		{
 			co::assign( workers, _workers );
 		}
