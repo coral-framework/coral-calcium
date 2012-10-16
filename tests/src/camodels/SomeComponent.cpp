@@ -30,7 +30,7 @@ public:
 		return _any1;
 	}
 
-	void setAny1( co::Any any1 )
+	void setAny1( const co::Any& any1 )
 	{
 		_any1 = any1;
 	}

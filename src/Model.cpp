@@ -722,11 +722,9 @@ TypeRecord* Model::validateTypeDependency( co::IType* dependency )
 	case co::TK_INT8:
 	case co::TK_INT16:
 	case co::TK_INT32:
-	case co::TK_INT64:
 	case co::TK_UINT8:
 	case co::TK_UINT16:
 	case co::TK_UINT32:
-	case co::TK_UINT64:
 	case co::TK_FLOAT:
 	case co::TK_DOUBLE:
 	case co::TK_STRING:

@@ -83,7 +83,7 @@ public:
 		// ignored
 	}
 
-	void postGetField( co::IService*, co::IField*, co::Any )
+	void postGetField( co::IService*, co::IField*, const co::Any& )
 	{
 		// ignored
 	}
@@ -93,12 +93,12 @@ public:
 		tryAddChange( object );
 	}
 
-	void postSetField( co::IService* service, co::IField*, co::Any )
+	void postSetField( co::IService* service, co::IField*, const co::Any& )
 	{
 		tryAddChange( service );
 	}
 
-	void postInvoke( co::IService* service, co::IMethod*, co::Range<co::Any>, co::Any )
+	void postInvoke( co::IService* service, co::IMethod*, co::Range<co::Any>, const co::Any& )
 	{
 		tryAddChange( service );
 	}

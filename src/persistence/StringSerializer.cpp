@@ -17,37 +17,27 @@ void StringSerializer::setModel( ca::IModel* model )
 	_model = model;
 }
 
-void StringSerializer::toString( const co::Any& value, std::string& result )
+void StringSerializer::toString( co::Any value, std::string& result )
 {
 	std::stringstream ss;
 	streamOut( ss, value );
 	ss.str().swap( result );
 }
 
-void StringSerializer::streamOut( std::stringstream& ss, const co::Any& var )
+void StringSerializer::streamOut( std::stringstream& ss, co::Any var )
 {
-	co::IType* type = var.getType();
-	co::TypeKind kind = type->getKind();
+	var = var.asIn();
+	co::TypeKind kind = var.getKind();
 	if( co::isScalar( kind ) )
-	{
 		ss << var;
-	}
 	else if( kind == co::TK_STRING )
-	{
 		writeString( ss, var.get<const std::string&>() );
-	}
 	else if( co::isComplexValue( kind ) )
-	{
 		writeRecord( ss, var );
-	}
 	else if( kind == co::TK_ARRAY )
-	{
-		writeArray( ss, var.isIn() ? var : var.asIn() );
-	}
+		writeArray( ss, var );
 	else
-	{
 		CORAL_THROW( co::IllegalArgumentException, "cannot serialize " << kind << " variables" );
-	}
 }
 
 inline bool mustBeEscaped( const std::string& str )

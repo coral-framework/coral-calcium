@@ -19,14 +19,11 @@ public:
 	IProject* getProject() { return _project; }
 	void setProject( IProject* project ) { _project = project; }
 
-	const std::string& getName() { return _name; }
+	std::string getName() { return _name; }
 	void setName( const std::string& name ) { _name = name; }
-	
+
 	double getSalary() { return _salary; }
 	void setSalary( double salary ) { _salary = salary; }
-
-protected:
-
 
 private:
 	IProject* _project;

@@ -18,9 +18,11 @@
 
 #include <ca/ISpace.h>
 #include <ca/INamed.h>
-#include <ca/IOException.h>
 #include <ca/ISpaceStore.h>
 #include <ca/ISpacePersister.h>
+
+#include <ca/IOException.h>
+#include <co/TypeLoadException.h>
 
 
 class Evolution1Version1Tests : public CompanySpace 
@@ -242,5 +244,5 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileInvalidRevisi
 
 	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
 
-	ASSERT_THROW( persisterToRestore->restore(), ca::IOException );
+	ASSERT_THROW( persisterToRestore->restore(), co::TypeLoadException );
 }

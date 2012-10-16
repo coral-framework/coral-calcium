@@ -102,33 +102,30 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 	co::IService* service = changes->getService();
 	graph->addChange( service );
 
-	co::Any instance( service ), value;
+	co::Any instance( service );
 
 	// revert all Ref fields
 	co::Range<ChangedRefField> refFields = changes->getChangedRefFields();
 	for( ; refFields; refFields.popFirst() )
 	{
-		value = refFields.getFirst().previous.get();
-		co::IField* field = refFields.getFirst().field.get();
-		field->getOwner()->getReflector()->setField( instance, field, value );
+		const ChangedRefField& cur = refFields.getFirst();
+		cur.field->getOwner()->getReflector()->setField( instance, cur.field.get(), cur.previous.get() );
 	}
 
 	// revert all RefVec fields
 	co::Range<ChangedRefVecField> refVecFields = changes->getChangedRefVecFields();
 	for( ; refVecFields; refVecFields.popFirst() )
 	{
-		co::IField* field = refVecFields.getFirst().field.get();
-		const co::RefVector<co::IService>& refVec = refVecFields.getFirst().previous;
-		value.set( true, field->getType(), &refVec[0], refVec.size() );
-		field->getOwner()->getReflector()->setField( instance, field, value );
+		const ChangedRefVecField& cur = refVecFields.getFirst();
+		cur.field->getOwner()->getReflector()->setField( instance, cur.field.get(), cur.previous );
 	}
 
 	// revert all Value fields
 	co::Range<ChangedValueField> valueFields = changes->getChangedValueFields();
 	for( ; valueFields; valueFields.popFirst() )
 	{
-		co::IField* field = valueFields.getFirst().field.get();
-		field->getOwner()->getReflector()->setField( instance, field, valueFields.getFirst().previous );
+		const ChangedValueField& cur = valueFields.getFirst();
+		cur.field->getOwner()->getReflector()->setField( instance, cur.field.get(), cur.previous );
 	}
 }
 

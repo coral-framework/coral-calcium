@@ -33,9 +33,9 @@ function ModelWrapper:__index( typeName )
 	if not v then
 		local t = coType[typeName]
 		if t.kind == 'TK_COMPONENT' then
-			v = self.__service:getPorts( t )
+			v = self.__coral:getPorts( t )
 		else
-			v = self.__service:getFields( t )
+			v = self.__coral:getFields( t )
 		end
 		self[typeName] = v
 	end
@@ -47,7 +47,7 @@ function ModelWrapper:wrap( model )
 	assert( #name > 0 )
 	local self = wrappedModels[name]
 	if not self then
-		self = setmetatable( { __service = model }, ModelWrapper )
+		self = setmetatable( { __coral = model }, ModelWrapper )
 		wrappedModels[name] = self
 	end
 	return self

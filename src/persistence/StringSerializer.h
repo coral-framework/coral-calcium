@@ -20,11 +20,11 @@ public:
 
 	void setModel( ca::IModel* model );
 
-	void toString( const co::Any& value, std::string& result );
+	void toString( co::Any value, std::string& result );
 
 private:
 	// serialization functions
-	void streamOut( std::stringstream& ss, const co::Any& var );
+	void streamOut( std::stringstream& ss, co::Any var );
 	void writeString( std::stringstream& ss, const std::string& str );
 	void writeRecord(std::stringstream& ss, const co::Any& var );
 	void writeArray( std::stringstream& ss, const co::Any& array );

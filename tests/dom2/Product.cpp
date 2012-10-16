@@ -19,7 +19,7 @@ namespace dom {
 			// empty
 		}
 
-		const std::string& getName() { return _name; }
+		std::string getName() { return _name; }
 		void setName( const std::string& name ) { _name = name; }
 
 		double getValue() { return _earnings; }

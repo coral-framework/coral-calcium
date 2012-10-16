@@ -19,7 +19,7 @@ namespace dom {
 			// empty
 		}
 
-		const std::string& getName() { return _name; }
+		std::string getName() { return _name; }
 		void setName( const std::string& name ) { _name = name; }
 
 		double getMonthlyIncome() { return _earnings; }
@@ -35,14 +35,10 @@ namespace dom {
 			co::assign( developers, _developers );
 		}
 
-	protected:
-
-
 	private:
 		std::string _name;
 		double _earnings;
 		co::RefVector<IEmployee> _developers;
-
 	};
 
 	CORAL_EXPORT_COMPONENT( Service, Service )

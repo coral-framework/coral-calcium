@@ -20,7 +20,7 @@ namespace dom {
 			// empty
 		}
 
-		const std::string& getName() { return _name; }
+		std::string getName() { return _name; }
 		void setName( const std::string& name ) { _name = name; }
 
 		double getEarnings() { return _earnings; }
@@ -56,16 +56,12 @@ namespace dom {
 			_manager = manager;
 		}
 
-	protected:
-
-
 	private:
 		std::string _name;
 		double _earnings;
 		bool _isService;
 		co::RefVector<IDeveloper> _developers;
 		co::RefPtr<IManager> _manager;
-
 	};
 
 	CORAL_EXPORT_COMPONENT( Project, Project )

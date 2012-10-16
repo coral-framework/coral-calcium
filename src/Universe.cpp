@@ -108,38 +108,32 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 	{
 		assert( !ref.service && !ref.object );
 
-		co::Any any;
-		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
-		assert( any.getKind() == co::TK_INTERFACE );
+		co::RefPtr<co::IService> value;
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
-		initRef( ref.service, ref.object, any.state.data.service );
+		initRef( ref.service, ref.object, value.get() );
 	}
 
 	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
 		assert( !refVec.services && !refVec.objects );
 
-		co::Any any;
-		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
-		co::Range<co::IService*> range = any.get<co::Range<co::IService*> >();
+		co::RefVector<co::IService> value;
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
-		size_t size = range.getSize();
+		size_t size = value.size();
 		if( size )
 		{
 			refVec.create( size );
 			for( size_t i = 0; i < size; ++i )
-				initRef( refVec.services[i], refVec.objects[i], range[i] );
+				initRef( refVec.services[i], refVec.objects[i], value[i].get() );
 		}
 	}
 
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
-		co::Any any;
-		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
-
-		co::TypeKind kind = any.getKind();
-		const void* fromPtr = ( co::isScalar( kind ) ? &any.state.data : any.state.data.ptr );
-		field.getTypeReflector()->copyValues( fromPtr, valuePtr, 1 );
+		co::Any value( false, field.field->getType(), valuePtr );
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 	}
 };
 
@@ -242,32 +236,29 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 
 	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
-		co::Any any;
-		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
-		assert( any.getKind() == co::TK_INTERFACE );
+		co::RefPtr<co::IService> value;
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
-		co::IService* service = any.state.data.service;
-		if( service == ref.service )
+		if( value == ref.service )
 			return; // no change
 
 		ChangedRefField& cf = getServiceChanges( facetId )->addChangedRefField();
 		cf.field = field.field;
 		cf.previous = ref.service;
-		cf.current = service;
+		cf.current = value.get();
 
-		updateRef( ref.service, ref.object, service );
+		updateRef( ref.service, ref.object, value.get() );
 	}
 
 	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
-		co::Any any;
-		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
-		co::Range<co::IService*> range = any.get<co::Range<co::IService*> >();
+		co::RefVector<co::IService> value;
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
-		size_t newSize = range.getSize();
+		size_t newSize = value.size();
 		size_t oldSize = refVec.getSize();
 		if( newSize == oldSize && ( !newSize ||
-				std::equal( &range.getFirst(), &range.getLast(), refVec.services ) ) )
+				std::equal( &value.front(), &value.back(), refVec.services ) ) )
 			return; // no change
 
 		ChangedRefVecField& cf = getServiceChanges( facetId )->addChangedRefVecField();
@@ -281,13 +272,13 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		// populate the 'current' RefVector
 		cf.current.resize( newSize );
 		for( size_t i = 0; i < newSize; ++i )
-			cf.current[i] = range[i];
+			cf.current[i] = value[i];
 
 		// create a new RefVec
 		RefVecField newRefVec;
 		newRefVec.create( newSize );
 		for( size_t i = 0; i < newSize; ++i )
-			initRef( newRefVec.services[i], newRefVec.objects[i], range[i] );
+			initRef( newRefVec.services[i], newRefVec.objects[i], value[i].get() );
 
 		// destroy the old RefVec
 		for( size_t i = 0; i < oldSize; ++i )
@@ -320,16 +311,16 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 
 	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
 	{
-		co::Any any;
-		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, any ) );
+		co::AnyValue value;
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
 		co::IType* type = field.field->getType();
 		co::IReflector* reflector = type->getReflector();
+		assert( value.getType() == type );
 
 		// perform comparison
-		co::TypeKind k = any.getKind();
-		void* newValuePtr = ( co::isScalar( k ) ? &any.state.data : any.state.data.ptr );
-		if( k == co::TK_STRING )
+		void* newValuePtr = value.getAny().state.data.ptr;
+		if( value.getKind() == co::TK_STRING )
 		{
 			if( isEqualStr( newValuePtr, valuePtr ) )
 				return; // no change
@@ -343,7 +334,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		ChangedValueField& cf = getServiceChanges( facetId )->addChangedValueField();
 		cf.field = field.field;
 		cf.previous = co::Any( true, type, valuePtr );
-		cf.current = any;
+		cf.current.swap( value );
 
 		// update our internal value
 		reflector->copyValues( newValuePtr, valuePtr, 1 );

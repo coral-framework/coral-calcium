@@ -55,7 +55,6 @@ public:
 	}
 private:
 	co::RefPtr<co::IObject> universeObj;
-
 };
 
 void applyValueFieldChange( ca::ISpace* spaceERM )
@@ -184,19 +183,16 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	_relCA->setMultiplicityA( mult( 7, 8 ) );
 	_relCA->setMultiplicityB( mult( 9, 0 ) );
 
-	std::string fileName = "SimpleSpaceSave.db";
-	
-	remove( fileName.c_str() );
+	const char* fileName = "SimpleSpaceSave.db";
+	remove( fileName );
 
 	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
-
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
 	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+	persisterToRestore->restoreRevision( 1 );
 
-	ASSERT_NO_THROW( persisterToRestore->restoreRevision( 1 ) );
-
-	ca::ISpace * spaceRestored = persisterToRestore->getSpace();
+	ca::ISpace* spaceRestored = persisterToRestore->getSpace();
 	
 	co::IObject* objRest = spaceRestored->getRootObject();
 
@@ -249,9 +245,8 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 	_relCA->setMultiplicityA( mult( 7, 8 ) );
 	_relCA->setMultiplicityB( mult( 9, 0 ) );
 
-	std::string fileName = "SimpleSpaceSave.db";
-
-	remove( fileName.c_str() );
+	const char* fileName = "SimpleSpaceSave.db";
+	remove( fileName );
 
 	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
@@ -340,9 +335,8 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	_relCA->setMultiplicityA( mult( 7, 8 ) );
 	_relCA->setMultiplicityB( mult( 9, 0 ) );
 
-	std::string fileName = "SimpleSpaceSave.db";
-
-	remove( fileName.c_str() );
+	const char* fileName = "SimpleSpaceSave.db";
+	remove( fileName );
 
 	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
@@ -575,5 +569,4 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	spaceRestored->addChange( erm->getEntities()[0] );
 	spaceRestored->notifyChanges();
 	ASSERT_NO_THROW( persiterRestore4->save() ); //it's ok to save new revision
-
 }

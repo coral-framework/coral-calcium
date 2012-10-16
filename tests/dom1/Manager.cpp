@@ -21,7 +21,7 @@ namespace dom {
 		IProject* getProject() { return _project; }
 		void setProject( IProject* project ) { _project = project; }
 
-		const std::string& getName() { return _name; }
+		std::string getName() { return _name; }
 		void setName( const std::string& name ) { _name = name; }
 
 		double getSalary() { return _salary; }
@@ -37,15 +37,11 @@ namespace dom {
 			co::assign( workers, _workers );
 		}
 
-	protected:
-
-
 	private:
 		IProject* _project;
 		std::string _name;
 		double _salary;
 		co::RefVector<IDeveloper> _workers;
-
 	};
 
 	CORAL_EXPORT_COMPONENT( Manager, Manager )

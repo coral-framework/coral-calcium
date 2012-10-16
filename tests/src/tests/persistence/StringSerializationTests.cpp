@@ -32,19 +32,19 @@ TEST( StringSerializationTests, stringDefinitionBasicTypes )
 	co::int8 integer8 = -127;
 	expected = "-127";
 
-	serializer.toString( co::Any(integer8), actual );
+	serializer.toString( integer8, actual );
 	EXPECT_EQ(expected, actual);
 
 	bool boolean = true;
 	expected = "true";
 	
-	serializer.toString(co::Any(boolean), actual);
+	serializer.toString( boolean, actual);
 	EXPECT_EQ(expected, actual);
 
 	co::uint8 uInteger8 = 127;
 	expected = "127";
 
-	serializer.toString( co::Any(uInteger8), actual );
+	serializer.toString( uInteger8, actual );
 	EXPECT_EQ(expected, actual);
 
 	co::int16 integer16 = -234;
@@ -69,24 +69,6 @@ TEST( StringSerializationTests, stringDefinitionBasicTypes )
 	expected = "1";
 	
 	serializer.toString( co::Any(uInteger32), actual );
-	EXPECT_EQ(expected, actual);
-
-	co::int64 integer64 = -389457987394875;
-	expected = "-389457987394875";
-	
-	serializer.toString( co::Any(integer64), actual );
-	EXPECT_EQ(expected, actual);
-
-	co::uint64 uInteger64 = 389457987394875;
-	expected = "389457987394875";
-	
-	serializer.toString( co::Any(uInteger64), actual );
-	EXPECT_EQ(expected, actual);
-
-	uInteger64 = 134000000;
-	expected = "134000000";
-	
-	serializer.toString( co::Any(uInteger64), actual );
 	EXPECT_EQ(expected, actual);
 
 	float floatValue = 4.3125f;
@@ -260,10 +242,6 @@ TEST( StringSerializationTests, stringDefinitionArray )
 	serializer.toString( int32Array, actual );
 	EXPECT_EQ( "{123,-234,345}", actual );
 
-	co::int64 int64Array[] = { 321, -432, 543 };
-	serializer.toString( int64Array, actual );
-	EXPECT_EQ( "{321,-432,543}", actual );
-
 	co::uint8 uint8Array[] = { 1, 2, 3 };
 	serializer.toString( uint8Array, actual );
 	EXPECT_EQ( "{1,2,3}", actual );
@@ -275,10 +253,6 @@ TEST( StringSerializationTests, stringDefinitionArray )
 	co::uint32 uint32Array[] = { 123 };
 	serializer.toString( uint32Array, actual );
 	EXPECT_EQ( "{123}", actual );
-
-	co::uint64 uint64Array[] = { 321, 432 };
-	serializer.toString( uint64Array, actual );
-	EXPECT_EQ( "{321,432}", actual );
 
 	float floatArray[] = { 6.25f, -3.35e-10f };
 	serializer.toString( floatArray, actual );

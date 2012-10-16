@@ -134,7 +134,7 @@ public:
 		_addedObjects.insert( obj );
 	}
 
-	void addChange( co::IService* service, co::IMember* member, co::Any newValue )
+	void addChange( co::IService* service, co::IMember* member, const co::Any& newValue )
 	{
 		_changeCache[service][member] = newValue;
 	}
@@ -196,11 +196,11 @@ public:
 			throw;
 		}
 
-		co::IObject* spaceObj = co::newInstance( "ca.Space" );
+		co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
 		_space = spaceObj->getService<ca::ISpace>();
 
 		spaceObj->setService( "universe", _universe.get() );
-		
+
 		_space->initialize( rootObject );
 		_space->notifyChanges();
 
@@ -270,11 +270,8 @@ public:
 				if( static_cast<IObject*>( service ) == object )
 				{
 					saveObject( object );
-
 					if( object == _space->getRootObject() )
-					{
 						_spaceStore->setRootObject( getObjectId( object ) );
-					}
 				}
 				else
 				{
@@ -290,9 +287,8 @@ public:
 			{
 				co::uint32 objectId = getObjectId( it->first );
 				for( ChangeSet::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2 )
-				{
-					saveChange( it2->first, it2->second, fieldNames, values );
-				}
+					saveChange( it2->first, it2->second.getAny().asIn(), fieldNames, values );
+
 				_spaceStore->addValues( objectId, fieldNames, values );
 				fieldNames.clear();
 				values.clear();
@@ -353,12 +349,12 @@ private:
 
 	void restoreLua( co::uint32 revision )
 	{
-		co::IObject* spaceObj = co::newInstance( "ca.Space" );
+		co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
 		spaceObj->setService( "universe", _universe.get() );
 		_space = spaceObj->getService<ca::ISpace>();
 
 		co::Any args[] = {
-			getSpace(),
+			_space.get(),
 			_spaceStore.get(),
 			_model.get(),
 			revision,
@@ -425,12 +421,16 @@ private:
 				std::vector<co::uint32> refIds;
 				co::Range<co::IService*> refs = value.get<co::Range<co::IService*> >();
 				for( ; refs; refs.popFirst() )
-					refIds.push_back( saveObject( refs.getFirst()->getProvider() ) );
+				{
+					co::IService* s = refs.getFirst();
+					saveObject( s->getProvider() );
+					refIds.push_back( getObjectId( s ) );
+				}
 				TO_STR( valueStr, "#" << refIds );
 			}
 			else
 			{
-				_serializer.toString( value, valueStr );
+				_serializer.toString( value.getAny(), valueStr );
 			}
 			fieldNames.push_back( field->getName() );
 			values.push_back( valueStr );
@@ -488,7 +488,7 @@ private:
 		_objectIdCache.clear();
 	}
 
-	void saveChange( co::IMember* member, co::Any value,
+	void saveChange( co::IMember* member, const co::Any& value,
 		std::vector<std::string>& fieldNames,
 		std::vector<std::string>& values )
 	{
@@ -500,8 +500,10 @@ private:
 			return;
 		}
 
-		std::string valueStr;
+		assert( value.isIn() );
 		co::TypeKind kind = value.getKind();
+
+		std::string valueStr;
 		if( kind == co::TK_INTERFACE )
 		{
 			co::IService* service = value.get<co::IService*>();

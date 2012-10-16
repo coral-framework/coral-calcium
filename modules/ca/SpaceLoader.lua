@@ -1,3 +1,5 @@
+local traceback = require( "debug" ).traceback
+
 local updateEnv = {}
 
 updateEnv.index = {}
@@ -22,19 +24,18 @@ updateEnv.updateMT = {
 			v._provider = t
 			v._facet = nil
 		end
-		
+
 		t[updateEnv.index][k] = v   -- update original table
 	end
 }
 
-function updateEnv.track (t)
+local function track( t )
   local proxy = {}
   proxy[updateEnv.index] = t
   setmetatable( proxy, updateEnv.updateMT )
   return proxy
 end
-local track = updateEnv.track
-
+updateEnv.track = track
 
 function updateEnv.newInstance( typeStr )
 
@@ -53,7 +54,7 @@ function updateEnv.newInstance( typeStr )
 		end
 	end
 	return t
-end 
+end
 
 updateEnv.facetMT = { __call = function( facetTable, initialValues )
 	if initialValues ~= nil and type( initialValues ) == 'table' then
@@ -65,14 +66,12 @@ updateEnv.facetMT = { __call = function( facetTable, initialValues )
 end }
 
 function updateEnv.Facet( serviceType )
-	local facetTable = setmetatable( { _type = serviceType, _facet = true }, updateEnv.facetMT )
-	
-	return facetTable
+	return setmetatable( { _type = serviceType, _facet = true }, updateEnv.facetMT )
 end
 
 local updateEnvMT = { __index = function( t, k )
 							local returnValue = updateEnv[k]
-							
+
 							if returnValue == nil then
 								returnValue = _G[k]
 							end
@@ -83,7 +82,7 @@ local updateEnvMT = { __index = function( t, k )
 local newEnv = { updateEnvMT = updateEnvMT } -- create new environment
 setmetatable( newEnv, {__index = _G} )
 _ENV = newEnv
-						
+
 local function loadFileIn( filePath, env )
 	local file, err = io.open( filePath, 'rb' )
 	if file then
@@ -94,8 +93,7 @@ local function loadFileIn( filePath, env )
     return file, err
 end
 
-local idCache = {}
-local conversionCache = {}
+local idCache, conversionCache
 
 local namespaces = {}
 
@@ -103,14 +101,13 @@ local coNew = co.new
 local coType = co.Type
 local coRaise = co.raise
 
-function extractNamespaceFullName( typeName )
+local function extractNamespaceFullName( typeName )
 	for ns in typeName:gmatch( "([%w%.]+)%.%w+" ) do
 		return ns
 	end
 end
 
-function refKind( fieldValue )
-
+local function refKind( fieldValue )
 	if fieldValue:sub(1,1) == '#' then
 		if fieldValue:sub(2,2) == '{' then
 			--refvec
@@ -119,10 +116,34 @@ function refKind( fieldValue )
 		return 1;
 	end
 	return 0
-
 end
 
-function restoreService( spaceStore, objModel, objectId, serviceId, revision )
+local restoreService
+
+local function restoreObject( spaceStore, objModel, objectId, revision )
+	local cached = idCache[objectId]
+	if cached then return cached end
+
+	local typeName = spaceStore:getObjectType( objectId, revision )
+	local luaObject = { _type = typeName, _id = objectId }
+	idCache[ objectId ] = track( luaObject )
+
+	local fieldNames = {}
+	local values = {}
+	fieldNames, values = spaceStore:getValues( objectId, revision )
+
+	for i, value in ipairs( values ) do
+		serviceIdStr = value:sub(2)
+		local chunk = load( "return " .. serviceIdStr )
+		local serviceId = chunk()
+		local service = restoreService( spaceStore, objModel, objectId, serviceId, revision )
+		luaObject[ fieldNames[i] ] = service
+	end
+
+	return luaObject
+end
+
+restoreService = function( spaceStore, objModel, objectId, serviceId, revision )
 	if idCache[objectId] == nil then
 		restoreObject( spaceStore, objModel, objectId, revision )
 	elseif idCache[serviceId] == nil then
@@ -141,7 +162,7 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 		for i, value in ipairs( values ) do
 			local refKind = refKind( value )
 
-			if  refKind == 1 then
+			if refKind == 1 then
 				local idServiceStr = value:sub( 2 )
 				local chunk = load( "return " .. idServiceStr )
 				local idServiceFieldValue = chunk()
@@ -158,26 +179,17 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 
 				local chunk = load( "return " .. idServiceListStr )
 				local idServiceList = chunk()
-
 				local serviceList = {}
 
 				for i, idService in ipairs( idServiceList ) do
 					local objProvider = spaceStore:getServiceProvider( idService, revision )
-
 					restoreService( spaceStore, objModel, objProvider, idService, revision )
-
 					serviceList[ #serviceList + 1 ] = idCache[ idService ]
-
 				end
-
 				luaObjectTable[ fieldNames[i] ] = serviceList
-
 			else
-				print( value )
 				local chunk = load( "return " .. value )
-				
 				local runtimeValue = chunk()
-				
 				if value:sub( 1, 4 ) == "[=[\n" then
 					runtimeValue = '\n' .. runtimeValue
 				end
@@ -190,72 +202,14 @@ function restoreService( spaceStore, objModel, objectId, serviceId, revision )
 	return idCache[ serviceId ]
 end
 
-function restoreObject( spaceStore, objModel, objectId, revision )
-	if idCache[objectId] == nil then
-
-		local typeName = spaceStore:getObjectType( objectId, revision )
-		local luaObjectTable = { _type = typeName, _id = objectId }
-		idCache[ objectId ] = track( luaObjectTable )
-
-		local fieldNames = {}
-		local values = {}
-		fieldNames, values = spaceStore:getValues( objectId, revision )
-
-		for i, value in ipairs( values ) do
-			serviceIdStr = value:sub(2)
-			local chunk = load( "return " .. serviceIdStr )
-			local serviceId = chunk()
-			local service = restoreService( spaceStore, objModel, objectId, serviceId, revision )
-
-			luaObjectTable[ fieldNames[i] ] = service
-		end
-
-	end
-	return idCache[ objectId ]
-end
-
-function restore( space, spaceStore, objModel, revision, spaceLoader )
-	updateEnv.model = objModel
-	spaceStore:open()
-
-	local rootId = spaceStore:getRootObject( revision )
-
-	local obj = restoreObject( spaceStore, objModel, rootId, revision )
-
-	local appliedUpdates = spaceStore:getUpdates( revision )
-
-	loadCaModels( objModel )
-	local availableUpdates = objModel.updates
-
-	local hasApplied = {}
-
-	for script in appliedUpdates:gmatch( "[^;]+" ) do
-	   hasApplied[script] = true
-	end
-
-	for _, script in ipairs( availableUpdates ) do
-		if not hasApplied[script] then
-			applyUpdate( script, obj )
-			appliedUpdates = appliedUpdates .. script ..";"
-		end
-	end
-
-	spaceStore:close()
-	coralObj = convertToCoral( obj, objModel, spaceLoader )
-	space:initialize( coralObj )
-	space:notifyChanges()
-
-	spaceLoader:setUpdateList( appliedUpdates )
-end
-
-function loadCaModels( objModel )
+local function loadCaModels( objModel )
 	for ns, _ in pairs( namespaces ) do
 		objModel:loadDefinitionsFor( ns )
 	end
 
 end
 
-function applyUpdate( updateScript, coralGraph )
+local function applyUpdate( updateScript, coralGraph )
 	local path = co.findScript( updateScript )
 
 	if path == nil then
@@ -266,12 +220,12 @@ function applyUpdate( updateScript, coralGraph )
 	updateList = {}
 
 	local chunk, err = loadFileIn( path, currentEnv )
-		
+
 	if ( chunk ) then
 		chunk()
 		local ok, result = pcall( currentEnv.update, coralGraph )
 		-- unload the chunk and update function
-		
+
 		chunk = nil
 		update = nil
 
@@ -282,12 +236,14 @@ function applyUpdate( updateScript, coralGraph )
 	else
 		coRaise( "ca.IOException", err )
 	end
-    
+
 	return nil
 
 end
 
-function convertToCoral( obj, objModel, spaceLoader )
+local fillServiceValues
+
+local function convertToCoral( obj, objModel, spaceLoader )
 	if conversionCache[obj] == nil then
 		local root = coNew( obj._type )
 
@@ -311,7 +267,7 @@ function convertToCoral( obj, objModel, spaceLoader )
 			portName = port.name
 			currentService = root[portName]
 			currentServiceValues = obj[portName]
-			
+
 			if port.isFacet then
 				fillServiceValues( currentService, currentServiceValues, objModel, spaceLoader )
 			else
@@ -329,10 +285,26 @@ function convertToCoral( obj, objModel, spaceLoader )
 	return conversionCache[ obj ]
 end
 
-function fillServiceValues( service, serviceValues, objModel, spaceLoader )
+local function restoreComplexType( struct, fieldType, fieldValue, objModel )
+	local fields = objModel:getFields( fieldType )
+
+	for i, field in ipairs( fields ) do
+		local kind = field.type.kind
+		local fieldName = field.name
+		if kind == 'TK_STRUCT' or kind == 'TK_NATIVECLASS' then
+			local fieldComplex = struct[fieldName]
+			struct[fieldName] = restoreComplexType( fieldComplex, field.type, fieldValue[ fieldName ], objModel )
+		else
+			struct[fieldName] = fieldValue[fieldName]
+		end
+	end
+	return struct
+end
+
+fillServiceValues = function( service, serviceValues, objModel, spaceLoader )
 	conversionCache[serviceValues] = service
 	if serviceValues._id == nil then
-		if serviceValues._provider._id ~= nil then 
+		if serviceValues._provider._id ~= nil then
 			spaceLoader:insertNewObject( service )
 		end
 	else
@@ -392,31 +364,40 @@ function fillServiceValues( service, serviceValues, objModel, spaceLoader )
 	end
 end
 
-function restoreComplexType( struct, fieldType, fieldValue, objModel )
-	local fields = objModel:getFields( fieldType )
-	
-	for i, field in ipairs( fields ) do
-		local kind = field.type.kind
-		local fieldName = field.name
-		if kind == 'TK_STRUCT' or kind == 'TK_NATIVECLASS' then
-			local fieldComplex = struct[fieldName]
-			struct[fieldName] = restoreComplexType( fieldComplex, field.type, fieldValue[ fieldName ], objModel )
-		else
-			struct[fieldName] = fieldValue[fieldName]
+local function restore( space, spaceStore, objModel, revision, spaceLoader )
+	idCache = {}
+	conversionCache = {}
+
+	updateEnv.model = objModel
+	spaceStore:open()
+
+	local rootId = spaceStore:getRootObject( revision )
+
+	local obj = restoreObject( spaceStore, objModel, rootId, revision )
+
+	local appliedUpdates = spaceStore:getUpdates( revision )
+
+	loadCaModels( objModel )
+	local availableUpdates = objModel.updates
+
+	local hasApplied = {}
+
+	for script in appliedUpdates:gmatch( "[^;]+" ) do
+	   hasApplied[script] = true
+	end
+
+	for _, script in ipairs( availableUpdates ) do
+		if not hasApplied[script] then
+			applyUpdate( script, obj )
+			appliedUpdates = appliedUpdates .. script ..";"
 		end
 	end
-	return struct
+
+	spaceStore:close()
+	space:initialize( convertToCoral( obj, objModel, spaceLoader ) )
+	space:notifyChanges()
+
+	spaceLoader:setUpdateList( appliedUpdates )
 end
 
-local function protectedRestoreSpace( space, spaceStore, objModel, revision, spaceLoader )
-	idCache = {}
-	coralCache = {}
-
-	local ok, result = pcall( restore, space, spaceStore, objModel, revision, spaceLoader )
-	if not ok then
-		print( result )
-		coRaise( "ca.IOException", result )
-	end
-end
-
-return protectedRestoreSpace
+return restore

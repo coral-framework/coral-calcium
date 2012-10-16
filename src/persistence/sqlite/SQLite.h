@@ -34,6 +34,12 @@ public:
 	*/
 	bool next();
 
+	/*!
+		Use this instead of next() when the expected result is a single row.
+		\throw IOException if the query did not result in a single row.
+	 */
+	void fetchRow();
+
 	//! Retrieves the value at \a column as a string.
 	const char* getString( int column );
 
@@ -61,41 +67,27 @@ public:
 	SQLiteStatement( const SQLiteStatement& o);
 	~SQLiteStatement();
 
+	//! Bind an int32.
+	void bind( int index, co::int32 value );
+
+	//! Bind an uint32.
+	inline void bind( int index, co::uint32 value )
+	{
+		assert( value <= co::MAX_INT32 );
+		bind( index, static_cast<co::int32>( value ) );
+	}
+
 	//! Bind a double.
 	void bind( int index, double value );
+
+	//! Bind a literal/C-string.
+	void bind( int index, const char* value );
 
 	//! Bind a string.
 	inline void bind( int index, const std::string& value )
 	{
 		bind( index, value.c_str() );
 	}
-
-	//! Bind a literal/C-string.
-	void bind( int index, const char* value );
-
-	//! Bind an int16 (promoting to int32).
-	void bind( int index, co::int16 value )
-	{
-		bind( index, static_cast<co::int32>(value) );
-	}
-
-	//! Bind an uint16 (promoting to int32).
-	inline void bind( int index, co::uint16 value )
-	{
-		bind( index, static_cast<co::int32>(value) );
-	}
-
-	//! Bind an int32.
-	void bind( int index, co::int32 value );
-
-	//! Bind an uint32 (promoting to int64).
-	inline void bind( int index, co::uint32 value )
-	{
-		bind( index, static_cast<co::int64>(value) );
-	}
-
-	//! Bind an int64.
-	void bind( int index, co::int64 value );
 
 	/*!
 		Executes a SELECT statement.
@@ -141,7 +133,7 @@ public:
 	/*!
 		Opens a connection to the database with the given \a fileName.
 		If the database does not exist yet, it is created.
-		*/
+	 */
 	void open( const std::string& fileName );
 
 	ca::SQLiteStatement prepare( const char* sql );

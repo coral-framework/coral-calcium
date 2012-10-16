@@ -399,6 +399,6 @@ TEST_F( SpaceTests, changedValueFields )
 TEST_F( SpaceTestsFaulty, unexpectedExceptions )
 {
 	createSimpleERM();
-	ASSERT_EXCEPTION( _space->initialize( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
-	ASSERT_EXCEPTION( _space->initialize( _erm->getProvider() ), "raised by field 'throwsOnGetAndSet'" );
+	ASSERT_EXCEPTION( _space->initialize( _erm->getProvider() ), "field 'throwsOnGetAndSet' in erm.IModel" );
+	ASSERT_EXCEPTION( _space->initialize( _erm->getProvider() ), "field 'throwsOnGetAndSet' in erm.IModel" );
 }

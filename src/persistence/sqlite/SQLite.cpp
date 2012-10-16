@@ -30,10 +30,15 @@ bool SQLiteResult::next()
 {
 	int status = sqlite3_step( _stmt );
 	if( status == SQLITE_ERROR )
-	{
-		throw ca::IOException("error on getting next result on ResultSet");
-	}
+		throw ca::IOException( "error getting next result in SQLiteResult" );
+
 	return status != SQLITE_DONE;
+}
+
+void SQLiteResult::fetchRow()
+{
+	if( !next() )
+		throw ca::IOException( "unexpected empty SQLiteResult" );
 }
 
 bool SQLiteResult::hasData( int column )
@@ -45,14 +50,15 @@ bool SQLiteResult::hasData( int column )
 const char* SQLiteResult::getString( int column )
 {
 	assert( hasData( column ) );
-
 	return reinterpret_cast<const char*>( sqlite3_column_text( _stmt, column ) );
 }
 
 co::uint32 SQLiteResult::getUint32( int column )
 {
 	assert( hasData( column ) );
-	return static_cast<co::uint32>( sqlite3_column_int64( _stmt, column ) );
+	int v = sqlite3_column_int( _stmt, column );
+	assert( v >= 0 );
+	return static_cast<co::uint32>( v );
 }
 
 /************************************************************************/
@@ -76,6 +82,11 @@ SQLiteStatement::~SQLiteStatement()
 	finalize();
 }
 
+void SQLiteStatement::bind( int index, co::int32 value )
+{
+	handleErrorCode( sqlite3_bind_int( _stmt, index, value ) );
+}
+
 void SQLiteStatement::bind( int index, double value )
 {
 	handleErrorCode( sqlite3_bind_double( _stmt, index, value ));
@@ -84,16 +95,6 @@ void SQLiteStatement::bind( int index, double value )
 void SQLiteStatement::bind( int index, const char* value )
 {
 	handleErrorCode( sqlite3_bind_text( _stmt, index, value, -1, NULL ));
-}
-
-void SQLiteStatement::bind( int index, co::int32 value )
-{
-	handleErrorCode( sqlite3_bind_int( _stmt, index, value ) );
-}
-
-void SQLiteStatement::bind( int index, co::int64 value )
-{
-	handleErrorCode( sqlite3_bind_int64( _stmt, index, value ) );
 }
 
 SQLiteResult SQLiteStatement::query()
@@ -109,9 +110,7 @@ void SQLiteStatement::execute()
 void SQLiteStatement::reset()
 {
 	if( _stmt )
-	{
 		sqlite3_reset( _stmt );
-	}
 }
 
 void SQLiteStatement::finalize()
@@ -146,7 +145,7 @@ SQLiteConnection::~SQLiteConnection()
 	close();
 }
 
-void SQLiteConnection::open(const std::string& fileName)
+void SQLiteConnection::open( const std::string& fileName )
 {
 	if( isConnected() )
 		throw ca::IOException( "Open database failed. Database already opened" );
@@ -163,7 +162,7 @@ void SQLiteConnection::close()
 		return;
 
 	if( sqlite3_close( _db ) != SQLITE_OK )
-		throw ca::IOException( "Could not close database. Check for unfinalized IResultSets" );
+		throw ca::IOException( "Could not close database. Check for unfinalized SQLiteResults" );
 
 	_db = 0;
 }
@@ -171,9 +170,7 @@ void SQLiteConnection::close()
 SQLiteStatement SQLiteConnection::prepare( const char* sql )
 {
 	if( !_db )
-	{
 		throw ca::IOException( "Database not connected. Cannot execute command" );
-	}
 
 	sqlite3_stmt* stmt;
 
@@ -189,9 +186,7 @@ SQLiteStatement SQLiteConnection::prepare( const char* sql )
 void SQLiteConnection::checkConnection()
 {
 	if( !isConnected() )
-	{
 		throw ca::IOException( "Database not connected. Cannot execute command" );
-	}
 }
 
 } // namespace ca
