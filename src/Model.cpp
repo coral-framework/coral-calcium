@@ -258,11 +258,10 @@ ObjectRecord* ObjectRecord::create( ComponentRecord* model, co::IObject* instanc
 	return rec;
 }
 
-const char* getServiceTypeName( ObjectRecord* object, co::int16 facetId )
+std::string getServiceTypeName( ObjectRecord* object, co::int16 facetId )
 {
-	return facetId < 0 ?
-		"co.IObject" :
-		object->model->ports[facetId].typeRec->type->getFullName().c_str();
+	static const std::string IOBJECT( "co.IObject" );
+	return facetId < 0 ? IOBJECT : object->model->ports[facetId].typeRec->type->getFullName();
 }
 
 struct ObjectDestructionTraverser : public Traverser<ObjectDestructionTraverser>

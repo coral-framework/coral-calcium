@@ -309,7 +309,7 @@ struct ObjectRecord
 };
 
 // Given an object and a facetId, returns the service type name.
-const char* getServiceTypeName( ObjectRecord* object, co::int16 facetId );
+std::string getServiceTypeName( ObjectRecord* object, co::int16 facetId );
 
 /*
 	Base template for object traversers.
