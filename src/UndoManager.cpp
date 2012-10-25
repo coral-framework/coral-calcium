@@ -5,7 +5,6 @@
 
 #include "UndoManager_Base.h"
 
-#include <co/RefVector.h>
 #include <co/IllegalStateException.h>
 #include <co/IllegalArgumentException.h>
 
@@ -53,12 +52,12 @@ public:
 		return !_descriptions[Stack_Redo].empty();
 	}
 
-	co::Range<std::string> getUndoStack()
+	co::TSlice<std::string> getUndoStack()
 	{
 		return _descriptions[Stack_Undo];
 	}
 
-	co::Range<std::string> getRedoStack()
+	co::TSlice<std::string> getRedoStack()
 	{
 		return _descriptions[Stack_Redo];
 	}
@@ -217,7 +216,7 @@ private:
 	}
 
 private:
-	co::RefPtr<ca::IGraph> _graph;
+	ca::IGraphRef _graph;
 
 	// changeset recording:
 	int _nestingLevel;
@@ -225,7 +224,7 @@ private:
 	std::string _description;
 
 	typedef std::vector<std::string> StringStack;
-	typedef co::RefVector<IGraphChanges> ChangeStack;
+	typedef std::vector<IGraphChangesRef> ChangeStack;
 
 	// undo / redo stacks:
 	ChangeStack _changes[Stack_Count];

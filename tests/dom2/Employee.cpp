@@ -1,60 +1,58 @@
 #include "Employee_Base.h"
 #include <dom/IProject.h>
-#include <co/RefVector.h>
-#include <co/Range.h>
 
 namespace dom {
 
-	class Employee : public Employee_Base
+class Employee : public Employee_Base
+{
+public:
+	Employee()
 	{
-	public:
-		Employee()
-		{
-			// empty
-		}
+		// empty
+	}
 
-		virtual ~Employee()
-		{
-			// empty
-		}
+	virtual ~Employee()
+	{
+		// empty
+	}
 
-		std::string getRole()
-		{
-			return _role;
-		}
+	std::string getRole()
+	{
+		return _role;
+	}
 
-		void setRole( const std::string& role )
-		{
-			_role = role;
-		}
+	void setRole( const std::string& role )
+	{
+		_role = role;
+	}
 
-		co::Range<IProject*> getWorking()
-		{
-			return _working;
-		}
+	co::TSlice<IProject*> getWorking()
+	{
+		return _working;
+	}
 
-		void setWorking( co::Range<IProject*> working )
-		{
-			co::assign( working, _working );
-		}
+	void setWorking( co::Slice<IProject*> working )
+	{
+		co::assign( working, _working );
+	}
 
-		IProject* getLeading() { return _leading.get(); }
-		void setLeading( IProject* leading ) { _leading = leading; }
+	IProject* getLeading() { return _leading.get(); }
+	void setLeading( IProject* leading ) { _leading = leading; }
 
-		std::string getName() { return _name; }
-		void setName( const std::string& name ) { _name = name; }
+	std::string getName() { return _name; }
+	void setName( const std::string& name ) { _name = name; }
 
-		co::int32 getSalary() { return _salary; }
-		void setSalary( co::int32 salary ) { _salary = salary; }
+	co::int32 getSalary() { return _salary; }
+	void setSalary( co::int32 salary ) { _salary = salary; }
 
-	private:
-		co::RefPtr<IProject> _leading;
-		co::RefVector<IProject> _working;
-		std::string _name;
-		std::string _role;
-		co::int32 _salary;
-	};
+private:
+	IProjectRef _leading;
+	std::vector<IProjectRef> _working;
+	std::string _name;
+	std::string _role;
+	co::int32 _salary;
+};
 
-	CORAL_EXPORT_COMPONENT( Employee, Employee )
+CORAL_EXPORT_COMPONENT( Employee, Employee )
 
 } // namespace erm

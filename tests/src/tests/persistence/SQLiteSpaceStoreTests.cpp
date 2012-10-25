@@ -28,7 +28,7 @@ public:
 	}
 
 	std::string fileName;
-	co::RefPtr<co::IObject> spaceStoreObj;
+	co::IObjectRef spaceStoreObj;
 	ca::ISpaceStore* spaceStore;
 };
 

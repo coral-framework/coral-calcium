@@ -38,14 +38,14 @@ protected:
 	}
 
 protected:
-	co::RefPtr<co::IObject> _undoManagerObj;
-	co::RefPtr<ca::IUndoManager> _undoManager;
+	co::IObjectRef _undoManagerObj;
+	ca::IUndoManagerRef _undoManager;
 };
 
 
 TEST_F( UndoRedoTests, setup )
 {
-	co::RefPtr<co::IObject> undoManagerObj = co::newInstance( "ca.UndoManager" );
+	co::IObjectRef undoManagerObj = co::newInstance( "ca.UndoManager" );
 	ca::IUndoManager* undoManager = undoManagerObj->getService<ca::IUndoManager>();
 	ASSERT_TRUE( undoManager != NULL );
 
@@ -105,124 +105,136 @@ TEST_F( UndoRedoTests, basicUndoRedo )
 	_undoManager->endChange();
 
 	// check the undoManager's state
-	co::Range<std::string> undoStack = _undoManager->getUndoStack();
-	co::Range<std::string> redoStack = _undoManager->getRedoStack();
-	EXPECT_TRUE( _undoManager->getCanUndo() );
-	EXPECT_FALSE( _undoManager->getCanRedo() );
-	ASSERT_EQ( 1, undoStack.getSize() );
-	EXPECT_EQ( "Rename Entity A", undoStack[0] );
-	EXPECT_EQ( 0, redoStack.getSize() );
+	{
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_TRUE( _undoManager->getCanUndo() );
+		EXPECT_FALSE( _undoManager->getCanRedo() );
+		ASSERT_EQ( 1, undoStack.getSize() );
+		EXPECT_EQ( "Rename Entity A", undoStack[0] );
+		EXPECT_EQ( 0, redoStack.getSize() );
 
-	// check the graph's state
-	EXPECT_EQ( "111", _relAB->getRelation() );
-	EXPECT_EQ( "AAA", _entityA->getName() );
-	EXPECT_EQ( "Entity B", _entityB->getName() );
-	EXPECT_EQ( _entityB.get(), _entityA->getParent() );
+		// check the graph's state
+		EXPECT_EQ( "111", _relAB->getRelation() );
+		EXPECT_EQ( "AAA", _entityA->getName() );
+		EXPECT_EQ( "Entity B", _entityB->getName() );
+		EXPECT_EQ( _entityB.get(), _entityA->getParent() );
 
-	// perform a second non-undoable change
-	_relAB->setRelation( "222" );
+		// perform a second non-undoable change
+		_relAB->setRelation( "222" );
 
-	// perform a second undoable change
-	_undoManager->beginChange( "Rename Entity B" );
-	_entityB->setName( "BBB" );
-	_space->addChange( _entityB.get() );
-	_undoManager->endChange();
-
-	// check the undoManager's state
-	undoStack = _undoManager->getUndoStack();
-	redoStack = _undoManager->getRedoStack();
-	EXPECT_TRUE( _undoManager->getCanUndo() );
-	EXPECT_FALSE( _undoManager->getCanRedo() );
-	ASSERT_EQ( 2, undoStack.getSize() );
-	EXPECT_EQ( "Rename Entity A", undoStack[0] );
-	EXPECT_EQ( "Rename Entity B", undoStack[1] );
-	EXPECT_EQ( 0, redoStack.getSize() );
-
-	// check the graph's state
-	EXPECT_EQ( "222", _relAB->getRelation() );
-	EXPECT_EQ( "AAA", _entityA->getName() );
-	EXPECT_EQ( "BBB", _entityB->getName() );
-	EXPECT_EQ( _entityB.get(), _entityA->getParent() );
-
-	// undo the last change
-	_undoManager->undo();
+		// perform a second undoable change
+		_undoManager->beginChange( "Rename Entity B" );
+		_entityB->setName( "BBB" );
+		_space->addChange( _entityB.get() );
+		_undoManager->endChange();
+	}
 
 	// check the undoManager's state
-	undoStack = _undoManager->getUndoStack();
-	redoStack = _undoManager->getRedoStack();
-	EXPECT_EQ( true, _undoManager->getCanUndo() );
-	EXPECT_EQ( true, _undoManager->getCanRedo() );	
-	ASSERT_EQ( 1, undoStack.getSize() );
-	EXPECT_EQ( "Rename Entity A", undoStack[0] );
-	ASSERT_EQ( 1, redoStack.getSize() );
-	EXPECT_EQ( "Rename Entity B", redoStack[0] );
+	{
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_TRUE( _undoManager->getCanUndo() );
+		EXPECT_FALSE( _undoManager->getCanRedo() );
+		ASSERT_EQ( 2, undoStack.getSize() );
+		EXPECT_EQ( "Rename Entity A", undoStack[0] );
+		EXPECT_EQ( "Rename Entity B", undoStack[1] );
+		EXPECT_EQ( 0, redoStack.getSize() );
 
-	// check the graph's state
-	EXPECT_EQ( "222", _relAB->getRelation() );
-	EXPECT_EQ( "AAA", _entityA->getName() );
-	EXPECT_EQ( "Entity B", _entityB->getName() );
-	EXPECT_EQ( _entityB.get(), _entityA->getParent() );
+		// check the graph's state
+		EXPECT_EQ( "222", _relAB->getRelation() );
+		EXPECT_EQ( "AAA", _entityA->getName() );
+		EXPECT_EQ( "BBB", _entityB->getName() );
+		EXPECT_EQ( _entityB.get(), _entityA->getParent() );
 
-	// modify a field that's just been 'undone'
-	_entityB->setName( "FOO" );
-	_space->addChange( _entityB.get() );
-
-	// redo the last undone change
-	_undoManager->redo();
+		// undo the last change
+		_undoManager->undo();
+	}
 
 	// check the undoManager's state
-	undoStack = _undoManager->getUndoStack();
-	redoStack = _undoManager->getRedoStack();
-	EXPECT_TRUE( _undoManager->getCanUndo() );
-	EXPECT_FALSE( _undoManager->getCanRedo() );	
-	ASSERT_EQ( 2, undoStack.getSize() );
-	EXPECT_EQ( "Rename Entity A", undoStack[0] );
-	EXPECT_EQ( "Rename Entity B", undoStack[1] );
-	ASSERT_EQ( 0, redoStack.getSize() );
+	{
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_EQ( true, _undoManager->getCanUndo() );
+		EXPECT_EQ( true, _undoManager->getCanRedo() );	
+		ASSERT_EQ( 1, undoStack.getSize() );
+		EXPECT_EQ( "Rename Entity A", undoStack[0] );
+		ASSERT_EQ( 1, redoStack.getSize() );
+		EXPECT_EQ( "Rename Entity B", redoStack[0] );
 
-	// check the graph's state
-	EXPECT_EQ( "222", _relAB->getRelation() );
-	EXPECT_EQ( "AAA", _entityA->getName() );
-	EXPECT_EQ( "BBB", _entityB->getName() );
-	EXPECT_EQ( _entityB.get(), _entityA->getParent() );
+		// check the graph's state
+		EXPECT_EQ( "222", _relAB->getRelation() );
+		EXPECT_EQ( "AAA", _entityA->getName() );
+		EXPECT_EQ( "Entity B", _entityB->getName() );
+		EXPECT_EQ( _entityB.get(), _entityA->getParent() );
 
-	// undo the change again...
-	_undoManager->undo();
+		// modify a field that's just been 'undone'
+		_entityB->setName( "FOO" );
+		_space->addChange( _entityB.get() );
 
-	// check the undoManager's state
-	undoStack = _undoManager->getUndoStack();
-	redoStack = _undoManager->getRedoStack();
-	EXPECT_EQ( true, _undoManager->getCanUndo() );
-	EXPECT_EQ( true, _undoManager->getCanRedo() );	
-	ASSERT_EQ( 1, undoStack.getSize() );
-	EXPECT_EQ( "Rename Entity A", undoStack[0] );
-	ASSERT_EQ( 1, redoStack.getSize() );
-	EXPECT_EQ( "Rename Entity B", redoStack[0] );
-
-	// check the graph's state
-	EXPECT_EQ( "222", _relAB->getRelation() );
-	EXPECT_EQ( "AAA", _entityA->getName() );
-	EXPECT_EQ( "FOO", _entityB->getName() );
-	EXPECT_EQ( _entityB.get(), _entityA->getParent() );
-
-	// undo the last remaining changeset
-	_undoManager->undo();
+		// redo the last undone change
+		_undoManager->redo();
+	}
 
 	// check the undoManager's state
-	undoStack = _undoManager->getUndoStack();
-	redoStack = _undoManager->getRedoStack();
-	EXPECT_FALSE( _undoManager->getCanUndo() );
-	EXPECT_TRUE( _undoManager->getCanRedo() );	
-	ASSERT_EQ( 0, undoStack.getSize() );
-	ASSERT_EQ( 2, redoStack.getSize() );
-	EXPECT_EQ( "Rename Entity B", redoStack[0] );
-	EXPECT_EQ( "Rename Entity A", redoStack[1] );
+	{
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_TRUE( _undoManager->getCanUndo() );
+		EXPECT_FALSE( _undoManager->getCanRedo() );	
+		ASSERT_EQ( 2, undoStack.getSize() );
+		EXPECT_EQ( "Rename Entity A", undoStack[0] );
+		EXPECT_EQ( "Rename Entity B", undoStack[1] );
+		ASSERT_EQ( 0, redoStack.getSize() );
 
-	// check the graph's state
-	EXPECT_EQ( "222", _relAB->getRelation() );
-	EXPECT_EQ( "Entity A", _entityA->getName() );
-	EXPECT_EQ( "FOO", _entityB->getName() );
-	EXPECT_EQ( NULL, _entityA->getParent() );
+		// check the graph's state
+		EXPECT_EQ( "222", _relAB->getRelation() );
+		EXPECT_EQ( "AAA", _entityA->getName() );
+		EXPECT_EQ( "BBB", _entityB->getName() );
+		EXPECT_EQ( _entityB.get(), _entityA->getParent() );
+
+		// undo the change again...
+		_undoManager->undo();
+	}
+
+	// check the undoManager's state
+	{
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_EQ( true, _undoManager->getCanUndo() );
+		EXPECT_EQ( true, _undoManager->getCanRedo() );	
+		ASSERT_EQ( 1, undoStack.getSize() );
+		EXPECT_EQ( "Rename Entity A", undoStack[0] );
+		ASSERT_EQ( 1, redoStack.getSize() );
+		EXPECT_EQ( "Rename Entity B", redoStack[0] );
+
+		// check the graph's state
+		EXPECT_EQ( "222", _relAB->getRelation() );
+		EXPECT_EQ( "AAA", _entityA->getName() );
+		EXPECT_EQ( "FOO", _entityB->getName() );
+		EXPECT_EQ( _entityB.get(), _entityA->getParent() );
+
+		// undo the last remaining changeset
+		_undoManager->undo();
+	}
+
+	// check the undoManager's state
+	{
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_FALSE( _undoManager->getCanUndo() );
+		EXPECT_TRUE( _undoManager->getCanRedo() );	
+		ASSERT_EQ( 0, undoStack.getSize() );
+		ASSERT_EQ( 2, redoStack.getSize() );
+		EXPECT_EQ( "Rename Entity B", redoStack[0] );
+		EXPECT_EQ( "Rename Entity A", redoStack[1] );
+
+		// check the graph's state
+		EXPECT_EQ( "222", _relAB->getRelation() );
+		EXPECT_EQ( "Entity A", _entityA->getName() );
+		EXPECT_EQ( "FOO", _entityB->getName() );
+		EXPECT_EQ( NULL, _entityA->getParent() );
+	}
 }
 
 TEST_F( UndoRedoTests, newChangeResetsRedoStack )
@@ -236,8 +248,8 @@ TEST_F( UndoRedoTests, newChangeResetsRedoStack )
 	_undoManager->endChange();
 
 	// check the undoManager's state
-	co::Range<std::string> undoStack = _undoManager->getUndoStack();
-	co::Range<std::string> redoStack = _undoManager->getRedoStack();
+	co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+	co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
 	EXPECT_TRUE( _undoManager->getCanUndo() );
 	EXPECT_FALSE( _undoManager->getCanRedo() );
 	ASSERT_EQ( 1, undoStack.getSize() );
@@ -245,27 +257,31 @@ TEST_F( UndoRedoTests, newChangeResetsRedoStack )
 	EXPECT_EQ( 0, redoStack.getSize() );
 
 	// undo the change and check the undoManager's state
-	_undoManager->undo();
-	undoStack = _undoManager->getUndoStack();
-	redoStack = _undoManager->getRedoStack();
-	EXPECT_FALSE( _undoManager->getCanUndo() );
-	EXPECT_TRUE( _undoManager->getCanRedo() );
-	ASSERT_EQ( 0, undoStack.getSize() );
-	EXPECT_EQ( 1, redoStack.getSize() );
-	EXPECT_EQ( "Rename Entity A", redoStack[0] );
+	{
+		_undoManager->undo();
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_FALSE( _undoManager->getCanUndo() );
+		EXPECT_TRUE( _undoManager->getCanRedo() );
+		ASSERT_EQ( 0, undoStack.getSize() );
+		EXPECT_EQ( 1, redoStack.getSize() );
+		EXPECT_EQ( "Rename Entity A", redoStack[0] );
 
-	// perform a second undoable change (resets the redo stack)
-	_undoManager->beginChange( "Rename Entity B" );
-	_entityB->setName( "BBB" );
-	_space->addChange( _entityB.get() );
-	_undoManager->endChange();
+		// perform a second undoable change (resets the redo stack)
+		_undoManager->beginChange( "Rename Entity B" );
+		_entityB->setName( "BBB" );
+		_space->addChange( _entityB.get() );
+		_undoManager->endChange();
+	}
 
 	// check the undoManager's state
-	undoStack = _undoManager->getUndoStack();
-	redoStack = _undoManager->getRedoStack();
-	EXPECT_TRUE( _undoManager->getCanUndo() );
-	EXPECT_FALSE( _undoManager->getCanRedo() );
-	ASSERT_EQ( 1, undoStack.getSize() );
-	EXPECT_EQ( "Rename Entity B", undoStack[0] );
-	EXPECT_EQ( 0, redoStack.getSize() );
+	{
+		co::TSlice<std::string> undoStack = _undoManager->getUndoStack();
+		co::TSlice<std::string> redoStack = _undoManager->getRedoStack();
+		EXPECT_TRUE( _undoManager->getCanUndo() );
+		EXPECT_FALSE( _undoManager->getCanRedo() );
+		ASSERT_EQ( 1, undoStack.getSize() );
+		EXPECT_EQ( "Rename Entity B", undoStack[0] );
+		EXPECT_EQ( 0, redoStack.getSize() );
+	}
 }

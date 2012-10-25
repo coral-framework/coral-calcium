@@ -66,25 +66,25 @@ protected:
 protected:
 	std::string _modelName;
 
-	co::RefPtr<co::IObject> _modelObj;
-	co::RefPtr<co::IObject> _universeObj;
-	co::RefPtr<co::IObject> _spaceObj;
+	co::IObjectRef _modelObj;
+	co::IObjectRef _universeObj;
+	co::IObjectRef _spaceObj;
 
-	co::RefPtr<ca::IModel> _model;
-	co::RefPtr<ca::IUniverse> _universe;
-	co::RefPtr<ca::ISpace> _space;
+	ca::IModelRef _model;
+	ca::IUniverseRef _universe;
+	ca::ISpaceRef _space;
 
-	co::RefPtr<ca::IGraphChanges> _changes;
-	co::RefVector<ca::IObjectChanges> _objectChanges;
-	co::RefVector<ca::IServiceChanges> _serviceChanges;
+	ca::IGraphChangesRef _changes;
+	std::vector<ca::IObjectChangesRef> _objectChanges;
+	std::vector<ca::IServiceChangesRef> _serviceChanges;
 
-	co::RefPtr<erm::IEntity> _entityA;
-	co::RefPtr<erm::IEntity> _entityB;
-	co::RefPtr<erm::IEntity> _entityC;
-	co::RefPtr<erm::IRelationship> _relAB;
-	co::RefPtr<erm::IRelationship> _relBC;
-	co::RefPtr<erm::IRelationship> _relCA;
-	co::RefPtr<erm::IModel> _erm;
+	erm::IEntityRef _entityA;
+	erm::IEntityRef _entityB;
+	erm::IEntityRef _entityC;
+	erm::IRelationshipRef _relAB;
+	erm::IRelationshipRef _relBC;
+	erm::IRelationshipRef _relCA;
+	erm::IModelRef _erm;
 };
 
 #endif // _ERMSPACE_H_

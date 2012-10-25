@@ -54,11 +54,11 @@ public:
 
 	void onGraphChanged( ca::IGraphChanges* changes )
 	{
-		co::Range<co::IObject*> addedObjects = changes->getAddedObjects();
+		co::TSlice<co::IObject*> addedObjects = changes->getAddedObjects();
 		for( ; addedObjects; addedObjects.popFirst() )
 			_addedObjects.insert( addedObjects.getFirst() );
 
-		co::Range<ca::IObjectChanges*> changedObjects = changes->getChangedObjects();
+		co::TSlice<ca::IObjectChanges*> changedObjects = changes->getChangedObjects();
 		for( ; changedObjects; changedObjects.popFirst() )
 		{
 			ca::IObjectChanges* objectChanges = changedObjects.getFirst();
@@ -70,7 +70,7 @@ public:
 			if( it != _addedObjects.end() )
 				continue;
 
-			co::Range<ca::ChangedConnection> changedConnections = objectChanges->getChangedConnections();
+			co::TSlice<ca::ChangedConnection> changedConnections = objectChanges->getChangedConnections();
 			if( changedConnections )
 			{
 				ChangeSet& cs = _changeCache[object];
@@ -81,27 +81,27 @@ public:
 				}
 			}
 
-			co::Range<ca::IServiceChanges*> changedServices = objectChanges->getChangedServices();
+			co::TSlice<ca::IServiceChanges*> changedServices = objectChanges->getChangedServices();
 			for( ; changedServices; changedServices.popFirst() )
 			{
 				ca::IServiceChanges* changes = changedServices.getFirst();
 				co::IService* service = changes->getService();
 				ChangeSet& cs = _changeCache[service];
 
-				co::Range<ca::ChangedValueField> changedValues = changes->getChangedValueFields();
+				co::TSlice<ca::ChangedValueField> changedValues = changes->getChangedValueFields();
 				for( ; changedValues; changedValues.popFirst() )
 					cs[changedValues.getFirst().field.get()] = changedValues.getFirst().current;
 
-				co::Range<ca::ChangedRefField> changedRefs = changes->getChangedRefFields();
+				co::TSlice<ca::ChangedRefField> changedRefs = changes->getChangedRefFields();
 				for( ; changedRefs; changedRefs.popFirst() )
 					cs[changedRefs.getFirst().field.get()] = changedRefs.getFirst().current;
 
-				co::Range<ca::ChangedRefVecField> changedRefVecs = changes->getChangedRefVecFields();
+				co::TSlice<ca::ChangedRefVecField> changedRefVecs = changes->getChangedRefVecFields();
 				for( ; changedRefVecs; changedRefVecs.popFirst() )
 					cs[changedRefVecs.getFirst().field.get()] = changedRefVecs.getFirst().current;
 			}
 
-			co::Range<co::IObject*> removedObjects = changes->getRemovedObjects();
+			co::TSlice<co::IObject*> removedObjects = changes->getRemovedObjects();
 			for( ; removedObjects; removedObjects.popFirst() )
 			{
 				co::IObject* removedObj = removedObjects.getFirst();
@@ -110,7 +110,7 @@ public:
 				_addedObjects.erase( removedObj );
 				_changeCache.erase( removedObj );
 
-				co::Range<co::IPort*> ports = removedObj->getComponent()->getPorts();
+				co::TSlice<co::IPort*> ports = removedObj->getComponent()->getPorts();
 				for( ; ports; ports.popFirst() )
 					_changeCache.erase( removedObj->getServiceAt( ports.getFirst() ) );
 			}
@@ -144,7 +144,7 @@ public:
 		addChange( service, member, newValue );
 	}
 
-	void addRefVecChange( co::IService* service, co::IMember* member, co::RefVector<co::IService>& newValue )
+	void addRefVecChange( co::IService* service, co::IMember* member, std::vector<co::IServiceRef>& newValue )
 	{
 		addChange( service, member, newValue );
 	}
@@ -180,7 +180,7 @@ public:
 			saveObject( rootObject );
 			_spaceStore->setRootObject( getObjectId(rootObject) );
 
-			co::Range<std::string> updates = _model->getUpdates();
+			co::TSlice<std::string> updates = _model->getUpdates();
 			std::stringstream updateList;
 
 			for( int i = 0; i < updates.getSize(); ++i )
@@ -196,7 +196,7 @@ public:
 			throw;
 		}
 
-		co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
+		co::IObjectRef spaceObj = co::newInstance( "ca.Space" );
 		_space = spaceObj->getService<ca::ISpace>();
 
 		spaceObj->setService( "universe", _universe.get() );
@@ -349,7 +349,7 @@ private:
 
 	void restoreLua( co::uint32 revision )
 	{
-		co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
+		co::IObjectRef spaceObj = co::newInstance( "ca.Space" );
 		spaceObj->setService( "universe", _universe.get() );
 		_space = spaceObj->getService<ca::ISpace>();
 
@@ -361,7 +361,7 @@ private:
 			static_cast<ca::ISpaceLoader*>( this )
 		};
 
-		co::getService<lua::IState>()->call( "ca.SpaceLoader", "", args, co::Range<co::Any>() );
+		co::getService<lua::IState>()->call( "ca.SpaceLoader", "", args, co::Slice<co::Any>() );
 
 		_space->addGraphObserver( this );
 		_space->notifyChanges();
@@ -384,7 +384,7 @@ private:
 		id = _spaceStore->addService( type->getFullName(), providerId );
 		insertObjectCache( service, id );
 
-		co::RefVector<co::IField> fields;
+		std::vector<co::IFieldRef> fields;
 		_model->getFields(type, fields);
 
 		std::vector<std::string> fieldNames;
@@ -419,7 +419,7 @@ private:
 					getElementType()->getKind() == co::TK_INTERFACE  )
 			{
 				std::vector<co::uint32> refIds;
-				co::Range<co::IService*> refs = value.get<co::Range<co::IService*> >();
+				co::Slice<co::IService*> refs = value.get<co::Slice<co::IService*> >();
 				for( ; refs; refs.popFirst() )
 				{
 					co::IService* s = refs.getFirst();
@@ -453,7 +453,7 @@ private:
 		std::vector<std::string> values;
 		std::vector<std::string> fieldNames;
 
-		co::Range<co::IPort*> ports = component->getPorts();
+		co::TSlice<co::IPort*> ports = component->getPorts();
 		for( size_t i = 0; i < ports.getSize(); ++i )
 		{
 			co::IPort* port = ports[i];
@@ -515,7 +515,7 @@ private:
 		else if( kind == co::TK_ARRAY && static_cast<co::IArray*>( value.getType() )->getElementType()->getKind() == co::TK_INTERFACE )
 		{
 			std::vector<co::uint32> refIds;
-			co::Range<co::IService*> refs = value.get<co::Range<co::IService*> >();
+			co::Slice<co::IService*> refs = value.get<co::Slice<co::IService*> >();
 			for( ; refs; refs.popFirst() )
 				refIds.push_back( getObjectId( refs.getFirst() ) );
 			TO_STR( valueStr, "#" << refIds );
@@ -537,12 +537,12 @@ private:
 	typedef std::map<co::IService*, ChangeSet> ChangeSetCache;
 
 private:
-	co::RefPtr<ca::ISpace> _space;
-	co::RefPtr<ca::IUniverse> _universe;
-	co::RefPtr<ca::ISpaceStore> _spaceStore;
+	ca::ISpaceRef _space;
+	ca::IUniverseRef _universe;
+	ca::ISpaceStoreRef _spaceStore;
 
 	StringSerializer _serializer;
-	co::RefPtr<ca::IModel> _model;
+	ca::IModelRef _model;
 
 	co::uint32 _trackedRevision;
 	std::string _updateList;

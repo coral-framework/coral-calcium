@@ -21,10 +21,10 @@ TEST( StringSerializationTests, stringDefinitionBasicTypes )
 {
 	ca::StringSerializer serializer;
 
-	co::IObject* modelObj = co::newInstance( "ca.Model" );
-	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
+	co::IObjectRef modelObj = co::newInstance( "ca.Model" );
+	ca::IModel* model = modelObj->getService<ca::IModel>();
 	model->setName( "serialization" );
-	serializer.setModel( model.get() );
+	serializer.setModel( model );
 
 	std::string expected;
 	std::string actual;
@@ -132,10 +132,10 @@ TEST( StringSerializationTests, stringDefinitionCompositeTypes )
 {
 
 	ca::StringSerializer serializer;
-	co::IObject* modelObj = co::newInstance( "ca.Model" );
-	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
+	co::IObjectRef modelObj = co::newInstance( "ca.Model" );
+	ca::IModel* model = modelObj->getService<ca::IModel>();
 	model->setName( "serialization" );
-	serializer.setModel( model.get() );
+	serializer.setModel( model );
 
 	serialization::BasicTypesStruct structValue;
 	structValue.intValue = 1;
@@ -223,7 +223,7 @@ TEST( StringSerializationTests, stringDefinitionArray )
 {
 	ca::StringSerializer serializer;
 
-	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
+	co::IObjectRef modelObj = co::newInstance( "ca.Model" );
 	ca::IModel* model = modelObj->getService<ca::IModel>();
 	model->setName( "serialization" );
 	serializer.setModel( model );

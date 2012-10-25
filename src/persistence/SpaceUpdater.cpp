@@ -61,7 +61,7 @@ namespace ca {
 
 		if( tk == co::TK_COMPONENT )
 		{
-			co::RefVector<co::IPort> ports;
+			std::vector<co::IPortRef> ports;
 			model->getPorts( co::cast<co::IComponent>( type ), ports );
 
 			for( int i = 0; i < ports.size(); i++ )
@@ -74,7 +74,7 @@ namespace ca {
 
 		if( tk == co::TK_INTERFACE )
 		{
-			co::RefVector<co::IField> fields;
+			std::vector<co::IFieldRef> fields;
 			model->getFields( co::cast<co::IInterface>( type ), fields );
 			for( int i = 0; i < fields.size(); i++ )
 			{

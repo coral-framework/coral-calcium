@@ -33,9 +33,9 @@ public:
 		_parent = parent;
 	}
 
-	co::Range<erm::IRelationship*> getRelationships()
+	co::TSlice<erm::IRelationship*> getRelationships()
 	{
-		return co::Range<erm::IRelationship*>();
+		return co::TSlice<erm::IRelationship*>();
 	}
 
 private:

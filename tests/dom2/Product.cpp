@@ -1,61 +1,58 @@
 #include "Product_Base.h"
 #include <dom/IProduct.h>
 #include <dom/IEmployee.h>
-#include <co/RefVector.h>
-#include <co/RefPtr.h>
 
 namespace dom {
 
-	class Product : public Product_Base
+class Product : public Product_Base
+{
+public:
+	Product()
 	{
-	public:
-		Product()
-		{
-			// empty
-		}
+		// empty
+	}
 
-		virtual ~Product()
-		{
-			// empty
-		}
+	virtual ~Product()
+	{
+		// empty
+	}
 
-		std::string getName() { return _name; }
-		void setName( const std::string& name ) { _name = name; }
+	std::string getName() { return _name; }
+	void setName( const std::string& name ) { _name = name; }
 
-		double getValue() { return _earnings; }
-		void setValue( double earnings ) { _earnings = earnings; }
+	double getValue() { return _earnings; }
+	void setValue( double earnings ) { _earnings = earnings; }
 
-		co::Range<IEmployee*> getDevelopers()
-		{
-			return _developers;
-		}
+	co::TSlice<IEmployee*> getDevelopers()
+	{
+		return _developers;
+	}
 
-		void setDevelopers( co::Range<IEmployee*> developers )
-		{
-			co::assign( developers, _developers );
-		}
+	void setDevelopers( co::Slice<IEmployee*> developers )
+	{
+		co::assign( developers, _developers );
+	}
 
-		IEmployee* getLeader()
-		{
-			return _leader.get();
-		}
+	IEmployee* getLeader()
+	{
+		return _leader.get();
+	}
 
-		void setLeader( IEmployee* leader )
-		{
-			_leader = leader;
-		}
+	void setLeader( IEmployee* leader )
+	{
+		_leader = leader;
+	}
 
-	protected:
+protected:
 
 
-	private:
-		std::string _name;
-		double _earnings;
-		co::RefVector<IEmployee> _developers;
-		co::RefPtr<IEmployee> _leader;
+private:
+	std::string _name;
+	double _earnings;
+	std::vector<IEmployeeRef> _developers;
+	IEmployeeRef _leader;
+};
 
-	};
-
-	CORAL_EXPORT_COMPONENT( Product, Product )
+CORAL_EXPORT_COMPONENT( Product, Product )
 
 } // namespace erm

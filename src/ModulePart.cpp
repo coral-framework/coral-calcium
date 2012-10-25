@@ -36,7 +36,7 @@ public:
 
 	void integrate( co::IModule* )
 	{
-		co::RefPtr<co::IObject> luaManager = co::newInstance( "ca.LuaManager" );
+		co::IObjectRef luaManager = co::newInstance( "ca.LuaManager" );
 
 		co::getSystem()->getServices()->addService(
 			co::typeOf<ca::ILuaManager>::get(),
@@ -64,7 +64,7 @@ public:
 	}
 
 private:
-	co::RefPtr<lua::IInterceptor> _luaInterceptor;
+	lua::IInterceptorRef _luaInterceptor;
 };
 
 CORAL_EXPORT_MODULE_PART( ModulePart );

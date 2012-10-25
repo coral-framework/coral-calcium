@@ -110,11 +110,11 @@ TEST_F( SpaceTests, simpleAdditions )
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 
 	// we also expect 2 changed fields in one service (_erm's lists of entities/rels)
-	co::Range<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
+	co::TSlice<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
 	ASSERT_EQ( 1, changedObjects.getSize() );
 	EXPECT_EQ( changedObjects[0]->getObject(), _erm->getProvider() );
 
-	co::Range<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
+	co::TSlice<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
 	ASSERT_EQ( 1, changedServices.getSize() );
 
 	ca::IServiceChanges* changedService = changedServices[0];
@@ -122,7 +122,7 @@ TEST_F( SpaceTests, simpleAdditions )
 	EXPECT_TRUE( changedService->getChangedRefFields().isEmpty() );
 	EXPECT_TRUE( changedService->getChangedValueFields().isEmpty() );
 
-	co::Range<ca::ChangedRefVecField> changedRefVecs = changedService->getChangedRefVecFields();
+	co::TSlice<ca::ChangedRefVecField> changedRefVecs = changedService->getChangedRefVecFields();
 	EXPECT_EQ( 2, changedRefVecs.getSize() );
 	EXPECT_EQ( "entities", changedRefVecs[0].field->getName() );
 	EXPECT_EQ( "relationships", changedRefVecs[1].field->getName() );
@@ -144,11 +144,11 @@ TEST_F( SpaceTests, changedReceptacles )
 	EXPECT_TRUE( _changes->getAddedObjects().isEmpty() );
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 
-	co::Range<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
+	co::TSlice<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
 	ASSERT_EQ( 1, changedObjects.getSize() );
 	EXPECT_EQ( changedObjects[0]->getObject(), relAB );
 
-	co::Range<ca::ChangedConnection> changedConnections = changedObjects[0]->getChangedConnections();
+	co::TSlice<ca::ChangedConnection> changedConnections = changedObjects[0]->getChangedConnections();
 	EXPECT_EQ( 2, changedConnections.getSize() );
 	EXPECT_EQ( "entityA", changedConnections[0].receptacle->getName() );
 	EXPECT_EQ( _entityA.get(), changedConnections[0].previous.get() );
@@ -173,23 +173,25 @@ TEST_F( SpaceTests, changedRefFields )
 	EXPECT_TRUE( _changes->findAddedObject( _entityC->getProvider() ) >= 0 );
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 
-	co::Range<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
-	ASSERT_EQ( 1, changedObjects.getSize() );
-	EXPECT_EQ( _entityA->getProvider(), changedObjects[0]->getObject() );
+	{
+		co::TSlice<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
+		ASSERT_EQ( 1, changedObjects.getSize() );
+		EXPECT_EQ( _entityA->getProvider(), changedObjects[0]->getObject() );
 
-	co::Range<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
-	ASSERT_EQ( 1, changedServices.getSize() );
+		co::TSlice<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
+		ASSERT_EQ( 1, changedServices.getSize() );
 
-	ca::IServiceChanges* changedService = changedServices[0];
-	EXPECT_EQ( _entityA.get(), changedService->getService() );
+		ca::IServiceChanges* changedService = changedServices[0];
+		EXPECT_EQ( _entityA.get(), changedService->getService() );
 
-	co::Range<ca::ChangedRefField> changedRefFields = changedService->getChangedRefFields();
-	ASSERT_EQ( 1, changedRefFields.getSize() );
-	EXPECT_EQ( "parent", changedRefFields[0].field->getName() );
-	EXPECT_EQ( NULL, changedRefFields[0].previous.get() );
-	EXPECT_EQ( _entityC.get(), changedRefFields[0].current.get() );
-	EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );
-	EXPECT_TRUE( changedService->getChangedValueFields().isEmpty() );
+		co::TSlice<ca::ChangedRefField> changedRefFields = changedService->getChangedRefFields();
+		ASSERT_EQ( 1, changedRefFields.getSize() );
+		EXPECT_EQ( "parent", changedRefFields[0].field->getName() );
+		EXPECT_EQ( NULL, changedRefFields[0].previous.get() );
+		EXPECT_EQ( _entityC.get(), changedRefFields[0].current.get() );
+		EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );
+		EXPECT_TRUE( changedService->getChangedValueFields().isEmpty() );
+	}
 
 	// now if we reset the same field to NULL, we shall get the reverse effect
 	_entityA->setParent( NULL );
@@ -201,23 +203,25 @@ TEST_F( SpaceTests, changedRefFields )
 	EXPECT_EQ( 1, _changes->getRemovedObjects().getSize() );
 	EXPECT_TRUE( _changes->findRemovedObject( _entityC->getProvider() ) >= 0 );
 
-	changedObjects = _changes->getChangedObjects();
-	ASSERT_EQ( 1, changedObjects.getSize() );
-	EXPECT_EQ( _entityA->getProvider(), changedObjects[0]->getObject() );
+	{
+		co::TSlice<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
+		ASSERT_EQ( 1, changedObjects.getSize() );
+		EXPECT_EQ( _entityA->getProvider(), changedObjects[0]->getObject() );
 
-	changedServices = changedObjects[0]->getChangedServices();
-	ASSERT_EQ( 1, changedServices.getSize() );
+		co::TSlice<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
+		ASSERT_EQ( 1, changedServices.getSize() );
 
-	changedService = changedServices[0];
-	EXPECT_EQ( _entityA.get(), changedService->getService() );
+		ca::IServiceChanges* changedService = changedServices[0];
+		EXPECT_EQ( _entityA.get(), changedService->getService() );
 
-	changedRefFields = changedService->getChangedRefFields();
-	ASSERT_EQ( 1, changedRefFields.getSize() );
-	EXPECT_EQ( "parent", changedRefFields[0].field->getName() );
-	EXPECT_EQ( _entityC.get(), changedRefFields[0].previous.get() );
-	EXPECT_EQ( NULL, changedRefFields[0].current.get() );
-	EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );
-	EXPECT_TRUE( changedService->getChangedValueFields().isEmpty() );
+		co::TSlice<ca::ChangedRefField> changedRefFields = changedService->getChangedRefFields();
+		ASSERT_EQ( 1, changedRefFields.getSize() );
+		EXPECT_EQ( "parent", changedRefFields[0].field->getName() );
+		EXPECT_EQ( _entityC.get(), changedRefFields[0].previous.get() );
+		EXPECT_EQ( NULL, changedRefFields[0].current.get() );
+		EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );
+		EXPECT_TRUE( changedService->getChangedValueFields().isEmpty() );
+	}
 }
 
 TEST_F( SpaceTests, changedRefVecFields )
@@ -228,7 +232,7 @@ TEST_F( SpaceTests, changedRefVecFields )
 		The ERM entity list is currently { entityA, entityB }
 		We'll turn it into { entityA, NULL, entityA, entityC }
 	 */
-	co::Range<erm::IEntity*> entities = _erm->getEntities();
+	co::TSlice<erm::IEntity*> entities = _erm->getEntities();
 	entities.popLast();
 	_erm->setEntities( entities );
 	_erm->addEntity( NULL );
@@ -257,40 +261,42 @@ TEST_F( SpaceTests, changedRefVecFields )
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 
 	// we expect 1 changed object/service (erm), with 2 changed RefVec fields
-	co::Range<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
-	ASSERT_EQ( 1, changedObjects.getSize() );
-	EXPECT_EQ( _erm->getProvider(), changedObjects[0]->getObject() );
+	{
+		co::TSlice<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
+		ASSERT_EQ( 1, changedObjects.getSize() );
+		EXPECT_EQ( _erm->getProvider(), changedObjects[0]->getObject() );
 
-	co::Range<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
-	ASSERT_EQ( 1, changedServices.getSize() );
+		co::TSlice<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
+		ASSERT_EQ( 1, changedServices.getSize() );
 
-	ca::IServiceChanges* changedService = changedServices[0];
-	EXPECT_EQ( _erm.get(), changedService->getService() );
+		ca::IServiceChanges* changedService = changedServices[0];
+		EXPECT_EQ( _erm.get(), changedService->getService() );
 
-	EXPECT_TRUE( changedService->getChangedRefFields().isEmpty() );
-	EXPECT_TRUE( changedService->getChangedValueFields().isEmpty() );
+		EXPECT_TRUE( changedService->getChangedRefFields().isEmpty() );
+		EXPECT_TRUE( changedService->getChangedValueFields().isEmpty() );
 
-	co::Range<ca::ChangedRefVecField> changedRefVecFields = changedService->getChangedRefVecFields();
-	ASSERT_EQ( 2, changedRefVecFields.getSize() );
+		co::TSlice<ca::ChangedRefVecField> changedRefVecFields = changedService->getChangedRefVecFields();
+		ASSERT_EQ( 2, changedRefVecFields.getSize() );
 
-	EXPECT_EQ( "entities", changedRefVecFields[0].field->getName() );
-	ASSERT_EQ( 2, changedRefVecFields[0].previous.size() );
-	EXPECT_EQ( _entityA.get(), changedRefVecFields[0].previous[0].get() );
-	EXPECT_EQ( _entityB.get(), changedRefVecFields[0].previous[1].get() );
-	ASSERT_EQ( 4, changedRefVecFields[0].current.size() );
-	EXPECT_EQ( _entityA.get(), changedRefVecFields[0].current[0].get() );
-	EXPECT_EQ( NULL, changedRefVecFields[0].current[1].get() );
-	EXPECT_EQ( _entityA.get(), changedRefVecFields[0].current[2].get() );
-	EXPECT_EQ( _entityC.get(), changedRefVecFields[0].current[3].get() );
+		EXPECT_EQ( "entities", changedRefVecFields[0].field->getName() );
+		ASSERT_EQ( 2, changedRefVecFields[0].previous.size() );
+		EXPECT_EQ( _entityA.get(), changedRefVecFields[0].previous[0].get() );
+		EXPECT_EQ( _entityB.get(), changedRefVecFields[0].previous[1].get() );
+		ASSERT_EQ( 4, changedRefVecFields[0].current.size() );
+		EXPECT_EQ( _entityA.get(), changedRefVecFields[0].current[0].get() );
+		EXPECT_EQ( NULL, changedRefVecFields[0].current[1].get() );
+		EXPECT_EQ( _entityA.get(), changedRefVecFields[0].current[2].get() );
+		EXPECT_EQ( _entityC.get(), changedRefVecFields[0].current[3].get() );
 
-	EXPECT_EQ( "relationships", changedRefVecFields[1].field->getName() );
-	ASSERT_EQ( 1, changedRefVecFields[1].previous.size() );
-	EXPECT_EQ( _relAB.get(), changedRefVecFields[1].previous[0].get() );
-	ASSERT_EQ( 4, changedRefVecFields[1].current.size() );
-	EXPECT_EQ( NULL, changedRefVecFields[1].current[0].get() );
-	EXPECT_EQ( _relAB.get(), changedRefVecFields[1].current[1].get() );
-	EXPECT_EQ( _relBC.get(), changedRefVecFields[1].current[2].get() );
-	EXPECT_EQ( _relAB.get(), changedRefVecFields[1].current[3].get() );
+		EXPECT_EQ( "relationships", changedRefVecFields[1].field->getName() );
+		ASSERT_EQ( 1, changedRefVecFields[1].previous.size() );
+		EXPECT_EQ( _relAB.get(), changedRefVecFields[1].previous[0].get() );
+		ASSERT_EQ( 4, changedRefVecFields[1].current.size() );
+		EXPECT_EQ( NULL, changedRefVecFields[1].current[0].get() );
+		EXPECT_EQ( _relAB.get(), changedRefVecFields[1].current[1].get() );
+		EXPECT_EQ( _relBC.get(), changedRefVecFields[1].current[2].get() );
+		EXPECT_EQ( _relAB.get(), changedRefVecFields[1].current[3].get() );
+	}
 
 	// remove relAB's ref to entityB; entityB should be removed from the space
 	_relAB->setEntityB( NULL );
@@ -309,19 +315,21 @@ TEST_F( SpaceTests, changedRefVecFields )
 	EXPECT_TRUE( _changes->findRemovedObject( _entityB->getProvider() ) >= 0 );
 
 	// the changed object (relAB) has 1 changed field and 1 changed connection
-	changedObjects = _changes->getChangedObjects();
-	ASSERT_EQ( 1, changedObjects.getSize() );
-	EXPECT_EQ( _relAB->getProvider(), changedObjects[0]->getObject() );
-	EXPECT_EQ( 1, changedObjects[0]->getChangedConnections().getSize() );
-	EXPECT_EQ( "entityB", changedObjects[0]->getChangedConnections()[0].receptacle->getName() );
+	{
+		co::TSlice<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
+		ASSERT_EQ( 1, changedObjects.getSize() );
+		EXPECT_EQ( _relAB->getProvider(), changedObjects[0]->getObject() );
+		EXPECT_EQ( 1, changedObjects[0]->getChangedConnections().getSize() );
+		EXPECT_EQ( "entityB", changedObjects[0]->getChangedConnections()[0].receptacle->getName() );
 
-	changedServices = changedObjects[0]->getChangedServices();
-	ASSERT_EQ( 1, changedServices.getSize() );
-	EXPECT_EQ( _relAB.get(), changedServices[0]->getService() );
-	ASSERT_EQ( 1, changedServices[0]->getChangedRefFields().getSize() );
-	EXPECT_EQ( "entityB", changedServices[0]->getChangedRefFields().getFirst().field->getName() );
-	EXPECT_TRUE( changedServices[0]->getChangedRefVecFields().isEmpty() );
-	EXPECT_TRUE( changedServices[0]->getChangedValueFields().isEmpty() );
+		co::TSlice<ca::IServiceChanges*> changedServices = changedObjects[0]->getChangedServices();
+		ASSERT_EQ( 1, changedServices.getSize() );
+		EXPECT_EQ( _relAB.get(), changedServices[0]->getService() );
+		ASSERT_EQ( 1, changedServices[0]->getChangedRefFields().getSize() );
+		EXPECT_EQ( "entityB", changedServices[0]->getChangedRefFields().getFirst().field->getName() );
+		EXPECT_TRUE( changedServices[0]->getChangedRefVecFields().isEmpty() );
+		EXPECT_TRUE( changedServices[0]->getChangedValueFields().isEmpty() );
+	}
 }
 
 TEST_F( SpaceTests, changedValueFields )
@@ -348,7 +356,7 @@ TEST_F( SpaceTests, changedValueFields )
 	EXPECT_TRUE( _changes->getAddedObjects().isEmpty() );
 	EXPECT_TRUE( _changes->getRemovedObjects().isEmpty() );
 
-	co::Range<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
+	co::TSlice<ca::IObjectChanges*> changedObjects = _changes->getChangedObjects();
 	ASSERT_EQ( 2, changedObjects.getSize() );
 
 	co::int32 indexOfEntityA = _changes->findChangedObject( _entityA->getProvider() );
@@ -372,28 +380,28 @@ TEST_F( SpaceTests, changedValueFields )
 	EXPECT_TRUE( changedService->getChangedRefFields().isEmpty() );
 	EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );
 	
-	co::Range<ca::ChangedValueField> changedValueFields = changedService->getChangedValueFields();
+	co::TSlice<ca::ChangedValueField> changedValueFields = changedService->getChangedValueFields();
 	ASSERT_EQ( 1, changedValueFields.getSize() );
 	EXPECT_EQ( "name", changedValueFields[0].field->getName() );
 	EXPECT_EQ( "Entity A", changedValueFields[0].previous.get<const std::string&>() );
 	EXPECT_EQ( "New Name", changedValueFields[0].current.get<const std::string&>() );
 
-	// check changes to relAB	
-	changedService = relBCChanges->getChangedServices().getFirst();
-	EXPECT_EQ( _relBC.get(), changedService->getService() );	
-	EXPECT_TRUE( changedService->getChangedRefFields().isEmpty() );
-	EXPECT_TRUE( changedService->getChangedRefVecFields().isEmpty() );
+	// check changes to relAB
+	ca::IServiceChanges* changedService2 = relBCChanges->getChangedServices().getFirst();
+	EXPECT_EQ( _relBC.get(), changedService2->getService() );
+	EXPECT_TRUE( changedService2->getChangedRefFields().isEmpty() );
+	EXPECT_TRUE( changedService2->getChangedRefVecFields().isEmpty() );
 
-	changedValueFields = changedService->getChangedValueFields();
-	ASSERT_EQ( 2, changedValueFields.getSize() );
-	EXPECT_EQ( "multiplicityA", changedValueFields[0].field->getName() );
-	EXPECT_EQ( 0, changedValueFields[0].previous.get<const erm::Multiplicity&>().min );
-	EXPECT_EQ( 0, changedValueFields[0].previous.get<const erm::Multiplicity&>().max );
-	EXPECT_EQ( 3, changedValueFields[0].current.get<const erm::Multiplicity&>().min );
-	EXPECT_EQ( 9, changedValueFields[0].current.get<const erm::Multiplicity&>().max );
-	EXPECT_EQ( "relation", changedValueFields[1].field->getName() );
-	EXPECT_EQ( "relation B-C", changedValueFields[1].previous.get<const std::string&>() );
-	EXPECT_EQ( "New Relation", changedValueFields[1].current.get<const std::string&>() );
+	co::TSlice<ca::ChangedValueField> changedValueFields2 = changedService2->getChangedValueFields();
+	ASSERT_EQ( 2, changedValueFields2.getSize() );
+	EXPECT_EQ( "multiplicityA", changedValueFields2[0].field->getName() );
+	EXPECT_EQ( 0, changedValueFields2[0].previous.get<const erm::Multiplicity&>().min );
+	EXPECT_EQ( 0, changedValueFields2[0].previous.get<const erm::Multiplicity&>().max );
+	EXPECT_EQ( 3, changedValueFields2[0].current.get<const erm::Multiplicity&>().min );
+	EXPECT_EQ( 9, changedValueFields2[0].current.get<const erm::Multiplicity&>().max );
+	EXPECT_EQ( "relation", changedValueFields2[1].field->getName() );
+	EXPECT_EQ( "relation B-C", changedValueFields2[1].previous.get<const std::string&>() );
+	EXPECT_EQ( "New Relation", changedValueFields2[1].current.get<const std::string&>() );
 }
 
 TEST_F( SpaceTestsFaulty, unexpectedExceptions )

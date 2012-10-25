@@ -25,17 +25,17 @@ co::IService* ServiceChanges::getService()
 	return _service.get();
 }
 
-co::Range<ChangedRefField> ServiceChanges::getChangedRefFields()
+co::TSlice<ChangedRefField> ServiceChanges::getChangedRefFields()
 {
 	return _changedRefFields;
 }
 
-co::Range<ChangedRefVecField> ServiceChanges::getChangedRefVecFields()
+co::TSlice<ChangedRefVecField> ServiceChanges::getChangedRefVecFields()
 {
 	return _changedRefVecFields;
 }
 
-co::Range<ChangedValueField> ServiceChanges::getChangedValueFields()
+co::TSlice<ChangedValueField> ServiceChanges::getChangedValueFields()
 {
 	return _changedValueFields;
 }

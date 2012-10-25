@@ -64,7 +64,7 @@ void StringSerializer::writeRecord( std::stringstream& ss, const co::Any& var )
 {
 	assert( _model != NULL );
 
-	co::RefVector<co::IField> fields;
+	std::vector<co::IFieldRef> fields;
 	_model->getFields( static_cast<co::IRecordType*>( var.getType() ), fields );
 
 	co::IReflector* reflector = var.getType()->getReflector();

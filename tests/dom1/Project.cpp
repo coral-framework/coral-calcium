@@ -2,68 +2,66 @@
 #include <dom/IProject.h>
 #include <dom/IManager.h>
 #include <dom/IDeveloper.h>
-#include <co/RefVector.h>
-#include <co/RefPtr.h>
 
 namespace dom {
 
-	class Project : public Project_Base
+class Project : public Project_Base
+{
+public:
+	Project()
 	{
-	public:
-		Project()
-		{
-			// empty
-		}
+		// empty
+	}
 
-		virtual ~Project()
-		{
-			// empty
-		}
+	virtual ~Project()
+	{
+		// empty
+	}
 
-		std::string getName() { return _name; }
-		void setName( const std::string& name ) { _name = name; }
+	std::string getName() { return _name; }
+	void setName( const std::string& name ) { _name = name; }
 
-		double getEarnings() { return _earnings; }
-		void setEarnings( double earnings ) { _earnings = earnings; }
+	double getEarnings() { return _earnings; }
+	void setEarnings( double earnings ) { _earnings = earnings; }
 
-		co::Range<IDeveloper*> getDevelopers()
-		{
-			return _developers;
-		}
+	co::TSlice<IDeveloper*> getDevelopers()
+	{
+		return _developers;
+	}
 
-		void setDevelopers( co::Range<IDeveloper*> developers )
-		{
-			co::assign( developers, _developers );
-		}
+	void setDevelopers( co::Slice<IDeveloper*> developers )
+	{
+		co::assign( developers, _developers );
+	}
 
-		bool getIsService()
-		{
-			return _isService;
-		}
+	bool getIsService()
+	{
+		return _isService;
+	}
 
-		void setIsService( bool isService )
-		{
-			_isService = isService;
-		}
+	void setIsService( bool isService )
+	{
+		_isService = isService;
+	}
 
-		IManager* getManager()
-		{
-			return _manager.get();
-		}
+	IManager* getManager()
+	{
+		return _manager.get();
+	}
 
-		void setManager( dom::IManager* manager )
-		{
-			_manager = manager;
-		}
+	void setManager( dom::IManager* manager )
+	{
+		_manager = manager;
+	}
 
-	private:
-		std::string _name;
-		double _earnings;
-		bool _isService;
-		co::RefVector<IDeveloper> _developers;
-		co::RefPtr<IManager> _manager;
-	};
+private:
+	std::string _name;
+	double _earnings;
+	bool _isService;
+	std::vector<IDeveloperRef> _developers;
+	IManagerRef _manager;
+};
 
-	CORAL_EXPORT_COMPONENT( Project, Project )
+CORAL_EXPORT_COMPONENT( Project, Project )
 
 } // namespace erm

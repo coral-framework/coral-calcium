@@ -96,20 +96,20 @@ TEST_F( SpaceNotificationTests, sharedModelNotification )
 {
 	startWithExtendedERM();
 
-	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
-	co::RefPtr<ca::IModel> model = modelObj->getService<ca::IModel>();
+	co::IObjectRef modelObj = co::newInstance( "ca.Model" );
+	ca::IModel* model = modelObj->getService<ca::IModel>();
 	model->setName( "shared" );
 
-	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
-	universeObj->setService( "model", model.get() );
-	co::RefPtr<ca::IUniverse> universe = universeObj->getService<ca::IUniverse>();
+	co::IObjectRef universeObj = co::newInstance( "ca.Universe" );
+	universeObj->setService( "model", model );
+	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 
-	co::RefPtr<co::IObject> rootObj = co::newInstance( "camodels.SomeComponent" );
-	co::RefPtr<camodels::SomeInterface> someInterface = rootObj->getService<camodels::SomeInterface>();
+	co::IObjectRef rootObj = co::newInstance( "camodels.SomeComponent" );
+	camodels::SomeInterface* someInterface = rootObj->getService<camodels::SomeInterface>();
 	someInterface->setExternal( _erm.get() );
 
-	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
-	spaceObj->setService( "universe", universe.get() );
+	co::IObjectRef spaceObj = co::newInstance( "ca.Space" );
+	spaceObj->setService( "universe", universe );
 
 	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 	ASSERT_NO_THROW( space->initialize( rootObj.get() ) );

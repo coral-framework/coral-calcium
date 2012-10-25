@@ -27,7 +27,7 @@ ca::IModel* loadModel( const std::string& name )
 class TypeMismatch {};
 
 template<typename T>
-bool containsMemberOfType( co::RefVector<T> vec, const std::string& memberName, const std::string& typeName )
+bool containsMemberOfType( std::vector<T> vec, const std::string& memberName, const std::string& typeName )
 {
 	size_t count = vec.size();
 	for( size_t i = 0; i < count; ++i )
@@ -41,7 +41,7 @@ bool containsMemberOfType( co::RefVector<T> vec, const std::string& memberName, 
 }
 
 #define ASSERT_MODEL_ERROR( modelName, type, expectedErrorMsg ) \
-	{ co::RefPtr<ca::IModel> m = loadModel( modelName ); \
+	{ ca::IModelRef m = loadModel( modelName ); \
 		ASSERT_EXCEPTION( m->contains( type ), expectedErrorMsg ); }
 
 TEST( ModelTests, simpleValidModels )
@@ -50,7 +50,7 @@ TEST( ModelTests, simpleValidModels )
 	co::IInterface* someInterface = co::cast<co::IInterface>( co::getType( "camodels.SomeInterface" ) );
 	co::IStruct* someStruct = co::cast<co::IStruct>( co::getType( "camodels.SomeStruct" ) );
 
-	co::RefPtr<ca::IModel> model = loadModel( "valid1" );
+	ca::IModelRef model = loadModel( "valid1" );
 	ASSERT_TRUE( model->contains( someEnum ) );
 	ASSERT_FALSE( model->contains( someInterface ) );
 	ASSERT_TRUE( model->getUpdates().getSize() == 0 );
@@ -81,7 +81,7 @@ TEST( ModelTests, simpleValidModels )
 	ASSERT_TRUE( model->contains( someInterface ) );
 	ASSERT_TRUE( model->contains( someStruct ) );
 
-	co::RefVector<co::IField> fields;
+	std::vector<co::IFieldRef> fields;
 
 	model->getFields( someInterface, fields );
 	EXPECT_EQ( 5, fields.size() );
@@ -105,7 +105,7 @@ TEST( ModelTests, simpleValidModels )
 
 TEST( ModelTests, testValidModelsWithUpdate )
 {
-	co::RefPtr<ca::IModel> model = loadModel( "valid4" );
+	ca::IModelRef model = loadModel( "valid4" );
 
 	ASSERT_NO_THROW( model->contains( co::getType( "camodels.SomeEnum") ) );
 	ASSERT_TRUE( model->getUpdates().getSize() == 1 );
@@ -183,7 +183,7 @@ TEST( ModelTests, extraModuleDefinitions )
 		If we query a type from 'camodels' first, the duplicates should only be detected
 		when we query an unknown type from module 'erm' later.
 	 */
-	co::RefPtr<ca::IModel> model = loadModel( "extraModule" );
+	ca::IModelRef model = loadModel( "extraModule" );
 	ASSERT_TRUE( model->contains( someEnum ) );
 	EXPECT_TRUE( model->alreadyContains( ermIEntity ) );
 	ASSERT_FALSE( model->contains( someStruct ) );
@@ -207,7 +207,7 @@ TEST( ModelTests, interModuleDefinitions )
 		Model 'erm' is collaboratively defined by two modules, 'erm' and 'camodels'.
 		This time each module only defines their own types and we have no problem.
 	 */
-	co::RefPtr<ca::IModel> model = loadModel( "erm" );
+	ca::IModelRef model = loadModel( "erm" );
 	ASSERT_TRUE( model->contains( co::getType( "camodels.SomeStruct" ) ) );
 	ASSERT_TRUE( model->contains( co::getType( "erm.IEntity" ) ) );
 	ASSERT_TRUE( model->contains( co::getType( "erm.Entity" ) ) );

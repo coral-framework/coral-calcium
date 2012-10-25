@@ -107,7 +107,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 	{
 		assert( !ref.service && !ref.object );
 
-		co::RefPtr<co::IService> value;
+		co::IServiceRef value;
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
 		initRef( ref.service, ref.object, value.get() );
@@ -117,7 +117,7 @@ struct InitTraverser : public UniverseTraverser<InitTraverser>
 	{
 		assert( !refVec.services && !refVec.objects );
 
-		co::RefVector<co::IService> value;
+		std::vector<co::IServiceRef> value;
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
 		size_t size = value.size();
@@ -235,7 +235,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 
 	void onRefField( co::uint8 facetId, FieldRecord& field, RefField& ref )
 	{
-		co::RefPtr<co::IService> value;
+		co::IServiceRef value;
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
 		if( value == ref.service )
@@ -251,7 +251,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 
 	void onRefVecField( co::uint8 facetId, FieldRecord& field, RefVecField& refVec )
 	{
-		co::RefVector<co::IService> value;
+		std::vector<co::IServiceRef> value;
 		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
 
 		size_t newSize = value.size();
@@ -262,7 +262,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 
 		ChangedRefVecField& cf = getServiceChanges( facetId )->addChangedRefVecField();
 		cf.field = field.field;
-	
+
 		// populate the 'previous' RefVector
 		cf.previous.resize( oldSize );
 		for( size_t i = 0; i < oldSize; ++i )
@@ -714,7 +714,7 @@ void Universe::addChange( co::IService* service )
 	spaceAddChange( -1, service );
 }
 
-void notifyObjectObservers( ObjectObserverMap& observers, co::Range<ca::IObjectChanges*> changes )
+void notifyObjectObservers( ObjectObserverMap& observers, co::Slice<ca::IObjectChanges*> changes )
 {
 	for( ; changes; changes.popFirst() )
 	{
@@ -745,7 +745,7 @@ void notifyObjectObservers( ObjectObserverMap& observers, co::Range<ca::IObjectC
 		ca::IServiceObserver* serviceObserver;
 		try
 		{
-			co::Range<IServiceChanges*> changedServices = objectChanges->getChangedServices();
+			co::TSlice<IServiceChanges*> changedServices = objectChanges->getChangedServices();
 			for( ; changedServices; changedServices.popFirst() )
 			{
 				ca::IServiceChanges* serviceChanges = changedServices.getFirst();
@@ -831,7 +831,7 @@ void Universe::notifyChanges()
 	if( !_u.hasChanges )
 		return;
 
-	co::RefPtr<IGraphChanges> changes( _u.changes.finalize( this ) );
+	IGraphChangesRef changes( _u.changes.finalize( this ) );
 	notifyObjectObservers( _u.objectObservers, changes->getChangedObjects() );
 	notifyGraphObservers( &_u, changes.get() );
 

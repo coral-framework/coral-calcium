@@ -20,7 +20,7 @@
 TEST( BasicTests, spaceUniverseAndModelSetup )
 {
 	// create a plain space
-	co::RefPtr<co::IObject> spaceObj = co::newInstance( "ca.Space" );
+	co::IObjectRef spaceObj = co::newInstance( "ca.Space" );
 	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 	assert( space );
 
@@ -31,7 +31,7 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	EXPECT_THROW( spaceObj->setService( "universe", NULL ), co::IllegalArgumentException );
 
 	// create a plain universe and bind it to the space
-	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
+	co::IObjectRef universeObj = co::newInstance( "ca.Universe" );
 	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 	spaceObj->setService( "universe", universe );
 
@@ -45,7 +45,7 @@ TEST( BasicTests, spaceUniverseAndModelSetup )
 	EXPECT_THROW( space->initialize( spaceObj.get() ), co::IllegalStateException );
 
 	// create a plain model and bind it to the universe
-	co::RefPtr<co::IObject> modelObj = co::newInstance( "ca.Model" );
+	co::IObjectRef modelObj = co::newInstance( "ca.Model" );
 	ca::IModel* model = modelObj->getService<ca::IModel>();
 	universeObj->setService( std::string( "model" ), model );
 

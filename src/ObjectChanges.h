@@ -9,7 +9,6 @@
 #include "ServiceChanges.h"
 #include "ObjectChanges_Base.h"
 #include <co/IObject.h>
-#include <co/RefVector.h>
 #include <ca/IServiceChanges.h>
 #include <ca/ChangedConnection.h>
 
@@ -43,12 +42,12 @@ public:
 	// ------ ca.IObjectChanges Methods ------ //
 	
 	co::IObject* getObject();
-	co::Range<IServiceChanges*> getChangedServices();
-	co::Range<ChangedConnection> getChangedConnections();
+	co::TSlice<IServiceChanges*> getChangedServices();
+	co::TSlice<ChangedConnection> getChangedConnections();
 
 private:
-	co::RefPtr<co::IObject> _object;
-	co::RefVector<IServiceChanges> _changedServices;
+	co::IObjectRef _object;
+	std::vector<IServiceChangesRef> _changedServices;
 	std::vector<ChangedConnection> _changedConnections;
 };
 

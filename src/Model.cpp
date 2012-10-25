@@ -355,7 +355,7 @@ void Model::setName( const std::string& name )
 	_name = name;
 }
 
-co::Range<std::string> Model::getUpdates()
+co::TSlice<std::string> Model::getUpdates()
 {
 	return _updates;
 }
@@ -372,7 +372,7 @@ bool Model::contains( co::IType* type )
 	return getType( type ) != NULL;
 }
 
-void Model::getFields( co::IRecordType* recordType, co::RefVector<co::IField>& fields )
+void Model::getFields( co::IRecordType* recordType, std::vector<co::IFieldRef>& fields )
 {
 	TypeRecord* typeRec = getTypeOrThrow( recordType );
 	fields.clear();
@@ -392,7 +392,7 @@ void Model::getFields( co::IRecordType* recordType, co::RefVector<co::IField>& f
 	}
 }
 
-void Model::getPorts( co::IComponent* component, co::RefVector<co::IPort>& ports )
+void Model::getPorts( co::IComponent* component, std::vector<co::IPortRef>& ports )
 {
 	ComponentRecord* rec = getComponentRec( component );
 	ports.clear();
@@ -451,7 +451,7 @@ void Model::addEnum( co::IEnum* enumType )
 	_transaction.push_back( TypeRecord::create( enumType ) );
 }
 
-void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField*> fields )
+void Model::addRecordType( co::IRecordType* recordType, co::Slice<co::IField*> fields )
 {
 	checkCanAddType( recordType );
 
@@ -522,7 +522,7 @@ void Model::addRecordType( co::IRecordType* recordType, co::Range<co::IField*> f
 	_transaction.push_back( rec );
 }
 
-void Model::addComponent( co::IComponent* component, co::Range<co::IPort*> ports )
+void Model::addComponent( co::IComponent* component, co::Slice<co::IPort*> ports )
 {
 	checkCanAddType( component );
 
@@ -614,7 +614,7 @@ bool Model::loadDefinitionsFor( co::INamespace* ns )
 	try
 	{
 		co::Any args[] = { static_cast<ca::IModel*>( this ), filePath };
-		co::getService<lua::IState>()->call( "ca.ModelLoader", std::string(), args, co::Range<co::Any>() );
+		co::getService<lua::IState>()->call( "ca.ModelLoader", std::string(), args, co::Slice<co::Any>() );
 		applyChanges();
 	}
 	catch( co::Exception& e )

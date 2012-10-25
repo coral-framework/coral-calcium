@@ -48,12 +48,12 @@ public:
 	// ------ ca.IServiceChanges Methods ------ //
 
 	co::IService* getService();
-	co::Range<ChangedRefField> getChangedRefFields();
-	co::Range<ChangedRefVecField> getChangedRefVecFields();
-	co::Range<ChangedValueField> getChangedValueFields();
+	co::TSlice<ChangedRefField> getChangedRefFields();
+	co::TSlice<ChangedRefVecField> getChangedRefVecFields();
+	co::TSlice<ChangedValueField> getChangedValueFields();
 
 private:
-	co::RefPtr<co::IService> _service;
+	co::IServiceRef _service;
 	std::vector<ChangedRefField> _changedRefFields;
 	std::vector<ChangedRefVecField> _changedRefVecFields;
 	std::vector<ChangedValueField> _changedValueFields;

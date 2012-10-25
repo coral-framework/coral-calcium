@@ -38,14 +38,14 @@ public:
 		universeObj->setService("model", _model.get());
 	}
 
-	co::RefPtr<ca::ISpacePersister> createPersister( const std::string& fileName )
+	ca::ISpacePersisterRef createPersister( const std::string& fileName )
 	{
 		ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 
 		co::IObject* persisterObj = co::newInstance( "ca.SpacePersister" );
-		co::RefPtr<ca::ISpacePersister> persister = persisterObj->getService<ca::ISpacePersister>();
+		ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
 
-		co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.SQLiteSpaceStore" );
+		co::IObjectRef spaceFileObj = co::newInstance( "ca.SQLiteSpaceStore" );
 		spaceFileObj->getService<ca::INamed>()->setName( fileName );
 
 		persisterObj->setService( "store", spaceFileObj->getService<ca::ISpaceStore>() );
@@ -54,14 +54,13 @@ public:
 		return persister;
 	}
 private:
-	co::RefPtr<co::IObject> universeObj;
+	co::IObjectRef universeObj;
 };
 
 void applyValueFieldChange( ca::ISpace* spaceERM )
 {
-	co::RefPtr<co::IObject> objRest = spaceERM->getRootObject();
-
-	co::RefPtr<erm::IModel> serviceModel = objRest->getService<erm::IModel>();
+	co::IObjectRef objRest = spaceERM->getRootObject();
+	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
 
 	serviceModel->getEntities()[0]->setName( "changedName" );
 	serviceModel->getRelationships()[1]->setRelation( "relationChanged" );
@@ -74,15 +73,15 @@ void applyValueFieldChange( ca::ISpace* spaceERM )
 
 void applyRefVecChange( ca::ISpace* spaceERM )
 {
-	co::RefPtr<co::IObject> objRest = spaceERM->getRootObject();
-	co::RefPtr<erm::IModel> serviceModel = objRest->getService<erm::IModel>();
+	co::IObjectRef objRest = spaceERM->getRootObject();
+	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
 
-	co::RefPtr<co::IObject> newEntity = co::newInstance( "erm.Entity"); 
-	co::RefPtr<erm::IEntity> newIEntity = newEntity->getService<erm::IEntity>();
+	co::IObjectRef newEntity = co::newInstance( "erm.Entity"); 
+	erm::IEntity* newIEntity = newEntity->getService<erm::IEntity>();
 	newIEntity->setName( "newEntity" );
-	serviceModel->addEntity( newIEntity.get() );
+	serviceModel->addEntity( newIEntity );
 
-	spaceERM->addChange( serviceModel.get() );
+	spaceERM->addChange( serviceModel );
 
 	spaceERM->notifyChanges();
 
@@ -90,7 +89,7 @@ void applyRefVecChange( ca::ISpace* spaceERM )
 
 void applyAddedObjectChange( ca::ISpace* spaceERM, erm::IEntity* entity )
 {
-	co::RefPtr<co::IObject> newEntityParent = co::newInstance( "erm.Entity");
+	co::IObjectRef newEntityParent = co::newInstance( "erm.Entity");
 	erm::IEntity* newIEntityParent = newEntityParent->getService<erm::IEntity>();
 	newIEntityParent->setName( "\newEntity\\Parent" );
 	entity->setParent( newIEntityParent );
@@ -127,14 +126,14 @@ TEST_F( SpacePersisterTests, misuseTest )
 
 	remove( fileName.c_str() );
 
-	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
+	ca::ISpacePersisterRef persister = createPersister( fileName );
 
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
 	//double initialize not allowed
 	ASSERT_THROW( persister->initialize( _erm->getProvider() ), ca::IOException );
 
-	co::RefPtr<ca::ISpacePersister> otherPersister = createPersister( fileName );
+	ca::ISpacePersisterRef otherPersister = createPersister( fileName );
 	//cannot initialize with other persister either
 	ASSERT_THROW( otherPersister->initialize( _erm->getProvider() ), ca::IOException );
 
@@ -143,7 +142,7 @@ TEST_F( SpacePersisterTests, misuseTest )
 
 TEST_F( SpacePersisterTests, badInitializationTest )
 {
-	co::RefPtr<co::IObject> persisterObj = co::newInstance( "ca.SpacePersister" );
+	co::IObjectRef persisterObj = co::newInstance( "ca.SpacePersister" );
 	ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
 
 	EXPECT_THROW( persister->restore(), co::IllegalStateException ); //spaceStore and universe not set
@@ -152,7 +151,7 @@ TEST_F( SpacePersisterTests, badInitializationTest )
 	std::string fileName = "SimpleSpaceSave.db";
 	remove( fileName.c_str() );
 
-	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
+	co::IObjectRef universeObj = co::newInstance( "ca.Universe" );
 
 	universeObj->setService("model", _model.get());
 	
@@ -161,7 +160,7 @@ TEST_F( SpacePersisterTests, badInitializationTest )
 	EXPECT_THROW( persister->restore(), co::IllegalStateException ); //spaceStore not set
 	EXPECT_THROW( persister->restoreRevision(1), co::IllegalStateException ); //spaceStore not set
 
-	co::RefPtr<co::IObject> spaceStoreObj = co::newInstance( "ca.SQLiteSpaceStore" );
+	co::IObjectRef spaceStoreObj = co::newInstance( "ca.SQLiteSpaceStore" );
 	spaceStoreObj->getService<ca::INamed>()->setName( fileName );
 
 	persisterObj->setService( "store", spaceStoreObj->getService<ca::ISpaceStore>() );
@@ -186,10 +185,10 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	const char* fileName = "SimpleSpaceSave.db";
 	remove( fileName );
 
-	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
+	ca::ISpacePersisterRef persister = createPersister( fileName );
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
-	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+	ca::ISpacePersisterRef persisterToRestore = createPersister( fileName );
 	persisterToRestore->restoreRevision( 1 );
 
 	ca::ISpace* spaceRestored = persisterToRestore->getSpace();
@@ -199,14 +198,14 @@ TEST_F( SpacePersisterTests, testNewFileSetup )
 	erm::IModel* erm = objRest->getService<erm::IModel>();
 	ASSERT_TRUE( erm != NULL );
 
-	co::Range<erm::IEntity*> entities = erm->getEntities();
+	co::TSlice<erm::IEntity*> entities = erm->getEntities();
 	ASSERT_EQ( 3, entities.getSize() );
 
 	EXPECT_EQ( "Entity A", entities[0]->getName() );
 	EXPECT_EQ( "Entity B", entities[1]->getName() );
 	EXPECT_EQ( "Entity C", entities[2]->getName() );
 
-	co::Range<erm::IRelationship*> rels = erm->getRelationships();
+	co::TSlice<erm::IRelationship*> rels = erm->getRelationships();
 	ASSERT_EQ( 3, rels.getSize() );
 
 	erm::IRelationship* rel = rels[0];
@@ -248,7 +247,7 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 	const char* fileName = "SimpleSpaceSave.db";
 	remove( fileName );
 
-	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
+	ca::ISpacePersisterRef persister = createPersister( fileName );
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
 	ca::ISpace * spaceInitialized = persister->getSpace();
@@ -262,7 +261,7 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 
 	ASSERT_NO_THROW( persister->save() );
 
-	co::RefPtr<ca::ISpacePersister> persiterRestore = createPersister( fileName );
+	ca::ISpacePersisterRef persiterRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore->restore() );
 
@@ -275,57 +274,58 @@ TEST_F( SpacePersisterTests, testSaveAccumulateChanges )
 	erm::IModel* erm = objRest->getService<erm::IModel>();
 	ASSERT_TRUE( erm != NULL );
 
-	co::Range<erm::IEntity*> entities = erm->getEntities();
+	co::TSlice<erm::IEntity*> entities = erm->getEntities();
 	ASSERT_EQ( 4, entities.getSize() );
 
-	co::Range<erm::IRelationship*> rels = erm->getRelationships();
-	ASSERT_EQ( 3, rels.getSize() );
+	{
+		co::TSlice<erm::IRelationship*> rels = erm->getRelationships();
+		ASSERT_EQ( 3, rels.getSize() );
 
-	objRest = spaceRestored->getRootObject();
+		objRest = spaceRestored->getRootObject();
 
-	erm = objRest->getService<erm::IModel>();
-	ASSERT_TRUE( erm != NULL );
+		erm = objRest->getService<erm::IModel>();
+		ASSERT_TRUE( erm != NULL );
 
-	EXPECT_EQ( "changedName", entities[0]->getName() );
-	EXPECT_EQ( "Entity B", entities[1]->getName() );
-	EXPECT_EQ( "Entity C", entities[2]->getName() );
-	EXPECT_EQ( "newEntity", entities[3]->getName() );
+		EXPECT_EQ( "changedName", entities[0]->getName() );
+		EXPECT_EQ( "Entity B", entities[1]->getName() );
+		EXPECT_EQ( "Entity C", entities[2]->getName() );
+		EXPECT_EQ( "newEntity", entities[3]->getName() );
 
-	ASSERT_TRUE( entities[3]->getParent() != NULL );
-	EXPECT_EQ( "\newEntity\\Parent", entities[3]->getParent()->getName() );
+		ASSERT_TRUE( entities[3]->getParent() != NULL );
+		EXPECT_EQ( "\newEntity\\Parent", entities[3]->getParent()->getName() );
+	}
+	{
+		co::TSlice<erm::IRelationship*> rels = erm->getRelationships();
+		ASSERT_EQ( 3, rels.getSize() );
 
-	rels = erm->getRelationships();
-	ASSERT_EQ( 3, rels.getSize() );
+		erm::IRelationship* rel = rels[0];
+		EXPECT_EQ( 0, rel->getMultiplicityA().min );
+		EXPECT_EQ( 0, rel->getMultiplicityA().max );
+		EXPECT_EQ( 1, rel->getMultiplicityB().min );
+		EXPECT_EQ( 2, rel->getMultiplicityB().max );
+		EXPECT_EQ( "relation A-B", rel->getRelation() );
+		EXPECT_EQ( entities[0], rel->getEntityA() );
+		EXPECT_EQ( entities[1], rel->getEntityB() );
 
-	erm::IRelationship* rel = rels[0];
-	EXPECT_EQ( 0, rel->getMultiplicityA().min );
-	EXPECT_EQ( 0, rel->getMultiplicityA().max );
-	EXPECT_EQ( 1, rel->getMultiplicityB().min );
-	EXPECT_EQ( 2, rel->getMultiplicityB().max );
-	EXPECT_EQ( "relation A-B", rel->getRelation() );
-	EXPECT_EQ( entities[0], rel->getEntityA() );
-	EXPECT_EQ( entities[1], rel->getEntityB() );
+		rel = rels[1];
+		EXPECT_EQ( "relationChanged", rel->getRelation() );
+		EXPECT_EQ( entities[1], rel->getEntityA() );
+		EXPECT_EQ( entities[2], rel->getEntityB() );
+		EXPECT_EQ( 3, rel->getMultiplicityA().min );
+		EXPECT_EQ( 4, rel->getMultiplicityA().max );
+		EXPECT_EQ( 5, rel->getMultiplicityB().min );
+		EXPECT_EQ( 6, rel->getMultiplicityB().max );
 
-	rel = rels[1];
-	EXPECT_EQ( "relationChanged", rel->getRelation() );
-	EXPECT_EQ( entities[1], rel->getEntityA() );
-	EXPECT_EQ( entities[2], rel->getEntityB() );
-	EXPECT_EQ( 3, rel->getMultiplicityA().min );
-	EXPECT_EQ( 4, rel->getMultiplicityA().max );
-	EXPECT_EQ( 5, rel->getMultiplicityB().min );
-	EXPECT_EQ( 6, rel->getMultiplicityB().max );
-
-	rel = rels[2];
-	EXPECT_EQ( "relation C-A", rel->getRelation() );
-	EXPECT_EQ( entities[2], rel->getEntityA() );
-	EXPECT_EQ( entities[0], rel->getEntityB() );
-	EXPECT_EQ( 7, rel->getMultiplicityA().min );
-	EXPECT_EQ( 8, rel->getMultiplicityA().max );
-	EXPECT_EQ( 9, rel->getMultiplicityB().min );
-	EXPECT_EQ( 0, rel->getMultiplicityB().max );
-
+		rel = rels[2];
+		EXPECT_EQ( "relation C-A", rel->getRelation() );
+		EXPECT_EQ( entities[2], rel->getEntityA() );
+		EXPECT_EQ( entities[0], rel->getEntityB() );
+		EXPECT_EQ( 7, rel->getMultiplicityA().min );
+		EXPECT_EQ( 8, rel->getMultiplicityA().max );
+		EXPECT_EQ( 9, rel->getMultiplicityB().min );
+		EXPECT_EQ( 0, rel->getMultiplicityB().max );
+	}
 }
-
 
 TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 {
@@ -338,13 +338,13 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	const char* fileName = "SimpleSpaceSave.db";
 	remove( fileName );
 
-	co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
+	ca::ISpacePersisterRef persister = createPersister( fileName );
 	ASSERT_NO_THROW( persister->initialize( _erm->getProvider() ) );
 
-	ca::ISpace * spaceInitialized = persister->getSpace();
+	ca::ISpace* spaceInitialized = persister->getSpace();
 
 	co::IObject* objRest = spaceInitialized->getRootObject();
-	
+
 	erm::IModel* serviceModel = objRest->getService<erm::IModel>();
 
 	applyValueFieldChange( spaceInitialized );
@@ -361,59 +361,61 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	applyChangeAndRemoveObject( spaceInitialized, serviceModel->getEntities()[3] );
 	ASSERT_NO_THROW( persister->save() );
 
-	co::RefPtr<ca::ISpacePersister> persiterRestore = createPersister( fileName );
+	ca::ISpacePersisterRef persiterRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore->restoreRevision( 2 ) );
 
-	ca::ISpace * spaceRestored = persiterRestore->getSpace();
+	ca::ISpace* spaceRestored = persiterRestore->getSpace();
 
 	objRest = spaceRestored->getRootObject();
 
 	erm::IModel* erm = objRest->getService<erm::IModel>();
 	ASSERT_TRUE( erm != NULL );
 
-	co::Range<erm::IEntity*> entities = erm->getEntities();
-	ASSERT_EQ( 3, entities.getSize() );
+	{
+		co::TSlice<erm::IEntity*> entities = erm->getEntities();
+		ASSERT_EQ( 3, entities.getSize() );
 
-	EXPECT_EQ( "changedName", entities[0]->getName() );
-	EXPECT_EQ( "Entity B", entities[1]->getName() );
-	EXPECT_EQ( "Entity C", entities[2]->getName() );
+		EXPECT_EQ( "changedName", entities[0]->getName() );
+		EXPECT_EQ( "Entity B", entities[1]->getName() );
+		EXPECT_EQ( "Entity C", entities[2]->getName() );
 
-	co::Range<erm::IRelationship*> rels = erm->getRelationships();
-	ASSERT_EQ( 3, rels.getSize() );
+		co::TSlice<erm::IRelationship*> rels = erm->getRelationships();
+		ASSERT_EQ( 3, rels.getSize() );
 
-	erm::IRelationship* rel = rels[0];
-	EXPECT_EQ( 0, rel->getMultiplicityA().min );
-	EXPECT_EQ( 0, rel->getMultiplicityA().max );
-	EXPECT_EQ( 1, rel->getMultiplicityB().min );
-	EXPECT_EQ( 2, rel->getMultiplicityB().max );
-	EXPECT_EQ( "relation A-B", rel->getRelation() );
-	EXPECT_EQ( entities[0], rel->getEntityA() );
-	EXPECT_EQ( entities[1], rel->getEntityB() );
+		erm::IRelationship* rel = rels[0];
+		EXPECT_EQ( 0, rel->getMultiplicityA().min );
+		EXPECT_EQ( 0, rel->getMultiplicityA().max );
+		EXPECT_EQ( 1, rel->getMultiplicityB().min );
+		EXPECT_EQ( 2, rel->getMultiplicityB().max );
+		EXPECT_EQ( "relation A-B", rel->getRelation() );
+		EXPECT_EQ( entities[0], rel->getEntityA() );
+		EXPECT_EQ( entities[1], rel->getEntityB() );
 
-	rel = rels[1];
-	EXPECT_EQ( "relationChanged", rel->getRelation() );
-	EXPECT_EQ( entities[1], rel->getEntityA() );
-	EXPECT_EQ( entities[2], rel->getEntityB() );
-	EXPECT_EQ( 3, rel->getMultiplicityA().min );
-	EXPECT_EQ( 4, rel->getMultiplicityA().max );
-	EXPECT_EQ( 5, rel->getMultiplicityB().min );
-	EXPECT_EQ( 6, rel->getMultiplicityB().max );
+		rel = rels[1];
+		EXPECT_EQ( "relationChanged", rel->getRelation() );
+		EXPECT_EQ( entities[1], rel->getEntityA() );
+		EXPECT_EQ( entities[2], rel->getEntityB() );
+		EXPECT_EQ( 3, rel->getMultiplicityA().min );
+		EXPECT_EQ( 4, rel->getMultiplicityA().max );
+		EXPECT_EQ( 5, rel->getMultiplicityB().min );
+		EXPECT_EQ( 6, rel->getMultiplicityB().max );
 
-	rel = rels[2];
-	EXPECT_EQ( "relation C-A", rel->getRelation() );
-	EXPECT_EQ( entities[2], rel->getEntityA() );
-	EXPECT_EQ( entities[0], rel->getEntityB() );
-	EXPECT_EQ( 7, rel->getMultiplicityA().min );
-	EXPECT_EQ( 8, rel->getMultiplicityA().max );
-	EXPECT_EQ( 9, rel->getMultiplicityB().min );
-	EXPECT_EQ( 0, rel->getMultiplicityB().max );
+		rel = rels[2];
+		EXPECT_EQ( "relation C-A", rel->getRelation() );
+		EXPECT_EQ( entities[2], rel->getEntityA() );
+		EXPECT_EQ( entities[0], rel->getEntityB() );
+		EXPECT_EQ( 7, rel->getMultiplicityA().min );
+		EXPECT_EQ( 8, rel->getMultiplicityA().max );
+		EXPECT_EQ( 9, rel->getMultiplicityB().min );
+		EXPECT_EQ( 0, rel->getMultiplicityB().max );
+	}
 
 	applyValueFieldChange( spaceRestored );
 
 	EXPECT_THROW( persiterRestore->save(), ca::IOException ); //attempt to save when current revision is not the last
 
-	co::RefPtr<ca::ISpacePersister> persiterRestore2 = createPersister( fileName );
+	ca::ISpacePersisterRef persiterRestore2 = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore2->restoreRevision( 3 ) );
 
@@ -424,45 +426,47 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	erm = objRest->getService<erm::IModel>();
 	ASSERT_TRUE( erm != NULL );
 
-	entities = erm->getEntities();
-	ASSERT_EQ( 4, entities.getSize() );
+	{
+		co::TSlice<erm::IEntity*> entities = erm->getEntities();
+		ASSERT_EQ( 4, entities.getSize() );
 
-	EXPECT_EQ( "changedName", entities[0]->getName() );
-	EXPECT_EQ( "Entity B", entities[1]->getName() );
-	EXPECT_EQ( "Entity C", entities[2]->getName() );
-	EXPECT_EQ( "newEntity", entities[3]->getName() );
+		EXPECT_EQ( "changedName", entities[0]->getName() );
+		EXPECT_EQ( "Entity B", entities[1]->getName() );
+		EXPECT_EQ( "Entity C", entities[2]->getName() );
+		EXPECT_EQ( "newEntity", entities[3]->getName() );
 
-	rels = erm->getRelationships();
-	ASSERT_EQ( 3, rels.getSize() );
+		co::TSlice<erm::IRelationship*> rels = erm->getRelationships();
+		ASSERT_EQ( 3, rels.getSize() );
 
-	rel = rels[0];
-	EXPECT_EQ( 0, rel->getMultiplicityA().min );
-	EXPECT_EQ( 0, rel->getMultiplicityA().max );
-	EXPECT_EQ( 1, rel->getMultiplicityB().min );
-	EXPECT_EQ( 2, rel->getMultiplicityB().max );
-	EXPECT_EQ( "relation A-B", rel->getRelation() );
-	EXPECT_EQ( entities[0], rel->getEntityA() );
-	EXPECT_EQ( entities[1], rel->getEntityB() );
+		erm::IRelationship* rel = rels[0];
+		EXPECT_EQ( 0, rel->getMultiplicityA().min );
+		EXPECT_EQ( 0, rel->getMultiplicityA().max );
+		EXPECT_EQ( 1, rel->getMultiplicityB().min );
+		EXPECT_EQ( 2, rel->getMultiplicityB().max );
+		EXPECT_EQ( "relation A-B", rel->getRelation() );
+		EXPECT_EQ( entities[0], rel->getEntityA() );
+		EXPECT_EQ( entities[1], rel->getEntityB() );
 
-	rel = rels[1];
-	EXPECT_EQ( "relationChanged", rel->getRelation() );
-	EXPECT_EQ( entities[1], rel->getEntityA() );
-	EXPECT_EQ( entities[2], rel->getEntityB() );
-	EXPECT_EQ( 3, rel->getMultiplicityA().min );
-	EXPECT_EQ( 4, rel->getMultiplicityA().max );
-	EXPECT_EQ( 5, rel->getMultiplicityB().min );
-	EXPECT_EQ( 6, rel->getMultiplicityB().max );
+		rel = rels[1];
+		EXPECT_EQ( "relationChanged", rel->getRelation() );
+		EXPECT_EQ( entities[1], rel->getEntityA() );
+		EXPECT_EQ( entities[2], rel->getEntityB() );
+		EXPECT_EQ( 3, rel->getMultiplicityA().min );
+		EXPECT_EQ( 4, rel->getMultiplicityA().max );
+		EXPECT_EQ( 5, rel->getMultiplicityB().min );
+		EXPECT_EQ( 6, rel->getMultiplicityB().max );
 
-	rel = rels[2];
-	EXPECT_EQ( "relation C-A", rel->getRelation() );
-	EXPECT_EQ( entities[2], rel->getEntityA() );
-	EXPECT_EQ( entities[0], rel->getEntityB() );
-	EXPECT_EQ( 7, rel->getMultiplicityA().min );
-	EXPECT_EQ( 8, rel->getMultiplicityA().max );
-	EXPECT_EQ( 9, rel->getMultiplicityB().min );
-	EXPECT_EQ( 0, rel->getMultiplicityB().max );
+		rel = rels[2];
+		EXPECT_EQ( "relation C-A", rel->getRelation() );
+		EXPECT_EQ( entities[2], rel->getEntityA() );
+		EXPECT_EQ( entities[0], rel->getEntityB() );
+		EXPECT_EQ( 7, rel->getMultiplicityA().min );
+		EXPECT_EQ( 8, rel->getMultiplicityA().max );
+		EXPECT_EQ( 9, rel->getMultiplicityB().min );
+		EXPECT_EQ( 0, rel->getMultiplicityB().max );
+	}
 
-	co::RefPtr<ca::ISpacePersister> persiterRestore3 = createPersister( fileName );
+	ca::ISpacePersisterRef persiterRestore3 = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore3->restoreRevision( 4 ) );
 
@@ -473,48 +477,50 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	erm = objRest->getService<erm::IModel>();
 	ASSERT_TRUE( erm != NULL );
 
-	entities = erm->getEntities();
-	ASSERT_EQ( 4, entities.getSize() );
+	{
+		co::TSlice<erm::IEntity*> entities = erm->getEntities();
+		ASSERT_EQ( 4, entities.getSize() );
 
-	EXPECT_EQ( "changedName", entities[0]->getName() );
-	EXPECT_EQ( "Entity B", entities[1]->getName() );
-	EXPECT_EQ( "Entity C", entities[2]->getName() );
-	EXPECT_EQ( "newEntity", entities[3]->getName() );
+		EXPECT_EQ( "changedName", entities[0]->getName() );
+		EXPECT_EQ( "Entity B", entities[1]->getName() );
+		EXPECT_EQ( "Entity C", entities[2]->getName() );
+		EXPECT_EQ( "newEntity", entities[3]->getName() );
 
-	ASSERT_TRUE( entities[3]->getParent() != NULL );
-	EXPECT_STREQ( "\newEntity\\Parent", entities[3]->getParent()->getName().c_str() );
+		ASSERT_TRUE( entities[3]->getParent() != NULL );
+		EXPECT_STREQ( "\newEntity\\Parent", entities[3]->getParent()->getName().c_str() );
 
-	rels = erm->getRelationships();
-	ASSERT_EQ( 3, rels.getSize() );
+		co::TSlice<erm::IRelationship*> rels = erm->getRelationships();
+		ASSERT_EQ( 3, rels.getSize() );
 
-	rel = rels[0];
-	EXPECT_EQ( 0, rel->getMultiplicityA().min );
-	EXPECT_EQ( 0, rel->getMultiplicityA().max );
-	EXPECT_EQ( 1, rel->getMultiplicityB().min );
-	EXPECT_EQ( 2, rel->getMultiplicityB().max );
-	EXPECT_EQ( "relation A-B", rel->getRelation() );
-	EXPECT_EQ( entities[0], rel->getEntityA() );
-	EXPECT_EQ( entities[1], rel->getEntityB() );
+		erm::IRelationship* rel = rels[0];
+		EXPECT_EQ( 0, rel->getMultiplicityA().min );
+		EXPECT_EQ( 0, rel->getMultiplicityA().max );
+		EXPECT_EQ( 1, rel->getMultiplicityB().min );
+		EXPECT_EQ( 2, rel->getMultiplicityB().max );
+		EXPECT_EQ( "relation A-B", rel->getRelation() );
+		EXPECT_EQ( entities[0], rel->getEntityA() );
+		EXPECT_EQ( entities[1], rel->getEntityB() );
 
-	rel = rels[1];
-	EXPECT_EQ( "relationChanged", rel->getRelation() );
-	EXPECT_EQ( entities[1], rel->getEntityA() );
-	EXPECT_EQ( entities[2], rel->getEntityB() );
-	EXPECT_EQ( 3, rel->getMultiplicityA().min );
-	EXPECT_EQ( 4, rel->getMultiplicityA().max );
-	EXPECT_EQ( 5, rel->getMultiplicityB().min );
-	EXPECT_EQ( 6, rel->getMultiplicityB().max );
+		rel = rels[1];
+		EXPECT_EQ( "relationChanged", rel->getRelation() );
+		EXPECT_EQ( entities[1], rel->getEntityA() );
+		EXPECT_EQ( entities[2], rel->getEntityB() );
+		EXPECT_EQ( 3, rel->getMultiplicityA().min );
+		EXPECT_EQ( 4, rel->getMultiplicityA().max );
+		EXPECT_EQ( 5, rel->getMultiplicityB().min );
+		EXPECT_EQ( 6, rel->getMultiplicityB().max );
 
-	rel = rels[2];
-	EXPECT_EQ( "relation C-A", rel->getRelation() );
-	EXPECT_EQ( entities[2], rel->getEntityA() );
-	EXPECT_EQ( entities[0], rel->getEntityB() );
-	EXPECT_EQ( 7, rel->getMultiplicityA().min );
-	EXPECT_EQ( 8, rel->getMultiplicityA().max );
-	EXPECT_EQ( 9, rel->getMultiplicityB().min );
-	EXPECT_EQ( 0, rel->getMultiplicityB().max );
+		rel = rels[2];
+		EXPECT_EQ( "relation C-A", rel->getRelation() );
+		EXPECT_EQ( entities[2], rel->getEntityA() );
+		EXPECT_EQ( entities[0], rel->getEntityB() );
+		EXPECT_EQ( 7, rel->getMultiplicityA().min );
+		EXPECT_EQ( 8, rel->getMultiplicityA().max );
+		EXPECT_EQ( 9, rel->getMultiplicityB().min );
+		EXPECT_EQ( 0, rel->getMultiplicityB().max );
+	}
 
-	co::RefPtr<ca::ISpacePersister> persiterRestore4 = createPersister( fileName );
+	ca::ISpacePersisterRef persiterRestore4 = createPersister( fileName );
 
 	ASSERT_NO_THROW( persiterRestore4->restore() );
 
@@ -525,45 +531,47 @@ TEST_F( SpacePersisterTests, testSaveMultipleRevisions )
 	erm = objRest->getService<erm::IModel>();
 	ASSERT_TRUE( erm != NULL );
 
-	entities = erm->getEntities();
-	ASSERT_EQ( 4, entities.getSize() );
+	{
+		co::TSlice<erm::IEntity*> entities = erm->getEntities();
+		ASSERT_EQ( 4, entities.getSize() );
 
-	EXPECT_EQ( "changedName", entities[0]->getName() );
-	EXPECT_EQ( "Entity B", entities[1]->getName() );
-	EXPECT_EQ( "Entity C", entities[2]->getName() );
-	EXPECT_EQ( "newEntity", entities[3]->getName() );
+		EXPECT_EQ( "changedName", entities[0]->getName() );
+		EXPECT_EQ( "Entity B", entities[1]->getName() );
+		EXPECT_EQ( "Entity C", entities[2]->getName() );
+		EXPECT_EQ( "newEntity", entities[3]->getName() );
 
-	ASSERT_TRUE( entities[3]->getParent() == NULL );
+		ASSERT_TRUE( entities[3]->getParent() == NULL );
 
-	rels = erm->getRelationships();
-	ASSERT_EQ( 3, rels.getSize() );
+		co::TSlice<erm::IRelationship*> rels = erm->getRelationships();
+		ASSERT_EQ( 3, rels.getSize() );
 
-	rel = rels[0];
-	EXPECT_EQ( 0, rel->getMultiplicityA().min );
-	EXPECT_EQ( 0, rel->getMultiplicityA().max );
-	EXPECT_EQ( 1, rel->getMultiplicityB().min );
-	EXPECT_EQ( 2, rel->getMultiplicityB().max );
-	EXPECT_EQ( "relation A-B", rel->getRelation() );
-	EXPECT_EQ( entities[0], rel->getEntityA() );
-	EXPECT_EQ( entities[1], rel->getEntityB() );
+		erm::IRelationship* rel = rels[0];
+		EXPECT_EQ( 0, rel->getMultiplicityA().min );
+		EXPECT_EQ( 0, rel->getMultiplicityA().max );
+		EXPECT_EQ( 1, rel->getMultiplicityB().min );
+		EXPECT_EQ( 2, rel->getMultiplicityB().max );
+		EXPECT_EQ( "relation A-B", rel->getRelation() );
+		EXPECT_EQ( entities[0], rel->getEntityA() );
+		EXPECT_EQ( entities[1], rel->getEntityB() );
 
-	rel = rels[1];
-	EXPECT_EQ( "relationChanged", rel->getRelation() );
-	EXPECT_EQ( entities[1], rel->getEntityA() );
-	EXPECT_EQ( entities[2], rel->getEntityB() );
-	EXPECT_EQ( 3, rel->getMultiplicityA().min );
-	EXPECT_EQ( 4, rel->getMultiplicityA().max );
-	EXPECT_EQ( 5, rel->getMultiplicityB().min );
-	EXPECT_EQ( 6, rel->getMultiplicityB().max );
+		rel = rels[1];
+		EXPECT_EQ( "relationChanged", rel->getRelation() );
+		EXPECT_EQ( entities[1], rel->getEntityA() );
+		EXPECT_EQ( entities[2], rel->getEntityB() );
+		EXPECT_EQ( 3, rel->getMultiplicityA().min );
+		EXPECT_EQ( 4, rel->getMultiplicityA().max );
+		EXPECT_EQ( 5, rel->getMultiplicityB().min );
+		EXPECT_EQ( 6, rel->getMultiplicityB().max );
 
-	rel = rels[2];
-	EXPECT_EQ( "relation C-A", rel->getRelation() );
-	EXPECT_EQ( entities[2], rel->getEntityA() );
-	EXPECT_EQ( entities[0], rel->getEntityB() );
-	EXPECT_EQ( 7, rel->getMultiplicityA().min );
-	EXPECT_EQ( 8, rel->getMultiplicityA().max );
-	EXPECT_EQ( 9, rel->getMultiplicityB().min );
-	EXPECT_EQ( 0, rel->getMultiplicityB().max );
+		rel = rels[2];
+		EXPECT_EQ( "relation C-A", rel->getRelation() );
+		EXPECT_EQ( entities[2], rel->getEntityA() );
+		EXPECT_EQ( entities[0], rel->getEntityB() );
+		EXPECT_EQ( 7, rel->getMultiplicityA().min );
+		EXPECT_EQ( 8, rel->getMultiplicityA().max );
+		EXPECT_EQ( 9, rel->getMultiplicityB().min );
+		EXPECT_EQ( 0, rel->getMultiplicityB().max );
+	}
 
 	erm->getEntities()[0]->setName( "another change" );
 	spaceRestored->addChange( erm->getEntities()[0] );

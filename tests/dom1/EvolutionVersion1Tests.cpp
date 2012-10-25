@@ -34,17 +34,17 @@ public:
 		CompanySpace::SetUp();
 	}
 
-	co::RefPtr<ca::ISpacePersister> createPersister( const std::string& fileName )
+	ca::ISpacePersisterRef createPersister( const std::string& fileName )
 	{
-		co::IObject* persisterObj = co::newInstance( "ca.SpacePersister" );
+		co::IObjectRef persisterObj = co::newInstance( "ca.SpacePersister" );
 
-		co::RefPtr<co::IObject> spaceFileObj = co::newInstance( "ca.SQLiteSpaceStore" );
+		co::IObjectRef spaceFileObj = co::newInstance( "ca.SQLiteSpaceStore" );
 		spaceFileObj->getService<ca::INamed>()->setName( fileName );
 
 		persisterObj->setService( "store", spaceFileObj->getService<ca::ISpaceStore>() );
 		persisterObj->setService( "universe", _universe.get() );
 		
-		co::RefPtr<ca::ISpacePersister> persister = persisterObj->getService<ca::ISpacePersister>();
+		ca::ISpacePersister* persister = persisterObj->getService<ca::ISpacePersister>();
 
 		return persister;
 	}
@@ -53,10 +53,10 @@ public:
 	{
 		remove( fileName.c_str() );
 
-		co::RefPtr<ca::ISpacePersister> persister = createPersister( fileName );
+		ca::ISpacePersisterRef persister = createPersister( fileName );
 		ASSERT_NO_THROW( persister->initialize( _company->getProvider() ) );
 
-		co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+		ca::ISpacePersisterRef persisterToRestore = createPersister( fileName );
 
 		ASSERT_NO_THROW( persisterToRestore->restoreRevision( 1 ) );
 
@@ -67,7 +67,7 @@ public:
 		dom::ICompany* company = objRest->getService<dom::ICompany>();
 		ASSERT_TRUE( company != NULL );
 
-		co::Range<dom::IProject*> projects = company->getProjects();
+		co::TSlice<dom::IProject*> projects = company->getProjects();
 		ASSERT_EQ( 2, projects.getSize() );
 
 		EXPECT_EQ( "Software2.0", projects[0]->getName() );
@@ -79,41 +79,43 @@ public:
 		EXPECT_EQ( false, projects[0]->getIsService() );
 		EXPECT_EQ( true, projects[1]->getIsService() );
 
-		co::Range<dom::IDeveloper*> devs = projects[0]->getDevelopers();
-		ASSERT_EQ( 2, devs.getSize() );
+		{
+			co::TSlice<dom::IDeveloper*> devs = projects[0]->getDevelopers();
 
-		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
-		EXPECT_EQ( 1000, devs[0]->getSalary() );
-		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
-		EXPECT_EQ( 4000, devs[1]->getSalary() );
+			ASSERT_EQ( 2, devs.getSize() );
 
-		//forcing one more revision
-		devs[1]->setSalary( 5000 );
-		spaceRestored->addChange( devs[1] );
-		spaceRestored->notifyChanges();
+			EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
+			EXPECT_EQ( 1000, devs[0]->getSalary() );
+			EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+			EXPECT_EQ( 4000, devs[1]->getSalary() );
+
+			//forcing one more revision
+			devs[1]->setSalary( 5000 );
+			spaceRestored->addChange( devs[1] );
+			spaceRestored->notifyChanges();
+		}
 
 		dom::IManager* manager = projects[0]->getManager();
-
 		EXPECT_EQ( "Richard Scrum Master", manager->getName() );
 		EXPECT_EQ( 10000, manager->getSalary() );
 
-		devs = projects[1]->getDevelopers();
-		ASSERT_EQ( 2, devs.getSize() );
+		{
+			co::TSlice<dom::IDeveloper*> devs = projects[1]->getDevelopers();
+			ASSERT_EQ( 2, devs.getSize() );
 
-		EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
-		EXPECT_EQ( 5000, devs[0]->getSalary() );
-		EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
-		EXPECT_EQ( 3000, devs[1]->getSalary() );
+			EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
+			EXPECT_EQ( 5000, devs[0]->getSalary() );
+			EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
+			EXPECT_EQ( 3000, devs[1]->getSalary() );
 
-		manager = projects[1]->getManager();
+			manager = projects[1]->getManager();
 
-		EXPECT_EQ( "Wiliam Kanban Expert", manager->getName() );
-		EXPECT_EQ( 9000, manager->getSalary() );
+			EXPECT_EQ( "Wiliam Kanban Expert", manager->getName() );
+			EXPECT_EQ( 9000, manager->getSalary() );
 
-		ASSERT_NO_THROW( persisterToRestore->save() );
-
+			ASSERT_NO_THROW( persisterToRestore->save() );
+		}
 	}
-
 };
 
 TEST_F( Evolution1Version1Tests, pass1CreateCompanyV1File )
@@ -132,7 +134,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision
 {
 	std::string fileName = "CompanyV1.db";
 
-	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+	ca::ISpacePersisterRef persisterToRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persisterToRestore->restoreRevision( 2 ) );
 
@@ -143,7 +145,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
 	ASSERT_TRUE( company != NULL );
 
-	co::Range<dom::IProject*> projects = company->getProjects();
+	co::TSlice<dom::IProject*> projects = company->getProjects();
 	ASSERT_EQ( 2, projects.getSize() );
 
 	EXPECT_EQ( "Software2.0", projects[0]->getName() );
@@ -155,26 +157,29 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision
 	EXPECT_EQ( false, projects[0]->getIsService() );
 	EXPECT_EQ( true, projects[1]->getIsService() );
 
-	co::Range<dom::IDeveloper*> devs = projects[0]->getDevelopers();
-	ASSERT_EQ( 2, devs.getSize() );
+	{
+		co::TSlice<dom::IDeveloper*> devs = projects[0]->getDevelopers();
+		ASSERT_EQ( 2, devs.getSize() );
 
-	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
-	EXPECT_EQ( 1000, devs[0]->getSalary() );
-	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
-	EXPECT_EQ( 5000, devs[1]->getSalary() );
+		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
+		EXPECT_EQ( 1000, devs[0]->getSalary() );
+		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( 5000, devs[1]->getSalary() );
+	}
 
 	dom::IManager* manager = projects[0]->getManager();
-
 	EXPECT_EQ( "Richard Scrum Master", manager->getName() );
 	EXPECT_EQ( 10000, manager->getSalary() );
 
-	devs = projects[1]->getDevelopers();
-	ASSERT_EQ( 2, devs.getSize() );
+	{
+		co::TSlice<dom::IDeveloper*> devs = projects[1]->getDevelopers();
+		ASSERT_EQ( 2, devs.getSize() );
 
-	EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
-	EXPECT_EQ( 5000, devs[0]->getSalary() );
-	EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
-	EXPECT_EQ( 3000, devs[1]->getSalary() );
+		EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
+		EXPECT_EQ( 5000, devs[0]->getSalary() );
+		EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
+		EXPECT_EQ( 3000, devs[1]->getSalary() );
+	}
 
 	manager = projects[1]->getManager();
 
@@ -187,7 +192,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyInvFileValidRevis
 {
 	std::string fileName = "CompanyV1Inv.db";
 
-	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+	ca::ISpacePersisterRef persisterToRestore = createPersister( fileName );
 
 	ASSERT_NO_THROW( persisterToRestore->restoreRevision( 2 ) );
 
@@ -198,7 +203,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyInvFileValidRevis
 	dom::ICompany* company = objRest->getService<dom::ICompany>();
 	ASSERT_TRUE( company != NULL );
 
-	co::Range<dom::IProject*> projects = company->getProjects();
+	co::TSlice<dom::IProject*> projects = company->getProjects();
 	ASSERT_EQ( 2, projects.getSize() );
 
 	EXPECT_EQ( "Software2.0", projects[0]->getName() );
@@ -210,26 +215,29 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyInvFileValidRevis
 	EXPECT_EQ( false, projects[0]->getIsService() );
 	EXPECT_EQ( true, projects[1]->getIsService() );
 
-	co::Range<dom::IDeveloper*> devs = projects[0]->getDevelopers();
-	ASSERT_EQ( 2, devs.getSize() );
+	{
+		co::TSlice<dom::IDeveloper*> devs = projects[0]->getDevelopers();
+		ASSERT_EQ( 2, devs.getSize() );
 
-	EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
-	EXPECT_EQ( 1000, devs[0]->getSalary() );
-	EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
-	EXPECT_EQ( 5000, devs[1]->getSalary() );
+		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
+		EXPECT_EQ( 1000, devs[0]->getSalary() );
+		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( 5000, devs[1]->getSalary() );
+	}
 
 	dom::IManager* manager = projects[0]->getManager();
-
 	EXPECT_EQ( "Richard Scrum Master", manager->getName() );
 	EXPECT_EQ( 10000, manager->getSalary() );
 
-	devs = projects[1]->getDevelopers();
-	ASSERT_EQ( 2, devs.getSize() );
+	{
+		co::TSlice<dom::IDeveloper*> devs = projects[1]->getDevelopers();
+		ASSERT_EQ( 2, devs.getSize() );
 
-	EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
-	EXPECT_EQ( 5000, devs[0]->getSalary() );
-	EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
-	EXPECT_EQ( 3000, devs[1]->getSalary() );
+		EXPECT_EQ( "John Cplusplus Experienced", devs[0]->getName() );
+		EXPECT_EQ( 5000, devs[0]->getSalary() );
+		EXPECT_EQ( "Jacob Lua Junior", devs[1]->getName() );
+		EXPECT_EQ( 3000, devs[1]->getSalary() );
+	}
 
 	manager = projects[1]->getManager();
 
@@ -242,7 +250,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileInvalidRevisi
 {
 	std::string fileName = "CompanyV1.db";
 
-	co::RefPtr<ca::ISpacePersister> persisterToRestore = createPersister( fileName );
+	ca::ISpacePersisterRef persisterToRestore = createPersister( fileName );
 
 	ASSERT_THROW( persisterToRestore->restore(), co::TypeLoadException );
 }

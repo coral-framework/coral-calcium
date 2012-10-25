@@ -30,8 +30,8 @@ inline int objectCompare( const co::IObject* a, const co::IObject* b )
 	return ( a < b ? -1 : ( a == b ? 0 : 1 ) );
 }
 
-inline bool changesStdCompare( const co::RefPtr<ca::IObjectChanges>& a,
-							   const co::RefPtr<ca::IObjectChanges>& b )
+inline bool changesStdCompare( const ca::IObjectChangesRef& a,
+							   const ca::IObjectChangesRef& b )
 {
 	return static_cast<ObjectChanges*>( a.get() )->getObjectInl()
 			< static_cast<ObjectChanges*>( b.get() )->getObjectInl();
@@ -61,17 +61,17 @@ ca::IGraph* GraphChanges::getGraph()
 	return _graph.get();
 }
 
-co::Range<co::IObject*> GraphChanges::getAddedObjects()
+co::TSlice<co::IObject*> GraphChanges::getAddedObjects()
 {
 	return _addedObjects;
 }
 
-co::Range<co::IObject*> GraphChanges::getRemovedObjects()
+co::TSlice<co::IObject*> GraphChanges::getRemovedObjects()
 {
 	return _removedObjects;
 }
 
-co::Range<ca::IObjectChanges*> GraphChanges::getChangedObjects()
+co::TSlice<ca::IObjectChanges*> GraphChanges::getChangedObjects()
 {
 	return _changedObjects;
 }
@@ -79,21 +79,21 @@ co::Range<ca::IObjectChanges*> GraphChanges::getChangedObjects()
 co::int32 GraphChanges::findAddedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject*>( _addedObjects ),
+	return co::binarySearch( co::Slice<co::IObject*>( _addedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
 co::int32 GraphChanges::findRemovedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<co::IObject*>( _removedObjects ),
+	return co::binarySearch( co::Slice<co::IObject*>( _removedObjects ),
 		object, objectCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
 co::int32 GraphChanges::findChangedObject( co::IObject* object )
 {
 	size_t pos;
-	return co::binarySearch( co::Range<ca::IObjectChanges*>( _changedObjects ),
+	return co::binarySearch( co::Slice<ca::IObjectChanges*>( _changedObjects ),
 		object, changesKeyCompare, pos ) ? static_cast<co::int32>( pos ) : -1;
 }
 
@@ -105,7 +105,7 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 	co::Any instance( service );
 
 	// revert all Ref fields
-	co::Range<ChangedRefField> refFields = changes->getChangedRefFields();
+	co::TSlice<ChangedRefField> refFields = changes->getChangedRefFields();
 	for( ; refFields; refFields.popFirst() )
 	{
 		const ChangedRefField& cur = refFields.getFirst();
@@ -113,7 +113,7 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 	}
 
 	// revert all RefVec fields
-	co::Range<ChangedRefVecField> refVecFields = changes->getChangedRefVecFields();
+	co::TSlice<ChangedRefVecField> refVecFields = changes->getChangedRefVecFields();
 	for( ; refVecFields; refVecFields.popFirst() )
 	{
 		const ChangedRefVecField& cur = refVecFields.getFirst();
@@ -121,7 +121,7 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 	}
 
 	// revert all Value fields
-	co::Range<ChangedValueField> valueFields = changes->getChangedValueFields();
+	co::TSlice<ChangedValueField> valueFields = changes->getChangedValueFields();
 	for( ; valueFields; valueFields.popFirst() )
 	{
 		const ChangedValueField& cur = valueFields.getFirst();
@@ -132,10 +132,10 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 void GraphChanges::revertChanges()
 {
 	// for each changed object
-	for( co::Range<IObjectChanges*> objects( _changedObjects ); objects; objects.popFirst() )
+	for( co::Slice<IObjectChanges*> objects( _changedObjects ); objects; objects.popFirst() )
 	{
 		// revert connection changes
-		co::Range<ChangedConnection> connections = objects.getFirst()->getChangedConnections();
+		co::TSlice<ChangedConnection> connections = objects.getFirst()->getChangedConnections();
 		if( connections )
 		{
 			co::IObject* object = objects.getFirst()->getObject();
@@ -148,7 +148,7 @@ void GraphChanges::revertChanges()
 		}
 
 		// revert field changes for each changed service
-		co::Range<IServiceChanges*> services = objects.getFirst()->getChangedServices();
+		co::TSlice<IServiceChanges*> services = objects.getFirst()->getChangedServices();
 		for( ; services; services.popFirst() )
 			revertFieldChanges( _graph.get(), services.getFirst() );
 	}

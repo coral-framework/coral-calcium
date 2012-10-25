@@ -36,26 +36,26 @@ protected:
 protected:
 	std::string _modelName;
 
-	co::RefPtr<co::IObject> _modelObj;
-	co::RefPtr<co::IObject> _universeObj;
-	co::RefPtr<co::IObject> _spaceObj;
+	co::IObjectRef _modelObj;
+	co::IObjectRef _universeObj;
+	co::IObjectRef _spaceObj;
 
-	co::RefPtr<ca::IModel> _model;
-	co::RefPtr<ca::IUniverse> _universe;
-	co::RefPtr<ca::ISpace> _space;
+	ca::IModelRef _model;
+	ca::IUniverseRef _universe;
+	ca::ISpaceRef _space;
 
-	co::RefPtr<dom::ICompany> _company;
-	co::RefPtr<dom::IProject> _software;
-	co::RefPtr<dom::IProject> _dataMaintain;
+	dom::ICompanyRef _company;
+	dom::IProjectRef _software;
+	dom::IProjectRef _dataMaintain;
 
-	co::RefPtr<dom::IManager> _manager1;
-	co::RefPtr<dom::IManager> _manager2;
+	dom::IManagerRef _manager1;
+	dom::IManagerRef _manager2;
 
-	co::RefPtr<dom::IDeveloper> _developer1;
-	co::RefPtr<dom::IDeveloper> _developer2;
+	dom::IDeveloperRef _developer1;
+	dom::IDeveloperRef _developer2;
 
-	co::RefPtr<dom::IDeveloper> _developer3;
-	co::RefPtr<dom::IDeveloper> _developer4;
+	dom::IDeveloperRef _developer3;
+	dom::IDeveloperRef _developer4;
 
 };
 

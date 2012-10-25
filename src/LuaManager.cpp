@@ -98,7 +98,7 @@ public:
 		tryAddChange( service );
 	}
 
-	void postInvoke( co::IService* service, co::IMethod*, co::Range<co::Any>, const co::Any& )
+	void postInvoke( co::IService* service, co::IMethod*, co::Slice<co::Any>, const co::Any& )
 	{
 		tryAddChange( service );
 	}
@@ -117,7 +117,7 @@ private:
 	}
 
 private:
-	co::RefPtr<ca::IGraphObserver> _universalObserver;
+	ca::IGraphObserverRef _universalObserver;
 	std::vector<Universe*> _universes;
 };
 

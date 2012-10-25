@@ -148,7 +148,7 @@ public:
 
 	}
 
-	void addValues( co::uint32 objId, co::Range<std::string> fieldNames, co::Range<std::string> values )
+	void addValues( co::uint32 objId, co::Slice<std::string> fieldNames, co::Slice<std::string> values )
 	{
 		assert( fieldNames.getSize() == values.getSize() );
 

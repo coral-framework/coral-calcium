@@ -4,8 +4,6 @@
  */
 
 #include "CompanySpace.h"
-#include <co/RefVector.h>
-
 #include <co/Log.h>
 
 void CompanySpace::SetUp()
@@ -87,7 +85,7 @@ co::IObject* CompanySpace::createCompanyGraph()
 	_manager1->setName( "Richard Scrum Master" );
 	_manager1->setSalary( 10000 );
 
-	co::RefVector<dom::IDeveloper> richardDevs;
+	std::vector<dom::IDeveloperRef> richardDevs;
 	richardDevs.push_back( _developer2 );
 	richardDevs.push_back( _developer3 );
 
@@ -115,7 +113,7 @@ co::IObject* CompanySpace::createCompanyGraph()
 	_dataMaintain->setEarnings( 50000 );
 	_dataMaintain->setIsService( true );
 
-	co::RefVector<dom::IDeveloper> maintainers;
+	std::vector<dom::IDeveloperRef> maintainers;
 	maintainers.push_back( _developer1.get() );
 	maintainers.push_back( _developer4.get() );
 

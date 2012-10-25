@@ -95,12 +95,12 @@ public:
 		_str1 = str1;
 	}
 
-	co::Range<std::string> getStrArray()
+	co::TSlice<std::string> getStrArray()
 	{
 		return _strArray;
 	}
 
-	void setStrArray( co::Range<std::string> strArray )
+	void setStrArray( co::Slice<std::string> strArray )
 	{
 		co::assign( strArray, _strArray );
 	}
@@ -118,10 +118,10 @@ public:
 private:
 	// member variables
 	co::Any _any1;
-	co::RefPtr<camodels::SomeInterface> _autoRef;
+	camodels::SomeInterfaceRef _autoRef;
 	co::int8 _byte1;
 	camodels::SomeEnum _enum1;
-	co::RefPtr<erm::IModel> _external;
+	erm::IModelRef _external;
 	co::int8 _readOnlyByte;
 	camodels::SomeStruct _readOnlyStruct;
 	std::string _str1;

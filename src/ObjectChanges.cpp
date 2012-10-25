@@ -24,12 +24,12 @@ co::IObject* ObjectChanges::getObject()
 	return _object.get();
 }
 
-co::Range<IServiceChanges*> ObjectChanges::getChangedServices()
+co::TSlice<IServiceChanges*> ObjectChanges::getChangedServices()
 {
 	return _changedServices;
 }
 
-co::Range<ChangedConnection> ObjectChanges::getChangedConnections()
+co::TSlice<ChangedConnection> ObjectChanges::getChangedConnections()
 {
 	return _changedConnections;
 }

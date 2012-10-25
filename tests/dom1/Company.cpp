@@ -4,7 +4,6 @@
 #include <dom/IProject.h>
 #include <dom/IDeveloper.h>
 #include <co/Exception.h>
-#include <co/RefVector.h>
 
 namespace dom {
 
@@ -21,32 +20,32 @@ public:
 		// empty
 	}
 
-	co::Range<IDeveloper*> getDevelopers()
+	co::TSlice<IDeveloper*> getDevelopers()
 	{
 		return _developers;
 	}
 
-	void setDevelopers( co::Range<IDeveloper*> developers )
+	void setDevelopers( co::Slice<IDeveloper*> developers )
 	{
 		co::assign( developers, _developers );
 	}
 
-	co::Range<IManager*> getManagers()
+	co::TSlice<IManager*> getManagers()
 	{
 		return _managers;
 	}
 
-	void setManagers( co::Range<IManager*> managers )
+	void setManagers( co::Slice<IManager*> managers )
 	{
 		co::assign( managers, _managers );
 	}
 	
-	co::Range<IProject*> getProjects()
+	co::TSlice<IProject*> getProjects()
 	{
 		return _projects;
 	}
 
-	void setProjects( co::Range<IProject*> projects )
+	void setProjects( co::Slice<IProject*> projects )
 	{
 		co::assign( projects, _projects );
 	}
@@ -67,9 +66,9 @@ public:
 	}
 
 private:
-	co::RefVector<IDeveloper> _developers;
-	co::RefVector<IManager> _managers;
-	co::RefVector<IProject> _projects;
+	std::vector<IDeveloperRef> _developers;
+	std::vector<IManagerRef> _managers;
+	std::vector<IProjectRef> _projects;
 };
 	
 CORAL_EXPORT_COMPONENT( Company, Company )

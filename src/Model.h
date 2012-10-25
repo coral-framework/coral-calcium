@@ -455,18 +455,18 @@ public:
 	std::string getName();
 	void setName( const std::string& name );
 	
-	co::Range<std::string> getUpdates();
+	co::TSlice<std::string> getUpdates();
 
 	bool alreadyContains( co::IType* type );
 	bool contains( co::IType* type );
-	void getFields( co::IRecordType* recordType, co::RefVector<co::IField>& fields );
-	void getPorts( co::IComponent* component, co::RefVector<co::IPort>& ports );
+	void getFields( co::IRecordType* recordType, std::vector<co::IFieldRef>& fields );
+	void getPorts( co::IComponent* component, std::vector<co::IPortRef>& ports );
 	void beginChanges();
 	void applyChanges();
 	void discardChanges();
 	void addEnum( co::IEnum* enumType );
-	void addRecordType( co::IRecordType* recordType, co::Range<co::IField*> fields );
-	void addComponent( co::IComponent* component, co::Range<co::IPort*> ports );
+	void addRecordType( co::IRecordType* recordType, co::Slice<co::IField*> fields );
+	void addComponent( co::IComponent* component, co::Slice<co::IPort*> ports );
 	void addUpdate( const std::string& update );
 
 	bool loadDefinitionsFor( const std::string& ns );

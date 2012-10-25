@@ -7,8 +7,6 @@
 #include <erm/IEntity.h>
 #include <erm/IRelationship.h>
 #include <co/Exception.h>
-#include <co/RefVector.h>
-#include <algorithm>
 
 namespace erm {
 
@@ -25,22 +23,22 @@ public:
 		// empty
 	}
 
-	co::Range<IEntity*> getEntities()
+	co::TSlice<IEntity*> getEntities()
 	{
 		return _entities;
 	}
 
-	void setEntities( co::Range<IEntity*> entities )
+	void setEntities( co::Slice<IEntity*> entities )
 	{
 		co::assign( entities, _entities );
 	}
 
-	co::Range<IRelationship*> getRelationships()
+	co::TSlice<IRelationship*> getRelationships()
 	{
 		return _relationships;
 	}
 
-	void setRelationships( co::Range<IRelationship*> relationships )
+	void setRelationships( co::Slice<IRelationship*> relationships )
 	{
 		co::assign( relationships, _relationships );
 	}
@@ -66,12 +64,12 @@ public:
 			std::remove( _relationships.begin(), _relationships.end(), rel ), _relationships.end() );
 	}
 
-	co::Range<IModel*> getDependencies()
+	co::TSlice<IModel*> getDependencies()
 	{
 		return _dependencies;
 	}
 
-	void setDependencies( co::Range<IModel*> dependencies )
+	void setDependencies( co::Slice<IModel*> dependencies )
 	{
 		co::assign( dependencies, _dependencies );
 	}
@@ -107,9 +105,9 @@ public:
 	}
 
 private:
-	co::RefVector<IEntity> _entities;
-	co::RefVector<IRelationship> _relationships;
-	co::RefVector<IModel> _dependencies;
+	std::vector<IEntityRef> _entities;
+	std::vector<IRelationshipRef> _relationships;
+	std::vector<IModelRef> _dependencies;
 };
 	
 CORAL_EXPORT_COMPONENT( Model, Model )

@@ -28,15 +28,15 @@ public:
 TEST_F( SpaceUpdaterTests, testCheckModel )
 {
 	
-	co::RefPtr<co::IObject> universeObj = co::newInstance( "ca.Universe" );
+	co::IObjectRef universeObj = co::newInstance( "ca.Universe" );
 	universeObj->setService("model", _model.get());
 
 	ca::IUniverse* universe = universeObj->getService<ca::IUniverse>();
 
 	co::IObject* persisterObj = co::newInstance( "ca.SpacePersister" );
-	co::RefPtr<ca::ISpacePersister> persister = persisterObj->getService<ca::ISpacePersister>();
+	ca::ISpacePersister> persister = persisterObj->getService<ca::ISpacePersisterRef();
 
-	co::RefPtr<co::IObject> storeObj = co::newInstance( "ca.SQLiteSpaceStore" );
+	co::IObjectRef storeObj = co::newInstance( "ca.SQLiteSpaceStore" );
 	remove( "dbFile.sql" );
 	storeObj->getService<ca::INamed>()->setName( "dbFile.sql" );
 
@@ -48,10 +48,10 @@ TEST_F( SpaceUpdaterTests, testCheckModel )
 	persister->initialize( _erm->getProvider() );
 
 	
-	co::RefPtr<co::IObject> changedModel = co::newInstance( "ca.Model" );
+	co::IObjectRef changedModel = co::newInstance( "ca.Model" );
 	changedModel->getService<ca::IModel>()->setName( "ermNew" );
 
-	co::RefPtr<co::IObject> scrambledModel = co::newInstance( "ca.Model" );
+	co::IObjectRef scrambledModel = co::newInstance( "ca.Model" );
 	scrambledModel->getService<ca::IModel>()->setName( "ermScrambled" );
 
 	store->open();

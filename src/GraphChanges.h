@@ -9,7 +9,6 @@
 #include "Model.h"
 #include "ObjectChanges.h"
 #include "GraphChanges_Base.h"
-#include <co/RefVector.h>
 #include <ca/IGraph.h>
 
 namespace ca {
@@ -46,9 +45,9 @@ public:
 	// ------ ca.IGraphChanges Methods ------ //
 
 	ca::IGraph* getGraph();
-	co::Range<co::IObject*> getAddedObjects();	
-	co::Range<co::IObject*> getRemovedObjects();
-	co::Range<ca::IObjectChanges*> getChangedObjects();
+	co::TSlice<co::IObject*> getAddedObjects();	
+	co::TSlice<co::IObject*> getRemovedObjects();
+	co::TSlice<ca::IObjectChanges*> getChangedObjects();
 	co::int32 findAddedObject( co::IObject* object );
 	co::int32 findRemovedObject( co::IObject* object );
 	co::int32 findChangedObject( co::IObject* object );
@@ -58,10 +57,10 @@ private:
 	GraphChanges( ca::IGraph* graph, GraphChanges& other );
 
 private:
-	co::RefPtr<ca::IGraph> _graph;
-	co::RefVector<co::IObject> _addedObjects;
-	co::RefVector<co::IObject> _removedObjects;
-	co::RefVector<ca::IObjectChanges> _changedObjects;
+	ca::IGraphRef _graph;
+	std::vector<co::IObjectRef> _addedObjects;
+	std::vector<co::IObjectRef> _removedObjects;
+	std::vector<ca::IObjectChangesRef> _changedObjects;
 };
 
 } // namespace ca
