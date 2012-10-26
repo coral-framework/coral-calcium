@@ -40,6 +40,15 @@ set( CPACK_PACKAGE_DESCRIPTION_SUMMARY	"Calcium is a versatile and minimally int
 include( CPack )
 
 ################################################################################
+# Global Definitions
+################################################################################
+
+add_definitions(
+	-DSQLITE_THREADSAFE=0
+	-DSQLITE_OMIT_LOAD_EXTENSION
+)
+
+################################################################################
 # Subdirectories
 ################################################################################
 

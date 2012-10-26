@@ -8,6 +8,7 @@
 #include <co/IllegalArgumentException.h>
 #include <ca/UnexpectedException.h>
 #include <camodels/SomeInterface.h>
+#include <algorithm>
 
 class SpaceNotificationTests : public ERMSpace
 {};

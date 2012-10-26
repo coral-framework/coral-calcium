@@ -7,6 +7,7 @@
 #include <erm/IEntity.h>
 #include <erm/IRelationship.h>
 #include <co/Exception.h>
+#include <algorithm>
 
 namespace erm {
 
