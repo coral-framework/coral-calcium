@@ -285,3 +285,27 @@ TEST_F( UndoRedoTests, newChangeResetsRedoStack )
 		EXPECT_EQ( 0, redoStack.getSize() );
 	}
 }
+
+TEST_F( UndoRedoTests, arrayTest )
+{
+	startWithSimpleERM();
+
+	erm::IEntity* testEntity = co::newInstance( "erm.Entity" )->getService<erm::IEntity>();
+	testEntity->setName( "Test Entity" );
+	
+	_undoManager->beginChange( "Add Entity A" );
+	_erm->addEntity( testEntity );
+	_space->addChange( _erm.get() );
+	_undoManager->endChange();
+
+	_space->notifyChanges();
+
+	_undoManager->beginChange( "Remove Entity A" );
+	_erm->removeEntity( testEntity );
+	_space->addChange( _erm.get() );
+	_undoManager->endChange();
+
+	_space->notifyChanges();
+	
+	EXPECT_NO_THROW( _undoManager->undo() );
+}
