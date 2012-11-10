@@ -6,8 +6,6 @@ cmake_minimum_required( VERSION 2.6 )
 
 project( CALCIUM )
 
-SET( CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-ldl" )
-
 ################################################################################
 # Setup Coral
 ################################################################################
@@ -47,6 +45,10 @@ add_definitions(
 	-DSQLITE_THREADSAFE=0
 	-DSQLITE_OMIT_LOAD_EXTENSION
 )
+
+if( UNIX )
+	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ldl" )
+endif()
 
 ################################################################################
 # Subdirectories

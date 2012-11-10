@@ -234,7 +234,7 @@ TEST_F( SpaceTests, changedRefVecFields )
 	 */
 	co::TSlice<erm::IEntity*> entities = _erm->getEntities();
 	entities.popLast();
-	_erm->setEntities( entities );
+	_erm->setEntities( entities.asSlice() );
 	_erm->addEntity( NULL );
 	_erm->addEntity( entities.getFirst() );
 	_erm->addEntity( _entityC.get() );

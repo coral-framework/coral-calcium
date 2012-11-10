@@ -116,8 +116,11 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 	co::TSlice<ChangedRefVecField> refVecFields = changes->getChangedRefVecFields();
 	for( ; refVecFields; refVecFields.popFirst() )
 	{
+		// force a downcast of the IService[] to its real element type
 		const ChangedRefVecField& cur = refVecFields.getFirst();
-		cur.field->getOwner()->getReflector()->setField( instance, cur.field.get(), cur.previous );
+		co::IField* field = cur.field.get();
+		co::Any value( true, field->getType(), &cur.previous[0], cur.previous.size() );
+		cur.field->getOwner()->getReflector()->setField( instance, field, value );
 	}
 
 	// revert all Value fields

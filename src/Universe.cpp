@@ -832,7 +832,7 @@ void Universe::notifyChanges()
 		return;
 
 	IGraphChangesRef changes( _u.changes.finalize( this ) );
-	notifyObjectObservers( _u.objectObservers, changes->getChangedObjects() );
+	notifyObjectObservers( _u.objectObservers, changes->getChangedObjects().asSlice() );
 	notifyGraphObservers( &_u, changes.get() );
 
 	size_t numSpaces = _u.spaces.size();
