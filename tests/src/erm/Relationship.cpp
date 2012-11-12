@@ -22,10 +22,10 @@ public:
 	}
 
 	IEntity* getEntityA() { return _entityA; }
-	void setEntityA( IEntity* entity ) { _entityA = entity; }
+	void setEntityA( IEntity* entity ) { updateEntity( _entityA, entity ); }
 
 	IEntity* getEntityB() { return _entityB; }
-	void setEntityB( IEntity* entity ) { _entityB = entity; }
+	void setEntityB( IEntity* entity ) { updateEntity( _entityB, entity ); }
 
 	Multiplicity getMultiplicityA() { return _multiplicityA; }
 	void setMultiplicityA( const Multiplicity& multiplicity ) { _multiplicityA = multiplicity; }
@@ -42,6 +42,16 @@ protected:
 
 	IEntity* getEntityBService() { return _entityB; }
 	void setEntityBService( IEntity* entity ) { _entityB = entity; }
+
+private:
+	void updateEntity( IEntity*& oldEntity, IEntity* newEntity )
+	{
+		if( oldEntity )
+			oldEntity->removeRelationship( this );
+		if( newEntity )
+			newEntity->addRelationship( this );
+		oldEntity = newEntity;
+	}
 
 private:
 	IEntity* _entityA;

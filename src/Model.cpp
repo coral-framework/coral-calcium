@@ -481,8 +481,6 @@ void Model::addRecordType( co::IRecordType* recordType, co::Slice<co::IField*> f
 		for( co::int32 i = 0; i < numFields; ++i )
 		{
 			co::IField* field = fields[i];
-			assert( !field->getIsReadOnly() );
-
 			FieldKind fieldKind = fieldKindOf( field->getType() );
 
 			co::ICompositeType* ct = field->getOwner();

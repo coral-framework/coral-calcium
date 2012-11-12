@@ -10,13 +10,12 @@
 #include <camodels/SomeInterface.h>
 #include <algorithm>
 
-class SpaceNotificationTests : public ERMSpace
-{};
+class SpaceNotificationTests : public ERMSpace {};
 
 TEST_F( SpaceNotificationTests, observersRegistration )
 {
 	startWithExtendedERM();
-	
+
 	EXPECT_THROW( _space->addServiceObserver( NULL, this ), co::IllegalArgumentException );
 	EXPECT_THROW( _space->addServiceObserver( _relAB.get(), NULL ), co::IllegalArgumentException );
 	EXPECT_THROW( _space->addServiceObserver( _relAB->getProvider(), this ), co::IllegalArgumentException );
@@ -38,12 +37,12 @@ TEST_F( SpaceNotificationTests, observersRegistration )
 
 	ASSERT_EQ( 0, _objectChanges.size() );
 	ASSERT_EQ( 0, _serviceChanges.size() );
-	
+
 	_space->notifyChanges();
-	
+
 	ASSERT_EQ( 0, _objectChanges.size() );
 	ASSERT_EQ( 1, _serviceChanges.size() );
-	
+
 	EXPECT_THROW( _space->removeServiceObserver( _entityB.get(), NULL ), co::IllegalArgumentException );
 	EXPECT_THROW( _space->removeServiceObserver( NULL, this ), co::IllegalArgumentException );
 
@@ -115,9 +114,6 @@ TEST_F( SpaceNotificationTests, sharedModelNotification )
 	ca::ISpace* space = spaceObj->getService<ca::ISpace>();
 	ASSERT_NO_THROW( space->initialize( rootObj.get() ) );
 	ASSERT_NO_THROW( space->notifyChanges() );
-
-	// the rest of the test, i don't know if it's correct, because never passed through here.
-	// but is based on the test below, then i think it should be ok
 
 	space->addServiceObserver( _entityA.get(), this );
 	space->addServiceObserver( _entityB.get(), this );

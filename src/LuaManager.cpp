@@ -44,7 +44,7 @@ public:
 	{
 		if( _universalObserver.isValid() )
 			universe->removeGraphObserver( _universalObserver.get() );
-		_universes.erase( std::remove( _universes.begin(), _universes.end(), universe ) );
+		_universes.erase( std::remove( _universes.begin(), _universes.end(), universe ), _universes.end() );
 	}
 
 	// ------ ca.ILuaManager Methods ------ //

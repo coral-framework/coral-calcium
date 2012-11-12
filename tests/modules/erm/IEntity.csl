@@ -3,9 +3,15 @@ interface IEntity
 	// Name of this entity.
 	string name;
 
-	// Silly field just to test cycles
+	// Dummy field just to test cycles
 	IEntity parent;
 
 	// List of relationships associated with this entity.
 	readonly IRelationship[] relationships;
+
+	// List with the names of all adjacent entities.
+	readonly string[] adjacentEntityNames;
+
+	void addRelationship( in IRelationship rel );
+	void removeRelationship( in IRelationship rel );
 };

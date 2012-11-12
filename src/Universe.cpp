@@ -287,56 +287,24 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		refVec = newRefVec;
 	}
 
-	template<typename ET>
-	static inline bool isEqualAligned( void* a, void* b, size_t len )
+	void onValueField( co::uint8 facetId, FieldRecord& field, void* oldValuePtr )
 	{
-		for( size_t i = 0; i < len; ++i )
-			if( reinterpret_cast<ET*>( a )[i] != reinterpret_cast<ET*>( b )[i] )
-				return false;
-		return true;
-	}
+		co::AnyValue newValue;
+		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, newValue ) );
 
-	static inline bool isEqual( void* a, void* b, size_t len )
-	{
-		return ( ( len % sizeof(size_t) ) == 0 ) ?
-			isEqualAligned<size_t>( a, b, len / sizeof(size_t) ) :
-			isEqualAligned<co::uint8>( a, b, len );
-	}
+		co::Any oldValue( false, field.field->getType(), oldValuePtr );
+		assert( newValue.getType() == oldValue.getType() );
 
-	static inline bool isEqualStr( void* a, void* b )
-	{
-		return *reinterpret_cast<std::string*>( a ) == *reinterpret_cast<std::string*>( b );
-	}
-
-	void onValueField( co::uint8 facetId, FieldRecord& field, void* valuePtr )
-	{
-		co::AnyValue value;
-		SVC_BARRIER( field.getOwnerReflector()->getField( source->services[facetId], field.field, value ) );
-
-		co::IType* type = field.field->getType();
-		co::IReflector* reflector = type->getReflector();
-		assert( value.getType() == type );
-
-		// perform comparison
-		void* newValuePtr = value.getAny().state.data.ptr;
-		if( value.getKind() == co::TK_STRING )
-		{
-			if( isEqualStr( newValuePtr, valuePtr ) )
-				return; // no change
-		}
-		else // raw memory comparison
-		{
-			if( isEqual( newValuePtr, valuePtr, reflector->getSize() ) )
-				return; // no change
-		}
+		if( newValue.getAny().equals( oldValue ) )
+			return; // no change
 
 		ChangedValueField& cf = getServiceChanges( facetId )->addChangedValueField();
 		cf.field = field.field;
-		cf.previous = co::Any( true, type, valuePtr );
-		cf.current.swap( value );
+		cf.previous = oldValue;
+		cf.current.swap( newValue );
 
 		// update our internal value
-		reflector->copyValues( newValuePtr, valuePtr, 1 );
+		oldValue.put( cf.current.getAny() );
 	}
 };
 
