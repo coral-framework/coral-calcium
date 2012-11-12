@@ -5,6 +5,7 @@
 
 #include "Entity_Base.h"
 #include <erm/IRelationship.h>
+#include <algorithm>
 
 namespace erm {
 
