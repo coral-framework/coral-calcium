@@ -257,7 +257,7 @@ struct UpdateTraverser : public UniverseTraverser<UpdateTraverser>
 		size_t newSize = value.size();
 		size_t oldSize = refVec.getSize();
 		if( newSize == oldSize && ( !newSize ||
-				std::equal( &value.front(), &value.back(), refVec.services ) ) )
+				std::equal( value.begin(), value.end(), refVec.services ) ) )
 			return; // no change
 
 		ChangedRefVecField& cf = getServiceChanges( facetId )->addChangedRefVecField();
