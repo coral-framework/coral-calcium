@@ -119,7 +119,9 @@ void revertFieldChanges( IGraph* graph, IServiceChanges* changes )
 		// force a downcast of the IService[] to its real element type
 		const ChangedRefVecField& cur = refVecFields.getFirst();
 		co::IField* field = cur.field.get();
-		co::Any value( true, field->getType(), &cur.previous[0], cur.previous.size() );
+		co::Any value( true, field->getType(), ( cur.previous.empty() ?
+						nullptr : &cur.previous[0] ), cur.previous.size() );
+
 		cur.field->getOwner()->getReflector()->setField( instance, field, value );
 	}
 

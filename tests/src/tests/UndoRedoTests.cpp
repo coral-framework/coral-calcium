@@ -292,20 +292,20 @@ TEST_F( UndoRedoTests, arrayTest )
 
 	erm::IEntity* testEntity = co::newInstance( "erm.Entity" )->getService<erm::IEntity>();
 	testEntity->setName( "Test Entity" );
-	
-	_undoManager->beginChange( "Add Entity A" );
+
+	// remove the only relationship so we can add it again
+	// this tests going from an empty array to a non-empty array (and undoing)
+	_erm->removeRelationship( _relAB.get() );
+	ASSERT_TRUE( _erm->getRelationships().isEmpty() );
+
+	_undoManager->beginChange( "Add Dependency and Entity" );
 	_erm->addEntity( testEntity );
+	_erm->addRelationship( _relAB.get() );
+	ASSERT_FALSE( _erm->getRelationships().isEmpty() );
 	_space->addChange( _erm.get() );
 	_undoManager->endChange();
 
-	_space->notifyChanges();
-
-	_undoManager->beginChange( "Remove Entity A" );
-	_erm->removeEntity( testEntity );
-	_space->addChange( _erm.get() );
-	_undoManager->endChange();
-
-	_space->notifyChanges();
-	
+	EXPECT_NO_THROW( _undoManager->undo() );
+	EXPECT_NO_THROW( _undoManager->redo() );
 	EXPECT_NO_THROW( _undoManager->undo() );
 }
