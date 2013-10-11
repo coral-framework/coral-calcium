@@ -7,6 +7,7 @@ project( TESTS_CORE )
 include_directories(
 	${GTEST_INCLUDE_DIRS}
 	${ERM_BINARY_DIR}/generated
+	${GRAPH_BINARY_DIR}/generated
 	${CAMODELS_BINARY_DIR}/generated
 	${SERIALIZATION_BINARY_DIR}/generated
 	${SERIALIZATION_SOURCE_DIR}
@@ -28,7 +29,7 @@ file( GLOB _SOURCES *.cpp persistence/*.cpp )
 
 add_executable( tests_core EXCLUDE_FROM_ALL ${REPLICATED_MODULE_FILES} ${_HEADERS} ${_SOURCES} )
 
-add_dependencies( tests_core camodels erm serialization )
+add_dependencies( tests_core camodels erm graph serialization )
 
 CORAL_TARGET( tests_core )
 

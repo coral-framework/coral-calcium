@@ -1,0 +1,4 @@
+interface INode
+{
+	INode[] refs;
+};

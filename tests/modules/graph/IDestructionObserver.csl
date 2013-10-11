@@ -1,0 +1,4 @@
+interface IDestructionObserver
+{
+	void onDestruction( in co.IObject object );
+};

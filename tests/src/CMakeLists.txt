@@ -9,6 +9,7 @@ set_property( DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS "CORAL_PATH=\"${CORA
 # Auxiliary Modules
 add_subdirectory( camodels )
 add_subdirectory( erm )
+add_subdirectory( graph )
 add_subdirectory( serialization )
 
 # The test executable

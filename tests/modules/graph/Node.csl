@@ -1,0 +1,5 @@
+component Node
+{
+	provides INode node;
+	receives IDestructionObserver destObs;
+};
