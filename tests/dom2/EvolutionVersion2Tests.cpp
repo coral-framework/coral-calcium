@@ -117,7 +117,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FilePreviousRevision )
 
 		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 		EXPECT_EQ( 1000, devs[0]->getSalary() );
-		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", devs[1]->getName() );
 		EXPECT_EQ( 4000, devs[1]->getSalary() );
 
 		EXPECT_EQ( "Developer", devs[0]->getRole() );
@@ -134,7 +134,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FilePreviousRevision )
 	co::TSlice<dom::IService*> services = company->getServices();
 	ASSERT_EQ( 1, services.getSize() );
 
-	EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
+	EXPECT_EQ( "Software1.0 \\ Maintenànce", services[0]->getName() );
 	EXPECT_EQ( 50000, services[0]->getMonthlyIncome() );
 
 	{
@@ -183,7 +183,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 
 		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 		EXPECT_EQ( 1000, devs[0]->getSalary() );
-		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", devs[1]->getName() );
 		EXPECT_EQ( 5000, devs[1]->getSalary() );
 
 		EXPECT_EQ( "Developer", devs[0]->getRole() );
@@ -198,7 +198,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 		co::TSlice<dom::IService*> services = company->getServices();
 		ASSERT_EQ( 1, services.getSize() );
 
-		EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", services[0]->getName() );
 		EXPECT_EQ( 50000, services[0]->getMonthlyIncome() );
 
 		co::TSlice<dom::IEmployee*> devs = services[0]->getMantainers();
@@ -238,7 +238,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 
 		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 		EXPECT_EQ( 1000, devs[0]->getSalary() );
-		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", devs[1]->getName() );
 		EXPECT_EQ( 5000, devs[1]->getSalary() );
 
 		EXPECT_EQ( "Developer", devs[0]->getRole() );
@@ -257,7 +257,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 		co::TSlice<dom::IService*> services = company->getServices();
 		ASSERT_EQ( 1, services.getSize() );
 
-		EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", services[0]->getName() );
 		EXPECT_EQ( 50000, services[0]->getMonthlyIncome() );
 
 		co::TSlice<dom::IEmployee*> devs = services[0]->getMantainers();
@@ -300,7 +300,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 
 		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 		EXPECT_EQ( 1000, devs[0]->getSalary() );
-		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", devs[1]->getName() );
 		EXPECT_EQ( 5000, devs[1]->getSalary() );
 
 		EXPECT_EQ( "Developer", devs[0]->getRole() );
@@ -317,7 +317,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevision )
 		co::TSlice<dom::IService*> services = company->getServices();
 		ASSERT_EQ( 1, services.getSize() );
 
-		EXPECT_EQ( "Software1.0 Maintenance", services[0]->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", services[0]->getName() );
 		EXPECT_EQ( 50000, services[0]->getMonthlyIncome() );
 		co::TSlice<dom::IEmployee*> devs = services[0]->getMantainers();
 
@@ -373,7 +373,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 		EXPECT_EQ( "Software2.0", devProduct->getName() );
 		EXPECT_EQ( 1000000, devProduct->getValue() );
 
-		EXPECT_EQ( "Michael CSharp Senior", employees[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", employees[1]->getName() );
 		EXPECT_EQ( 5000, employees[1]->getSalary() );
 		EXPECT_EQ( "Developer", employees[1]->getRole() );
 		EXPECT_EQ( NULL, employees[1]->getLeading() );
@@ -403,7 +403,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 
 		ASSERT_EQ( 1, employees[3]->getWorking().getSize() );
 		ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[3]->getWorking()[0] ) );
-		EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", devService->getName() );
 		EXPECT_EQ( 50000.0/1.90, devService->getMonthlyIncome() );
 
 		EXPECT_EQ( "Jacob Lua Junior", employees[4]->getName() );
@@ -413,7 +413,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 
 		ASSERT_EQ( 1, employees[4]->getWorking().getSize() );
 		ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[4]->getWorking()[0] ) );
-		EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", devService->getName() );
 		EXPECT_NEAR( 26315.79, devService->getMonthlyIncome(), 0.01 );
 	}
 
@@ -446,7 +446,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 		EXPECT_EQ( "Software2.0", devProduct->getName() );
 		EXPECT_EQ( 1000000, devProduct->getValue() );
 
-		EXPECT_EQ( "Michael CSharp Senior", employees[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", employees[1]->getName() );
 		EXPECT_EQ( 5000, employees[1]->getSalary() );
 		EXPECT_EQ( "Developer", employees[1]->getRole() );
 		EXPECT_EQ( NULL, employees[1]->getLeading() );
@@ -476,7 +476,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 
 		ASSERT_EQ( 1, employees[3]->getWorking().getSize() );
 		ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[3]->getWorking()[0] ) );
-		EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", devService->getName() );
 		EXPECT_NEAR( 26315.79, devService->getMonthlyIncome(), 0.01 );
 
 		EXPECT_EQ( "Jacob Lua Junior", employees[4]->getName() );
@@ -486,7 +486,7 @@ TEST_F( EvolutionVersion2Tests, restoreV2SpaceFromV1FileLastRevisionInv )
 
 		ASSERT_EQ( 1, employees[4]->getWorking().getSize() );
 		ASSERT_NO_THROW( devService = co::cast<dom::IService>( employees[4]->getWorking()[0] ) );
-		EXPECT_EQ( "Software1.0 Maintenance", devService->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", devService->getName() );
 		EXPECT_NEAR( 26315.79, devService->getMonthlyIncome(), 0.01 );
 
 		devService->setMonthlyIncome( 60000 );

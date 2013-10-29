@@ -453,10 +453,13 @@ private:
 		std::vector<std::string> values;
 		std::vector<std::string> fieldNames;
 
-		co::TSlice<co::IPort*> ports = component->getPorts();
-		for( size_t i = 0; i < ports.getSize(); ++i )
+		std::vector<co::IPortRef> ports;
+
+		_model->getPorts( component, ports );
+
+		for( size_t i = 0; i < ports.size(); ++i )
 		{
-			co::IPort* port = ports[i];
+			co::IPort* port = ports[i].get();
 			co::IService* service = object->getServiceAt( port );
 
 			co::uint32 refId;

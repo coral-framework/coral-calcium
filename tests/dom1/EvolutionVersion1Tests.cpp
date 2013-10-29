@@ -71,7 +71,7 @@ public:
 		ASSERT_EQ( 2, projects.getSize() );
 
 		EXPECT_EQ( "Software2.0", projects[0]->getName() );
-		EXPECT_EQ( "Software1.0 Maintenance", projects[1]->getName() );
+		EXPECT_EQ( "Software1.0 \\ Maintenànce", projects[1]->getName() );
 
 		EXPECT_EQ( 1000000, projects[0]->getEarnings() );
 		EXPECT_EQ( 50000, projects[1]->getEarnings() );
@@ -86,7 +86,7 @@ public:
 
 			EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 			EXPECT_EQ( 1000, devs[0]->getSalary() );
-			EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+			EXPECT_EQ( "Michael CSharp Sénior", devs[1]->getName() );
 			EXPECT_EQ( 4000, devs[1]->getSalary() );
 
 			//forcing one more revision
@@ -149,7 +149,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision
 	ASSERT_EQ( 2, projects.getSize() );
 
 	EXPECT_EQ( "Software2.0", projects[0]->getName() );
-	EXPECT_EQ( "Software1.0 Maintenance", projects[1]->getName() );
+	EXPECT_EQ( "Software1.0 \\ Maintenànce", projects[1]->getName() );
 
 	EXPECT_EQ( 1000000, projects[0]->getEarnings() );
 	EXPECT_EQ( 50000, projects[1]->getEarnings() );
@@ -163,7 +163,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyFileValidRevision
 
 		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 		EXPECT_EQ( 1000, devs[0]->getSalary() );
-		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", devs[1]->getName() );
 		EXPECT_EQ( 5000, devs[1]->getSalary() );
 	}
 
@@ -207,7 +207,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyInvFileValidRevis
 	ASSERT_EQ( 2, projects.getSize() );
 
 	EXPECT_EQ( "Software2.0", projects[0]->getName() );
-	EXPECT_EQ( "Software1.0 Maintenance", projects[1]->getName() );
+	EXPECT_EQ( "Software1.0 \\ Maintenànce", projects[1]->getName() );
 
 	EXPECT_EQ( 1000000, projects[0]->getEarnings() );
 	EXPECT_EQ( 50000, projects[1]->getEarnings() );
@@ -221,7 +221,7 @@ TEST_F( Evolution1Version1Tests, pass2restoreFromEvolvedCompanyInvFileValidRevis
 
 		EXPECT_EQ( "Joseph Java Newbie", devs[0]->getName() );
 		EXPECT_EQ( 1000, devs[0]->getSalary() );
-		EXPECT_EQ( "Michael CSharp Senior", devs[1]->getName() );
+		EXPECT_EQ( "Michael CSharp Sénior", devs[1]->getName() );
 		EXPECT_EQ( 5000, devs[1]->getSalary() );
 	}
 

@@ -74,7 +74,7 @@ co::IObject* CompanySpace::createCompanyGraph()
 	_developer2->setSalary( 1000 );
 
 	_developer3 = co::newInstance( "dom.Developer" )->getService<dom::IDeveloper>();
-	_developer3->setName( "Michael CSharp Senior" );
+	_developer3->setName( "Michael CSharp Sénior" );
 	_developer3->setSalary( 4000 );
 
 	_developer4 = co::newInstance( "dom.Developer" )->getService<dom::IDeveloper>();
@@ -109,7 +109,7 @@ co::IObject* CompanySpace::createCompanyGraph()
 	_software->setDevelopers( richardDevs );
 
 	_dataMaintain = co::newInstance( "dom.Project" )->getService<dom::IProject>();
-	_dataMaintain->setName( "Software1.0 Maintenance" );
+	_dataMaintain->setName( "Software1.0 \\ Maintenànce" );
 	_dataMaintain->setEarnings( 50000 );
 	_dataMaintain->setIsService( true );
 

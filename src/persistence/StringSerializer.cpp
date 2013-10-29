@@ -4,6 +4,7 @@
 #include <co/IReflector.h>
 #include <co/IllegalArgumentException.h>
 #include <sstream>
+#include <locale>
 
 namespace ca {
 
@@ -46,7 +47,8 @@ inline bool mustBeEscaped( const std::string& str )
 	for( size_t i = 0; i < size; ++i )
 	{
 		char c = str[i];
-		if( c == '\'' || iscntrl( c ) )
+		std::locale loc( "Portuguese_Brazil" );
+		if( c == '\'' || std::iscntrl( c, loc ) || c == '\\' )
 			return true;
 	}
 	return false;
