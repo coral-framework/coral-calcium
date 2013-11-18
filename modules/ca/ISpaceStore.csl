@@ -79,6 +79,12 @@ interface ISpaceStore
 	void getValues( in uint32 objectId, in uint32 revision, out string[] fieldNames, out string[] values ) raises ca.IOException;
 	
 	/*
+		Retrieve an all objects list of values in a given \a revision. The output arrays, \a ids \a fieldNames and \a values, are index matched.
+		\throw ca.IOException if store is not open, or if the revision number is invalid
+	*/
+	void getAllValues( in uint32 revision, out uint32[] ids, out string[] fieldNames, out string[] values ) raises ca.IOException;
+	
+	/*
 		Retrieve the service's provider id for a service in a given \a revision.
 	*/
 	uint32 getServiceProvider( in uint32 serviceId, in uint32 revision ) raises ca.IOException;

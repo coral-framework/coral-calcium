@@ -201,6 +201,25 @@ public:
 		}
 	}
 
+	void getAllValues( co::uint32 revision, std::vector<co::uint32>& ids, std::vector<std::string>& fieldNames, std::vector<std::string>& values )
+	{
+		fieldNames.clear();
+		values.clear();
+		ids.clear();
+		
+		ca::SQLiteStatement stmt = _db.prepare( "SELECT FV.OBJECT_ID, FV.FIELD_NAME, FV.VALUE FROM (SELECT OBJECT_ID, MAX(REVISION) AS LATEST_REVISION, FIELD_NAME,\
+													VALUE FROM FIELD_VALUE WHERE REVISION <= ? GROUP BY OBJECT_ID, FIELD_NAME ) FV\
+													ORDER BY FV.OBJECT_ID, FV.FIELD_NAME" );
+		stmt.bind( 1, revision );
+		ca::SQLiteResult rs = stmt.query();
+		while( rs.next() )
+		{
+			ids.push_back( rs.getUint32( 0 ) );
+			fieldNames.push_back( rs.getString( 1 ) );
+			values.push_back( rs.getString( 2 ) );
+		}
+	}
+
 	std::string getName() 
 	{
 		return _fileName;

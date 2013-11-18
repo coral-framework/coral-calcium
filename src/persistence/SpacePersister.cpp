@@ -361,13 +361,14 @@ private:
 			static_cast<ca::ISpaceLoader*>( this )
 		};
 
-		co::getService<lua::IState>()->call( "ca.SpaceLoader", "", args, co::Slice<co::Any>() );
+		co::getService<lua::IState>()->call( "ca.SpaceLoaderFast", "", args, co::Slice<co::Any>() );
 
 		_space->addGraphObserver( this );
 		_space->notifyChanges();
 	}
 
 	// Save functions
+
 
 	#define TO_STR( strVar, ostreamStuff ) \
 		{ std::stringstream ss; ss << ostreamStuff; \
