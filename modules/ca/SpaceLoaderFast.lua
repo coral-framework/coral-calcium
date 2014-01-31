@@ -160,7 +160,7 @@ restoreService = function( spaceStore, objModel, objectId, serviceId, revision )
 		local allValues = valueMap[ serviceId ]
 		local typeName = allValues[ "_type" ]
 	
-		namespaces[ #namespaces + 1 ] = extractNamespaceFullName( typeName )
+		namespaces[ extractNamespaceFullName( typeName ) ] = true
 
 		local luaObjectTable = { _type = typeName, _id = serviceId }
 		idCache[ serviceId ] = track( luaObjectTable )
@@ -220,7 +220,7 @@ restoreService = function( spaceStore, objModel, objectId, serviceId, revision )
 end
 
 local function loadCaModels( objModel )
-	for _, ns in ipairs( namespaces ) do
+	for ns, _  in pairs( namespaces ) do
 		objModel:loadDefinitionsFor( ns )
 	end
 
