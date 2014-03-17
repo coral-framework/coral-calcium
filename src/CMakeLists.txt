@@ -49,6 +49,13 @@ install( FILES "${CMAKE_BINARY_DIR}/modules/ca/ca_debug.pdb"
 	OPTIONAL
 )
 
+install( FILES "${CMAKE_BINARY_DIR}/modules/ca/ca.pdb"
+	DESTINATION "modules/ca"
+	CONFIGURATIONS RelWithDebInfo
+	COMPONENT "Calcium Module"
+	OPTIONAL
+)
+
 # install module files
 install( DIRECTORY ${CMAKE_SOURCE_DIR}/modules/ca
 	DESTINATION "modules"
