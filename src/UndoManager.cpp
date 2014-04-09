@@ -209,6 +209,9 @@ private:
 		_descriptions[s].pop_back();
 
 		_changes[s].back()->revertChanges();
+
+		//keep changes alive until the end of method
+		ca::IGraphChangesRef recentChanges = _changes[s].back();
 		_changes[s].pop_back();
 
 		// record the "reverse" changes on the "other" stack
