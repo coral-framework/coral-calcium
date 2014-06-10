@@ -83,7 +83,9 @@ saveValue = function( writer, model, index, value, valueType, indentLevel, inden
 	elseif tp == 'string' then
 		writer( ( "%q" ):format( value ) )
 	else
-		writer( tostring( value ) )
+		-- verify we are not storing NaN that would result in crash when loading later
+		if( value ~= value ) then writer( tostring( 0 ) )
+		else writer( tostring( value ) ) end
 	end
 end
 
