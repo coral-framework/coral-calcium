@@ -33,9 +33,9 @@ function ModelWrapper:__index( typeName )
 	if not v then
 		local t = coType[typeName]
 		if t.kind == 'TK_COMPONENT' then
-			v = self.__service:getPorts( t )
+			v = self.__coral:getPorts( t )
 		else
-			v = self.__service:getFields( t )
+			v = self.__coral:getFields( t )
 		end
 		self[typeName] = v
 	end
@@ -47,7 +47,7 @@ function ModelWrapper:wrap( model )
 	assert( #name > 0 )
 	local self = wrappedModels[name]
 	if not self then
-		self = setmetatable( { __service = model }, ModelWrapper )
+		self = setmetatable( { __coral = model }, ModelWrapper )
 		wrappedModels[name] = self
 	end
 	return self
@@ -83,7 +83,9 @@ saveValue = function( writer, model, index, value, valueType, indentLevel, inden
 	elseif tp == 'string' then
 		writer( ( "%q" ):format( value ) )
 	else
-		writer( tostring( value ) )
+		-- verify we are not storing NaN that would result in crash when loading later
+		if( value ~= value ) then writer( tostring( 0 ) )
+		else writer( tostring( value ) ) end
 	end
 end
 
@@ -215,20 +217,25 @@ end
 local function restoreObjects( objects )
 	-- instantiate all objects
 	for i, objRec in ipairs( objects ) do
-		objRec.object = coNew( objRec.typeName )
+		print( "Tying to create object >>>>>>> : ", i, objRec )
+		if objRec.typeName then
+			objRec.object = coNew( objRec.typeName )
+		end
 	end
 
 	-- restore all values and references
 	for i, objRec in ipairs( objects ) do
 		local object = objRec.object
-		for portName, portRec in pairs( objRec.data ) do
-			if portRec.kind == 'service' then
-				local service = object[portName]
-				for fieldName, valueRec in pairs( portRec.data ) do
-					service[fieldName] = resolveValue( objects, valueRec )
+		if object then
+			for portName, portRec in pairs( objRec.data ) do
+				if portRec.kind == 'service' then
+					local service = object[portName]
+					for fieldName, valueRec in pairs( portRec.data ) do
+						service[fieldName] = resolveValue( objects, valueRec )
+					end
+				else
+					object[portName] = resolveRef( objects, portRec )
 				end
-			else
-				object[portName] = resolveRef( objects, portRec )
 			end
 		end
 	end
