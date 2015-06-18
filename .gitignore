@@ -3,7 +3,8 @@
 ################
 /_*/
 /@*/
-/build/
+build
+_build
 
 ######################
 # OS generated files #
