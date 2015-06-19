@@ -1,5 +1,7 @@
 @echo on
 
+cd..
+
 mkdir build
 chdir build
 
